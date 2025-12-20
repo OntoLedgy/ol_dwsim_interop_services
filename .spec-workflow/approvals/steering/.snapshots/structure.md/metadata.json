@@ -1,0 +1,30 @@
+{
+  "filePath": ".spec-workflow/steering/structure.md",
+  "currentVersion": 3,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-12-19T13:57:26.921Z",
+      "trigger": "initial",
+      "approvalId": "approval_1766152646902_t1314i0m4",
+      "approvalTitle": "Project Structure - DWSIM MCP Server Organization"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-12-19T14:06:46.221Z",
+      "trigger": "revision_requested",
+      "approvalId": "approval_1766152646902_t1314i0m4",
+      "approvalTitle": "Project Structure - DWSIM MCP Server Organization"
+    },
+    {
+      "version": 3,
+      "filename": "snapshot-003.json",
+      "timestamp": "2025-12-19T14:25:57.115Z",
+      "trigger": "revision_requested",
+      "approvalId": "approval_1766154008153_3wd40r6wf",
+      "approvalTitle": "Structure Document - OntoLedgy Convention with Models Folder"
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "filePath": ".spec-workflow/steering/product.md",
+  "currentVersion": 8,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-12-19T12:13:42.350Z",
+      "trigger": "initial",
+      "approvalId": "approval_1766146422327_6v4t5zr5l",
+      "approvalTitle": "Product Vision - DWSIM MCP Server"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-12-19T12:14:23.493Z",
+      "trigger": "approved",
+      "approvalId": "approval_1766146422327_6v4t5zr5l",
+      "approvalTitle": "Product Vision - DWSIM MCP Server"
+    },
+    {
+      "version": 3,
+      "filename": "snapshot-003.json",
+      "timestamp": "2025-12-19T12:14:24.732Z",
+      "trigger": "approved",
+      "approvalId": "approval_1766146422327_6v4t5zr5l",
+      "approvalTitle": "Product Vision - DWSIM MCP Server"
+    },
+    {
+      "version": 4,
+      "filename": "snapshot-004.json",
+      "timestamp": "2025-12-19T12:14:31.233Z",
+      "trigger": "approved",
+      "approvalId": "approval_1766146422327_6v4t5zr5l",
+      "approvalTitle": "Product Vision - DWSIM MCP Server"
+    },
+    {
+      "version": 5,
+      "filename": "snapshot-005.json",
+      "timestamp": "2025-12-19T12:14:37.546Z",
+      "trigger": "approved",
+      "approvalId": "approval_1766146422327_6v4t5zr5l",
+      "approvalTitle": "Product Vision - DWSIM MCP Server"
+    },
+    {
+      "version": 6,
+      "filename": "snapshot-006.json",
+      "timestamp": "2025-12-19T12:14:46.767Z",
+      "trigger": "approved",
+      "approvalId": "approval_1766146422327_6v4t5zr5l",
+      "approvalTitle": "Product Vision - DWSIM MCP Server"
+    },
+    {
+      "version": 7,
+      "filename": "snapshot-007.json",
+      "timestamp": "2025-12-19T12:14:50.514Z",
+      "trigger": "approved",
+      "approvalId": "approval_1766146422327_6v4t5zr5l",
+      "approvalTitle": "Product Vision - DWSIM MCP Server"
+    },
+    {
+      "version": 8,
+      "filename": "snapshot-008.json",
+      "timestamp": "2025-12-19T12:15:15.159Z",
+      "trigger": "approved",
+      "approvalId": "approval_1766146422327_6v4t5zr5l",
+      "approvalTitle": "Product Vision - DWSIM MCP Server"
+    }
+  ]
+}
