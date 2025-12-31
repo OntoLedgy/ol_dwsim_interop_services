@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__spec-workflow__approvals",
+      "mcp__spec-workflow__spec-status",
+      "mcp__spec-workflow__log-implementation",
+      "Bash(awk:*)"
+    ]
+  }
+}

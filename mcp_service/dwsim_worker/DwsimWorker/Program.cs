@@ -1,7 +1,9 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
+using DwsimWorker.Engine;
 
 namespace DwsimWorker
 {
@@ -24,6 +26,40 @@ namespace DwsimWorker
             try
             {
                 Log.Information("DWSIM Worker starting...");
+
+                // ===== ASSEMBLY LOADING =====
+                Log.Information("Loading DWSIM assemblies...");
+
+                // Create AssemblyLoader configuration with default settings
+                var config = AssemblyLoaderConfig.Default();
+
+                // Instantiate AssemblyLoader with logger and config
+                var assemblyLoader = new AssemblyLoader(Log.Logger, config);
+
+                // Load DWSIM assemblies
+                var loadResult = assemblyLoader.LoadDwsimAssemblies();
+
+                // Handle loading result
+                if (!loadResult.Success)
+                {
+                    Log.Error("Failed to load DWSIM assemblies: {Message}", loadResult.Message);
+                    if (loadResult.Error != null)
+                    {
+                        Log.Error(loadResult.Error, "Assembly loading error details");
+                    }
+                    Log.Information("Worker exiting with code {ExitCode}", loadResult.ExitCode);
+                    return loadResult.ExitCode;
+                }
+
+                // Log successfully loaded assemblies
+                Log.Information("Successfully loaded {Count} DWSIM assemblies", loadResult.LoadedAssemblies.Count);
+                foreach (var assembly in loadResult.LoadedAssemblies)
+                {
+                    Log.Information("  - {Name} v{Version} from {Path}",
+                        assembly.Name,
+                        assembly.Version,
+                        assembly.Path);
+                }
 
                 // TODO: Parse command line arguments
                 // TODO: Load configuration

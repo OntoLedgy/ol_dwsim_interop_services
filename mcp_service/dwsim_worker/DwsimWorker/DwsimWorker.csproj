@@ -35,6 +35,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.IO.Pipes" />
     <Reference Include="System.Threading.Tasks" />
@@ -68,6 +69,15 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Engine\DwsimLoadException.cs" />
+    <Compile Include="Engine\AssemblyInfo.cs" />
+    <Compile Include="Engine\LoadResult.cs" />
+    <Compile Include="Engine\ValidationResult.cs" />
+    <Compile Include="Engine\AssemblyLoaderConfig.cs" />
+    <Compile Include="Engine\AssemblyLoaderConfigBuilder.cs" />
+    <Compile Include="Engine\DwsimValidator.cs" />
+    <Compile Include="Engine\AssemblyLoader.cs" />
+    <Compile Include="Utilities\PathResolver.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

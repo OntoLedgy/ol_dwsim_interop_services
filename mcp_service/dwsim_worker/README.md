@@ -11,6 +11,72 @@ The worker is responsible for:
 - Enforcing resource limits and timeouts
 - Converting between JSON DTOs and DWSIM/CAPE-OPEN objects
 
+## Assembly Loading Requirements
+
+DwsimWorker automatically loads DWSIM assemblies at startup using a multi-strategy resolution approach:
+
+### Required DWSIM Assemblies
+
+The following assemblies must be available:
+- `DWSIM.Interfaces.dll` - Core interfaces
+- `DWSIM.Thermodynamics.dll` - Thermodynamic calculations
+- `DWSIM.SharedClasses.dll` - Shared utilities
+- `CapeOpen.dll` (optional) - CAPE-OPEN interface definitions
+
+### Assembly Path Resolution
+
+The worker resolves DWSIM assembly paths using this fallback order:
+
+1. **Environment Variable**: Set `DWSIM_PATH` to your DWSIM installation directory
+   ```cmd
+   set DWSIM_PATH=C:\Program Files\DWSIM
+   ```
+
+2. **App.config Setting**: Uncomment and set in `App.config`:
+   ```xml
+   <appSettings>
+     <add key="DwsimPath" value="C:\Program Files\DWSIM" />
+   </appSettings>
+   ```
+
+3. **Default Installation Paths**: Automatically checks common installation locations:
+   - `C:\Program Files\DWSIM`
+   - `C:\Program Files (x86)\DWSIM`
+
+### Validation
+
+After loading, the worker validates assemblies by instantiating core DWSIM types:
+- `DWSIM.SharedClasses.Flowsheet`
+- `DWSIM.Thermodynamics.Streams.MaterialStream`
+
+This ensures assemblies are not just loaded but fully functional in a headless environment (no GUI).
+
+### Exit Codes
+
+The worker uses specific exit codes to indicate assembly loading status:
+
+| Exit Code | Meaning | Description |
+|-----------|---------|-------------|
+| 0 | Success | All assemblies loaded and validated successfully |
+| 1 | Load Failure | Assembly files not found or failed to load |
+| 2 | Validation Failure | Assemblies loaded but validation failed |
+| 3 | Configuration Error | Invalid configuration or timeout |
+
+### Manual Testing
+
+Use the included batch script to test assembly loading:
+
+```cmd
+test-assembly-loading.bat
+```
+
+Or test with custom path:
+```cmd
+set DWSIM_PATH=C:\Custom\Path\To\DWSIM
+DwsimWorker.exe
+echo Exit code: %ERRORLEVEL%
+```
+
 ## Building
 
 ### Using Visual Studio
@@ -145,13 +211,68 @@ Integration tests are located in the repository root `integration-tests/` direct
 
 ## Troubleshooting
 
-### Assembly Load Errors
+### Assembly Loading Issues
 
-If you encounter "Could not load file or assembly 'DWSIM.XXX'" errors:
+#### Exit Code 1: Assembly Load Failure
 
-1. Verify all DWSIM DLLs are in the same directory as `DwsimWorker.exe`
-2. Check binding redirects in `App.config`
-3. Ensure DWSIM assemblies are built for the correct .NET Framework version
+**Symptoms**: Worker exits with code 1, log shows "Assembly file not found" or "DWSIM assembly path does not exist"
+
+**Solutions**:
+1. **Set DWSIM_PATH environment variable**:
+   ```cmd
+   set DWSIM_PATH=C:\Program Files\DWSIM
+   ```
+
+2. **Configure App.config**: Uncomment the DwsimPath setting in `App.config`:
+   ```xml
+   <add key="DwsimPath" value="C:\Your\DWSIM\Path" />
+   ```
+
+3. **Install DWSIM**: Download from https://dwsim.org and install to default location
+
+4. **Verify assembly files exist**: Check that these files are in the DWSIM directory:
+   - DWSIM.Interfaces.dll
+   - DWSIM.Thermodynamics.dll
+   - DWSIM.SharedClasses.dll
+
+#### Exit Code 2: Validation Failure
+
+**Symptoms**: Worker exits with code 2, log shows "Assembly validation failed"
+
+**Causes**:
+- DWSIM assemblies are corrupted
+- Incompatible DWSIM version
+- Missing dependencies (e.g., CapeOpen.dll)
+
+**Solutions**:
+1. Reinstall DWSIM
+2. Check logs for specific validation error messages
+3. Verify .NET Framework 4.8 is installed
+4. Check binding redirects in App.config
+
+#### Version Conflicts
+
+**Symptoms**: "Could not load file or assembly" with version mismatch message
+
+**Solutions**:
+1. Check `App.config` binding redirects for Newtonsoft.Json:
+   ```xml
+   <dependentAssembly>
+     <assemblyIdentity name="Newtonsoft.Json" publicKeyToken="30ad4fe6b2a6aeed" />
+     <bindingRedirect oldVersion="0.0.0.0-13.0.0.0" newVersion="13.0.3.0" />
+   </dependentAssembly>
+   ```
+
+2. Update to match installed DWSIM version requirements
+
+#### Platform/Bitness Issues
+
+**Symptoms**: BadImageFormatException or "is not a valid Win32 application"
+
+**Solutions**:
+1. Ensure DwsimWorker is compiled for x64 (DWSIM is 64-bit only)
+2. Set Platform target to x64 in project properties
+3. Verify you're not mixing x86/x64 assemblies
 
 ### Named Pipe Connection Issues
 

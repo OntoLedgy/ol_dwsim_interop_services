@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/dwsim-assembly-loader/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-12-31T11:12:45.051Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767179565018_iz4asjlkl",
+      "approvalTitle": "Requirements Document for DWSIM Assembly Loader"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-12-31T11:15:05.626Z",
+      "trigger": "approved",
+      "approvalId": "approval_1767179565018_iz4asjlkl",
+      "approvalTitle": "Requirements Document for DWSIM Assembly Loader"
+    }
+  ]
+}
