@@ -117,9 +117,8 @@ namespace DwsimWorker.Adapters
                 var streamId = $"S{_streamCounter}";
 
                 // Step 3: Create DWSIM MaterialStream object
-                // TODO: In full implementation, create actual DWSIM.Thermodynamics.Streams.MaterialStream
-                // For now, we add a placeholder stream to the context
-                _context.AddStream(null, streamId);  // null as placeholder for actual MaterialStream
+                var materialStream = CreateMaterialStream(name, streamId);
+                _context.AddStream(materialStream, streamId);
 
                 // Step 4: Store properties in cache
                 _streamPropertiesCache[streamId] = properties;
@@ -579,6 +578,51 @@ namespace DwsimWorker.Adapters
                     return props.Composition.MoleFractions;
                 default:
                     throw new ArgumentException($"Unknown CAPE-OPEN property name: {capeOpenPropertyName}");
+            }
+        }
+
+        /// <summary>
+        /// Creates a DWSIM MaterialStream instance using reflection.
+        /// </summary>
+        /// <param name="name">The name for the stream.</param>
+        /// <param name="streamId">The unique stream ID.</param>
+        /// <returns>A DWSIM MaterialStream object.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when MaterialStream type cannot be found or instantiated.</exception>
+        private object CreateMaterialStream(string name, string streamId)
+        {
+            const string typeName = "DWSIM.Thermodynamics.Streams.MaterialStream";
+
+            try
+            {
+                // Find the MaterialStream type in loaded assemblies
+                Type streamType = null;
+                foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    streamType = assembly.GetType(typeName);
+                    if (streamType != null)
+                        break;
+                }
+
+                if (streamType == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Type '{typeName}' not found in loaded assemblies. Ensure DWSIM assemblies are loaded.");
+                }
+
+                // Create instance using default constructor
+                var instance = Activator.CreateInstance(streamType);
+                if (instance == null)
+                {
+                    throw new InvalidOperationException($"Failed to create instance of '{typeName}'");
+                }
+
+                _logger.Debug("Created MaterialStream: {StreamId} (Name: {Name})", streamId, name);
+                return instance;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to create MaterialStream for {StreamId}", streamId);
+                throw new InvalidOperationException($"Failed to create MaterialStream: {ex.Message}", ex);
             }
         }
     }
