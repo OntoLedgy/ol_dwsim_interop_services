@@ -94,6 +94,11 @@
     <Compile Include="Exceptions\InvalidPropertyValueException.cs" />
     <Compile Include="Exceptions\StreamNotFoundException.cs" />
     <Compile Include="Exceptions\UnitNotFoundException.cs" />
+    <Compile Include="Models\Ranges.cs" />
+    <Compile Include="Models\PhysicalQuantities.cs" />
+    <Compile Include="Models\UnitsOfMeasure.cs" />
+    <Compile Include="Models\Measurements.cs" />
+    <Compile Include="Models\PhysicalProperties.cs" />
     <Compile Include="Models\StreamProperties.cs" />
     <Compile Include="Models\Composition.cs" />
     <Compile Include="Models\UnitOpConfig.cs" />

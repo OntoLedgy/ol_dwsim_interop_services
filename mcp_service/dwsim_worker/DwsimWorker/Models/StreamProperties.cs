@@ -4,24 +4,35 @@ namespace DwsimWorker.Models
 {
     /// <summary>
     /// Represents all thermodynamic properties of a material stream.
-    /// Properties use SI units: Temperature (K), Pressure (Pa), Molar Flow (mol/s).
+    /// Properties are stored with their measurements (quantity, value, unit) and validated.
     /// </summary>
+    /// <remarks>
+    /// This class stores physical properties of a stream as provided by the user.
+    /// Unit conversion and full validation are delegated to DWSIM's systems.
+    ///
+    /// Example usage:
+    /// <code>
+    /// var tempUnit = new UnitsOfMeasure("K", typeof(Temperature), new Ranges(0, double.PositiveInfinity));
+    /// var tempMeasurement = new Measurements(new Temperature(), 298.15, tempUnit);
+    /// var tempProperty = new PhysicalProperties("Temperature", tempMeasurement);
+    /// </code>
+    /// </remarks>
     public sealed class StreamProperties
     {
         /// <summary>
-        /// Gets the temperature in Kelvin.
+        /// Gets the temperature property.
         /// </summary>
-        public double TemperatureK { get; }
+        public PhysicalProperties Temperature { get; }
 
         /// <summary>
-        /// Gets the pressure in Pascal.
+        /// Gets the pressure property.
         /// </summary>
-        public double PressurePa { get; }
+        public PhysicalProperties Pressure { get; }
 
         /// <summary>
-        /// Gets the molar flow rate in mol/s.
+        /// Gets the molar flow rate property.
         /// </summary>
-        public double MolarFlowMolPerSec { get; }
+        public PhysicalProperties MolarFlow { get; }
 
         /// <summary>
         /// Gets the composition (mole fractions for each compound).
@@ -31,93 +42,59 @@ namespace DwsimWorker.Models
         /// <summary>
         /// Initializes a new instance of the <see cref="StreamProperties"/> class.
         /// </summary>
-        /// <param name="temperatureK">The temperature in Kelvin. Must be greater than 0.</param>
-        /// <param name="pressurePa">The pressure in Pascal. Must be greater than 0.</param>
-        /// <param name="molarFlowMolPerSec">The molar flow rate in mol/s. Must be greater than or equal to 0.</param>
+        /// <param name="temperature">The temperature physical property.</param>
+        /// <param name="pressure">The pressure physical property.</param>
+        /// <param name="molarFlow">The molar flow rate physical property.</param>
         /// <param name="composition">The composition (mole fractions).</param>
-        /// <exception cref="ArgumentException">Thrown when any property value is out of valid range.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when composition is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when any parameter is null.</exception>
         public StreamProperties(
-            double temperatureK,
-            double pressurePa,
-            double molarFlowMolPerSec,
+            PhysicalProperties temperature,
+            PhysicalProperties pressure,
+            PhysicalProperties molarFlow,
             Composition composition)
         {
+            Temperature = temperature ?? throw new ArgumentNullException(nameof(temperature));
+            Pressure = pressure ?? throw new ArgumentNullException(nameof(pressure));
+            MolarFlow = molarFlow ?? throw new ArgumentNullException(nameof(molarFlow));
             Composition = composition ?? throw new ArgumentNullException(nameof(composition));
-
-            if (!IsValid(temperatureK, pressurePa, molarFlowMolPerSec, out string errorMessage))
-            {
-                throw new ArgumentException(errorMessage);
-            }
-
-            TemperatureK = temperatureK;
-            PressurePa = pressurePa;
-            MolarFlowMolPerSec = molarFlowMolPerSec;
         }
 
         /// <summary>
-        /// Validates stream property values against physical constraints.
-        /// </summary>
-        /// <param name="temperatureK">The temperature to validate.</param>
-        /// <param name="pressurePa">The pressure to validate.</param>
-        /// <param name="molarFlowMolPerSec">The molar flow to validate.</param>
-        /// <param name="errorMessage">If validation fails, contains a description of the error.</param>
-        /// <returns>True if all values are valid; otherwise, false.</returns>
-        public static bool IsValid(
-            double temperatureK,
-            double pressurePa,
-            double molarFlowMolPerSec,
-            out string errorMessage)
-        {
-            const double MinTemperatureK = 0.0;
-            const double MaxTemperatureK = 10000.0;
-            const double MinPressurePa = 0.0;
-            const double MaxPressurePa = 1e9; // 10000 bar
-            const double MinMolarFlowMolPerSec = 0.0;
-
-            if (temperatureK <= MinTemperatureK)
-            {
-                errorMessage = $"Temperature must be > {MinTemperatureK} K. Provided: {temperatureK} K.";
-                return false;
-            }
-
-            if (temperatureK > MaxTemperatureK)
-            {
-                errorMessage = $"Temperature must be <= {MaxTemperatureK} K. Provided: {temperatureK} K.";
-                return false;
-            }
-
-            if (pressurePa <= MinPressurePa)
-            {
-                errorMessage = $"Pressure must be > {MinPressurePa} Pa. Provided: {pressurePa} Pa.";
-                return false;
-            }
-
-            if (pressurePa > MaxPressurePa)
-            {
-                errorMessage = $"Pressure must be <= {MaxPressurePa} Pa. Provided: {pressurePa} Pa.";
-                return false;
-            }
-
-            if (molarFlowMolPerSec < MinMolarFlowMolPerSec)
-            {
-                errorMessage = $"Molar flow must be >= {MinMolarFlowMolPerSec} mol/s. Provided: {molarFlowMolPerSec} mol/s.";
-                return false;
-            }
-
-            errorMessage = null;
-            return true;
-        }
-
-        /// <summary>
-        /// Validates the current instance properties.
+        /// Validates the stream properties.
         /// </summary>
         /// <param name="errorMessage">If validation fails, contains a description of the error.</param>
         /// <returns>True if all values are valid; otherwise, false.</returns>
+        /// <remarks>
+        /// For now, performs basic validation:
+        /// - All properties must be non-null
+        /// - Composition must be valid (sum to 1.0)
+        ///
+        /// Full validation including unit-specific constraints will be delegated to DWSIM
+        /// when the stream is created in the flowsheet.
+        /// </remarks>
         public bool IsValid(out string errorMessage)
         {
-            if (!IsValid(TemperatureK, PressurePa, MolarFlowMolPerSec, out errorMessage))
+            if (Temperature == null)
             {
+                errorMessage = "Temperature cannot be null";
+                return false;
+            }
+
+            if (Pressure == null)
+            {
+                errorMessage = "Pressure cannot be null";
+                return false;
+            }
+
+            if (MolarFlow == null)
+            {
+                errorMessage = "Molar flow cannot be null";
+                return false;
+            }
+
+            if (Composition == null)
+            {
+                errorMessage = "Composition cannot be null";
                 return false;
             }
 

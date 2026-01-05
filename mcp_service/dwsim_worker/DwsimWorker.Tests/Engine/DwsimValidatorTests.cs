@@ -310,78 +310,102 @@ namespace DwsimWorker.Tests.Engine
         // They are marked with [Trait("Category", "Integration")] so they can be excluded
         // from regular test runs in CI/CD environments without DWSIM.
 
-        [Fact(Skip = "Requires DWSIM assemblies to be loaded. Run manually with DWSIM installed.")]
+        [Fact]
         [Trait("Category", "Integration")]
         public void ValidateInstantiation_WithDwsimAssemblies_ReturnsSuccess()
         {
-            // Arrange
-            // This test would require loading actual DWSIM assemblies first
-            // using AssemblyLoader before running the validator
+            // Arrange - Load DWSIM assemblies first
+            var loaderConfig = AssemblyLoaderConfig.Create()
+                .WithValidationEnabled(false) // Skip validation in loader since we're testing validator
+                .Build();
+            var loaderLogger = _mockLogger.Object;
+            var loader = new AssemblyLoader(loaderLogger, loaderConfig);
 
-            var logger = _mockLogger.Object;
-            var validator = new DwsimValidator(logger);
+            // Load DWSIM assemblies
+            var loadResult = loader.LoadDwsimAssemblies();
+            Assert.True(loadResult.Success, $"Failed to load DWSIM assemblies: {loadResult.Message}");
+
+            var validator = new DwsimValidator(_mockLogger.Object);
 
             // Act
             var result = validator.ValidateInstantiation();
 
             // Assert
-            Assert.True(result.Success);
+            Assert.True(result.Success, $"Validation failed: {result.Message}");
             Assert.NotEmpty(result.ValidatedTypes);
-            Assert.Contains("DWSIM.SharedClasses.Flowsheet", result.ValidatedTypes);
+            Assert.Contains("DWSIM.SharedClasses.FOSSEEFlowsheet", result.ValidatedTypes);
             Assert.Contains("DWSIM.Thermodynamics.Streams.MaterialStream", result.ValidatedTypes);
             Assert.Null(result.Error);
         }
 
-        [Fact(Skip = "Requires DWSIM assemblies to be loaded. Run manually with DWSIM installed.")]
+        [Fact]
         [Trait("Category", "Integration")]
         public void ValidateFlowsheetCreation_WithDwsimAssemblies_ReturnsSuccess()
         {
-            // Arrange
-            var logger = _mockLogger.Object;
-            var validator = new DwsimValidator(logger);
+            // Arrange - Load DWSIM assemblies first
+            var loaderConfig = AssemblyLoaderConfig.Create()
+                .WithValidationEnabled(false)
+                .Build();
+            var loader = new AssemblyLoader(_mockLogger.Object, loaderConfig);
+            var loadResult = loader.LoadDwsimAssemblies();
+            Assert.True(loadResult.Success, $"Failed to load DWSIM assemblies: {loadResult.Message}");
+
+            var validator = new DwsimValidator(_mockLogger.Object);
 
             // Act
             var result = validator.ValidateFlowsheetCreation();
 
             // Assert
-            Assert.True(result.Success);
+            Assert.True(result.Success, $"Validation failed: {result.Message}");
             Assert.Single(result.ValidatedTypes);
-            Assert.Contains("DWSIM.SharedClasses.Flowsheet", result.ValidatedTypes);
+            Assert.Contains("DWSIM.SharedClasses.FOSSEEFlowsheet", result.ValidatedTypes);
             Assert.Null(result.Error);
         }
 
-        [Fact(Skip = "Requires DWSIM assemblies to be loaded. Run manually with DWSIM installed.")]
+        [Fact]
         [Trait("Category", "Integration")]
         public void ValidateMaterialStreamCreation_WithDwsimAssemblies_ReturnsSuccess()
         {
-            // Arrange
-            var logger = _mockLogger.Object;
-            var validator = new DwsimValidator(logger);
+            // Arrange - Load DWSIM assemblies first
+            var loaderConfig = AssemblyLoaderConfig.Create()
+                .WithValidationEnabled(false)
+                .Build();
+            var loader = new AssemblyLoader(_mockLogger.Object, loaderConfig);
+            var loadResult = loader.LoadDwsimAssemblies();
+            Assert.True(loadResult.Success, $"Failed to load DWSIM assemblies: {loadResult.Message}");
+
+            var validator = new DwsimValidator(_mockLogger.Object);
 
             // Act
             var result = validator.ValidateMaterialStreamCreation();
 
             // Assert
-            Assert.True(result.Success);
+            Assert.True(result.Success, $"Validation failed: {result.Message}");
             Assert.Single(result.ValidatedTypes);
             Assert.Contains("DWSIM.Thermodynamics.Streams.MaterialStream", result.ValidatedTypes);
             Assert.Null(result.Error);
         }
 
-        [Fact(Skip = "Requires DWSIM assemblies to be loaded. Run manually with DWSIM installed.")]
+        [Fact]
         [Trait("Category", "Integration")]
         public void ValidateInstantiation_WithDwsimAssemblies_CreatesObjectsWithoutGuiContext()
         {
-            // Arrange
+            // Arrange - Load DWSIM assemblies first
             // This test validates requirement 2.3: must work without GUI context (no STA thread)
-            var logger = _mockLogger.Object;
-            var validator = new DwsimValidator(logger);
+            var loaderConfig = AssemblyLoaderConfig.Create()
+                .WithValidationEnabled(false)
+                .Build();
+            var loader = new AssemblyLoader(_mockLogger.Object, loaderConfig);
+            var loadResult = loader.LoadDwsimAssemblies();
+            Assert.True(loadResult.Success, $"Failed to load DWSIM assemblies: {loadResult.Message}");
+
+            var validator = new DwsimValidator(_mockLogger.Object);
 
             // Act
             var result = validator.ValidateInstantiation();
 
             // Assert
-            Assert.True(result.Success);
+            Assert.True(result.Success, $"Validation failed: {result.Message}");
             // If this test passes without hanging or throwing, it proves objects
             // can be instantiated without GUI context
         }

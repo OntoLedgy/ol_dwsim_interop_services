@@ -127,8 +127,8 @@ namespace DwsimWorker.Adapters
                 // Step 5: Log success with structured logging
                 _logger.Information("Stream created successfully: {StreamId} (Name: {StreamName})",
                     streamId, name);
-                _logger.Debug("Stream properties: Temperature={Temperature}K, Pressure={Pressure}Pa, Flow={Flow}mol/s",
-                    properties.TemperatureK, properties.PressurePa, properties.MolarFlowMolPerSec);
+                _logger.Debug("Stream properties: Temperature={Temperature}, Pressure={Pressure}, Flow={Flow}",
+                    properties.Temperature.Measurement, properties.Pressure.Measurement, properties.MolarFlow.Measurement);
 
                 return PropertySetResult.SuccessResult(streamId);
             }
@@ -523,21 +523,36 @@ namespace DwsimWorker.Adapters
         /// </summary>
         private StreamProperties UpdateProperty(StreamProperties current, string capeOpenPropertyName, object value)
         {
-            double temp = current.TemperatureK;
-            double pressure = current.PressurePa;
-            double flow = current.MolarFlowMolPerSec;
+            PhysicalProperties temp = current.Temperature;
+            PhysicalProperties pressure = current.Pressure;
+            PhysicalProperties flow = current.MolarFlow;
             Composition composition = current.Composition;
 
             switch (capeOpenPropertyName)
             {
                 case "temperature":
-                    temp = Convert.ToDouble(value);
+                    // Keep the same quantity and unit, update value
+                    var tempMeasurement = new Measurements(
+                        current.Temperature.Quantity,
+                        Convert.ToDouble(value),
+                        current.Temperature.Unit);
+                    temp = new PhysicalProperties("Temperature", tempMeasurement);
                     break;
                 case "pressure":
-                    pressure = Convert.ToDouble(value);
+                    // Keep the same quantity and unit, update value
+                    var pressureMeasurement = new Measurements(
+                        current.Pressure.Quantity,
+                        Convert.ToDouble(value),
+                        current.Pressure.Unit);
+                    pressure = new PhysicalProperties("Pressure", pressureMeasurement);
                     break;
                 case "totalFlow":
-                    flow = Convert.ToDouble(value);
+                    // Keep the same quantity and unit, update value
+                    var flowMeasurement = new Measurements(
+                        current.MolarFlow.Quantity,
+                        Convert.ToDouble(value),
+                        current.MolarFlow.Unit);
+                    flow = new PhysicalProperties("MolarFlow", flowMeasurement);
                     break;
                 case "composition":
                     // In full implementation, this would handle composition arrays
@@ -555,11 +570,11 @@ namespace DwsimWorker.Adapters
             switch (capeOpenPropertyName)
             {
                 case "temperature":
-                    return props.TemperatureK;
+                    return props.Temperature.Measurement.Value;
                 case "pressure":
-                    return props.PressurePa;
+                    return props.Pressure.Measurement.Value;
                 case "totalFlow":
-                    return props.MolarFlowMolPerSec;
+                    return props.MolarFlow.Measurement.Value;
                 case "composition":
                     return props.Composition.MoleFractions;
                 default:

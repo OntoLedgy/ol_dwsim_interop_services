@@ -255,7 +255,7 @@ namespace DwsimWorker.Tests.Integration
             if (result.Success)
             {
                 Assert.Single(result.ValidatedTypes);
-                Assert.Contains("DWSIM.SharedClasses.Flowsheet", result.ValidatedTypes);
+                Assert.Contains("DWSIM.SharedClasses.FOSSEEFlowsheet", result.ValidatedTypes);
                 _logger.Information("✓ Flowsheet can be instantiated without GUI context");
             }
             else
