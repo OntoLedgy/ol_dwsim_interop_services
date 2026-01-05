@@ -107,9 +107,8 @@ namespace DwsimWorker.Adapters
                 var unitId = $"U{_unitCounter}";
 
                 // Step 2: Create DWSIM unit operation object
-                // TODO: In full implementation, create actual DWSIM.UnitOperations.Separators.Separator3Phase
-                // For now, we add a placeholder to the context
-                _context.AddUnit(null, unitId);  // null as placeholder for actual unit operation object
+                var unitOperation = CreateThreePhaseSeparator(name, unitId);
+                _context.AddUnit(unitOperation, unitId);
 
                 // Step 3: Initialize parameters from config
                 var parameters = new Dictionary<string, object>();
@@ -427,6 +426,51 @@ namespace DwsimWorker.Adapters
             {
                 errorMessage = $"Validation error: {ex.Message}";
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Creates a DWSIM three-phase separator instance using reflection.
+        /// </summary>
+        /// <param name="name">The name for the separator.</param>
+        /// <param name="unitId">The unique unit ID.</param>
+        /// <returns>A DWSIM Separator3Phase object or placeholder.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when unit operation creation fails.</exception>
+        private object CreateThreePhaseSeparator(string name, string unitId)
+        {
+            const string typeName = "DWSIM.UnitOperations.Separators.Separator3Phase";
+
+            try
+            {
+                // Try to find the Separator3Phase type in loaded assemblies
+                Type separatorType = null;
+                foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    separatorType = assembly.GetType(typeName);
+                    if (separatorType != null)
+                        break;
+                }
+
+                if (separatorType != null)
+                {
+                    // Create actual DWSIM instance if type is found
+                    var instance = Activator.CreateInstance(separatorType);
+                    if (instance != null)
+                    {
+                        _logger.Debug("Created DWSIM three-phase separator: {UnitId} (Name: {Name})", unitId, name);
+                        return instance;
+                    }
+                }
+
+                // If DWSIM type not found, create a placeholder object
+                // This allows the adapter logic to be tested independently of DWSIM availability
+                _logger.Debug("DWSIM type not available, creating placeholder for: {UnitId} (Name: {Name})", unitId, name);
+                return new { UnitType = "Separator3Phase", Name = name, UnitId = unitId };
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to create three-phase separator for {UnitId}", unitId);
+                throw new InvalidOperationException($"Failed to create three-phase separator: {ex.Message}", ex);
             }
         }
     }

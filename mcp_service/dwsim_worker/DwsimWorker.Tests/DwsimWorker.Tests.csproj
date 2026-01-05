@@ -43,6 +43,8 @@
     <Compile Include="Adapters\CompoundAdapterTests.cs" />
     <Compile Include="Adapters\StreamAdapterTests.cs" />
     <Compile Include="Adapters\PropertyPackageAdapterTests.cs" />
+    <Compile Include="Adapters\UnitOpAdapterTests.cs" />
+    <Compile Include="Adapters\ConnectionAdapterTests.cs" />
     <Compile Include="Utilities\PathResolverTests.cs" />
     <Compile Include="Integration\AssemblyLoadingIntegrationTests.cs" />
     <Compile Include="Performance\AssemblyLoadingPerformanceTests.cs" />
