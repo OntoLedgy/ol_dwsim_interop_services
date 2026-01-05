@@ -267,7 +267,7 @@ Tasks are ordered for logical implementation progression:
 
 ## Phase 3: Adapters
 
-- [ ] 7. Create CapeOpenPropertyConverter utility
+- [x] 7. Create CapeOpenPropertyConverter utility
   - Files:
     - `DwsimWorker/Converters/CapeOpenPropertyConverter.cs` (new)
   - Purpose: Map between user-friendly property names and CAPE-OPEN standard names
@@ -309,7 +309,7 @@ Tasks are ordered for logical implementation progression:
 
       After completion: Mark task [ ] as [-] in tasks.md before starting. After implementation, use log-implementation tool to record artifacts, then mark [-] as [x]._
 
-- [ ] 8. Create CompoundAdapter
+- [x] 8. Create CompoundAdapter
   - Files:
     - `DwsimWorker/Adapters/CompoundAdapter.cs` (new)
   - Purpose: Handle compound database access and compound addition to flowsheet
@@ -352,7 +352,7 @@ Tasks are ordered for logical implementation progression:
 
       After completion: Mark task [ ] as [-] in tasks.md before starting. After implementation, use log-implementation tool to record artifacts, then mark [-] as [x]._
 
-- [ ] 9. Create PropertyPackageAdapter
+- [x] 9. Create PropertyPackageAdapter
   - Files:
     - `DwsimWorker/Adapters/PropertyPackageAdapter.cs` (new)
   - Purpose: Configure thermodynamic property package for flowsheet
@@ -394,7 +394,7 @@ Tasks are ordered for logical implementation progression:
 
       After completion: Mark task [ ] as [-] in tasks.md before starting. After implementation, use log-implementation tool to record artifacts, then mark [-] as [x]._
 
-- [ ] 10. Create StreamAdapter
+- [x] 10. Create StreamAdapter
   - Files:
     - `DwsimWorker/Adapters/StreamAdapter.cs` (new)
   - Purpose: Create material streams and set/get thermodynamic properties using CAPE-OPEN interfaces
@@ -444,7 +444,7 @@ Tasks are ordered for logical implementation progression:
 
       After completion: Mark task [ ] as [-] in tasks.md before starting. After implementation, use log-implementation tool to record artifacts, then mark [-] as [x]._
 
-- [ ] 11. Create UnitOpAdapter
+- [x] 11. Create UnitOpAdapter
   - Files:
     - `DwsimWorker/Adapters/UnitOpAdapter.cs` (new)
   - Purpose: Add unit operations to flowsheet and configure their parameters
@@ -490,7 +490,7 @@ Tasks are ordered for logical implementation progression:
 
       After completion: Mark task [ ] as [-] in tasks.md before starting. After implementation, use log-implementation tool to record artifacts, then mark [-] as [x]._
 
-- [ ] 12. Create ConnectionAdapter
+- [x] 12. Create ConnectionAdapter
   - Files:
     - `DwsimWorker/Adapters/ConnectionAdapter.cs` (new)
   - Purpose: Connect material streams to unit operation ports

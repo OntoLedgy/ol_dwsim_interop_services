@@ -82,6 +82,12 @@
     <Compile Include="Engine\FlowsheetContextConfigBuilder.cs" />
     <Compile Include="Engine\PropertySetResult.cs" />
     <Compile Include="Engine\ConnectionResult.cs" />
+    <Compile Include="Adapters\CompoundAdapter.cs" />
+    <Compile Include="Adapters\PropertyPackageAdapter.cs" />
+    <Compile Include="Adapters\StreamAdapter.cs" />
+    <Compile Include="Adapters\UnitOpAdapter.cs" />
+    <Compile Include="Adapters\ConnectionAdapter.cs" />
+    <Compile Include="Converters\CapeOpenPropertyConverter.cs" />
     <Compile Include="Exceptions\DwsimException.cs" />
     <Compile Include="Exceptions\PropertySetException.cs" />
     <Compile Include="Exceptions\CompoundNotFoundException.cs" />
