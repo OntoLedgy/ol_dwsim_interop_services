@@ -77,6 +77,21 @@
     <Compile Include="Engine\AssemblyLoaderConfigBuilder.cs" />
     <Compile Include="Engine\DwsimValidator.cs" />
     <Compile Include="Engine\AssemblyLoader.cs" />
+    <Compile Include="Engine\FlowsheetContext.cs" />
+    <Compile Include="Engine\FlowsheetContextConfig.cs" />
+    <Compile Include="Engine\FlowsheetContextConfigBuilder.cs" />
+    <Compile Include="Engine\PropertySetResult.cs" />
+    <Compile Include="Engine\ConnectionResult.cs" />
+    <Compile Include="Exceptions\DwsimException.cs" />
+    <Compile Include="Exceptions\PropertySetException.cs" />
+    <Compile Include="Exceptions\CompoundNotFoundException.cs" />
+    <Compile Include="Exceptions\InvalidPropertyValueException.cs" />
+    <Compile Include="Exceptions\StreamNotFoundException.cs" />
+    <Compile Include="Exceptions\UnitNotFoundException.cs" />
+    <Compile Include="Models\StreamProperties.cs" />
+    <Compile Include="Models\Composition.cs" />
+    <Compile Include="Models\UnitOpConfig.cs" />
+    <Compile Include="Models\ConnectionInfo.cs" />
     <Compile Include="Utilities\PathResolver.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -87,7 +102,9 @@
     <Folder Include="Engine\" />
     <Folder Include="Adapters\" />
     <Folder Include="Converters\" />
+    <Folder Include="Exceptions\" />
     <Folder Include="Limits\" />
+    <Folder Include="Models\" />
     <Folder Include="Utilities\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

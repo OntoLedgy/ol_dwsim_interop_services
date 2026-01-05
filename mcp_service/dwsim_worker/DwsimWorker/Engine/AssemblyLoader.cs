@@ -74,7 +74,13 @@ namespace DwsimWorker.Engine
                 {
                     _logger.Information("Loading assembly: {AssemblyName}...", assemblyName);
 
+                    // Try .dll first, then .exe (for main DWSIM assembly)
                     var assemblyPath = Path.Combine(basePath, $"{assemblyName}.dll");
+                    if (!File.Exists(assemblyPath))
+                    {
+                        assemblyPath = Path.Combine(basePath, $"{assemblyName}.exe");
+                    }
+
                     var assembly = LoadAssembly(assemblyName, assemblyPath);
 
                     var assemblyInfo = new AssemblyInfo(

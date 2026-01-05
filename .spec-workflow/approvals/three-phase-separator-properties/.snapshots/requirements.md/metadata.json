@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/three-phase-separator-properties/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-02T17:36:10.033Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767375370001_0a5ot99sb",
+      "approvalTitle": "Requirements document for three-phase-separator-properties spec"
+    }
+  ]
+}

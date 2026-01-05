@@ -19,7 +19,7 @@ namespace DwsimWorker.Engine
         /// </summary>
         private static readonly string[] TypesToValidate = new[]
         {
-            "DWSIM.SharedClasses.Flowsheet",
+            "DWSIM.SharedClasses.FOSSEEFlowsheet",  // Actual Flowsheet class name
             "DWSIM.Thermodynamics.Streams.MaterialStream"
         };
 
@@ -93,12 +93,12 @@ namespace DwsimWorker.Engine
         }
 
         /// <summary>
-        /// Validates that DWSIM.SharedClasses.Flowsheet can be instantiated.
+        /// Validates that DWSIM.SharedClasses.FOSSEEFlowsheet can be instantiated.
         /// </summary>
         /// <returns>A ValidationResult for Flowsheet instantiation.</returns>
         public ValidationResult ValidateFlowsheetCreation()
         {
-            const string typeName = "DWSIM.SharedClasses.Flowsheet";
+            const string typeName = "DWSIM.SharedClasses.FOSSEEFlowsheet";
 
             try
             {

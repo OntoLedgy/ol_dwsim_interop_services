@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/three-phase-separator-properties/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-05T09:22:18.241Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767604938206_2gsu8zmf4",
+      "approvalTitle": "Tasks document for three-phase-separator-properties spec"
+    }
+  ]
+}
