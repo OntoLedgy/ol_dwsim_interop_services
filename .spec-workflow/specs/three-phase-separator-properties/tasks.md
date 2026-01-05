@@ -581,7 +581,7 @@ Tasks are ordered for logical implementation progression:
 
       After completion: Mark task [ ] as [-] in tasks.md before starting. After implementation, use log-implementation tool to record artifacts, then mark [-] as [x]._
 
-- [ ] 14. Create StreamAdapter unit tests
+- [x] 14. Create StreamAdapter unit tests
   - Files:
     - `DwsimWorker.Tests/Adapters/StreamAdapterTests.cs` (new)
   - Purpose: Validate stream creation and property round-trip
@@ -633,7 +633,7 @@ Tasks are ordered for logical implementation progression:
 
       After completion: Mark task [ ] as [-] in tasks.md before starting. After implementation, use log-implementation tool to record artifacts, then mark [-] as [x]._
 
-- [ ] 15. Create UnitOpAdapter and ConnectionAdapter unit tests
+- [x] 15. Create UnitOpAdapter and ConnectionAdapter unit tests
   - Files:
     - `DwsimWorker.Tests/Adapters/UnitOpAdapterTests.cs` (new)
     - `DwsimWorker.Tests/Adapters/ConnectionAdapterTests.cs` (new)
@@ -685,9 +685,9 @@ Tasks are ordered for logical implementation progression:
 
 ## Phase 5: Integration and Performance
 
-- [ ] 16. Create golden integration test for three-phase separator workflow
+- [x] 16. Create golden integration test for three-phase separator workflow
   - Files:
-    - `DwsimWorker.Tests/Integration/ThreePhaseSeparatorWorkflowTests.cs` (new)
+    - `DwsimWorker.Tests/Integration/ThreePhaseSeparatorIntegrationTests.cs` (new)
   - Purpose: Validate complete end-to-end workflow from requirements validation test plan
   - _Leverage: All adapters, `DwsimWorker.Tests/TestConfiguration.cs`_
   - _Requirements: All requirements (Req 1-6), Validation Test Plan from requirements.md_
@@ -743,7 +743,7 @@ Tasks are ordered for logical implementation progression:
 
       After completion: Mark task [ ] as [-] in tasks.md before starting. After implementation, use log-implementation tool to record artifacts, then mark [-] as [x]._
 
-- [ ] 17. Create performance tests
+- [x] 17. Create performance tests
   - Files:
     - `DwsimWorker.Tests/Performance/PropertySetPerformanceTests.cs` (new)
   - Purpose: Validate NFR performance targets are met
@@ -797,7 +797,7 @@ Tasks are ordered for logical implementation progression:
 
 ## Phase 6: Documentation and Cleanup
 
-- [ ] 18. Update DwsimWorker project file and add XML documentation
+- [x] 18. Update DwsimWorker project file and add XML documentation
   - Files:
     - `DwsimWorker/DwsimWorker.csproj` (modify)
     - All new .cs files (add XML documentation if missing)
@@ -841,7 +841,7 @@ Tasks are ordered for logical implementation progression:
 
       After completion: Mark task [ ] as [-] in tasks.md before starting. After implementation, use log-implementation tool to record artifacts, then mark [-] as [x]._
 
-- [ ] 19. Final validation and test run
+- [x] 19. Final validation and test run
   - Files:
     - None (validation task)
   - Purpose: Run all tests, verify all requirements are met, document any issues

@@ -165,6 +165,194 @@ dwsim_worker/
 └── DwsimWorker.sln               # Visual Studio solution
 ```
 
+## Specification 1.2: Three-Phase Separator Properties (Adapters Layer)
+
+Specification 1.2 adds a comprehensive adapters layer for flowsheet configuration and property manipulation. This layer provides clean, type-safe interfaces for working with DWSIM flowsheets.
+
+### New Components
+
+#### Adapters
+High-level API wrappers that simplify DWSIM interactions:
+
+- **CompoundAdapter** - Add compounds from DWSIM database to flowsheet
+- **PropertyPackageAdapter** - Configure thermodynamic property packages (Peng-Robinson, NRTL, etc.)
+- **StreamAdapter** - Create material streams and set/get thermodynamic properties
+- **UnitOpAdapter** - Add unit operations (three-phase separators) and configure parameters
+- **ConnectionAdapter** - Connect streams to unit operation ports and validate flowsheet topology
+
+#### Models
+Type-safe domain models for physical properties:
+
+- **PhysicalQuantities** - Base types for Temperature, Pressure, MolarFlowRate
+- **UnitsOfMeasure** - Unit definitions with valid ranges
+- **Measurements** - Value + unit combinations
+- **PhysicalProperties** - Named property with measurement
+- **StreamProperties** - Complete stream state (T, P, flow, composition)
+- **Composition** - Mole fraction array with validation
+- **UnitOpConfig** - Unit operation configuration parameters
+- **ConnectionInfo** - Stream-to-unit connection details
+
+#### Converters
+- **CapeOpenPropertyConverter** - Maps property names to CAPE-OPEN identifiers
+
+#### Exceptions
+Custom exception types for domain-specific errors:
+- **DwsimException** (base)
+- **PropertySetException**
+- **CompoundNotFoundException**
+- **InvalidPropertyValueException**
+- **StreamNotFoundException**
+- **UnitNotFoundException**
+
+### Usage Examples
+
+#### Configure a Three-Phase Separator Flowsheet
+
+```csharp
+using DwsimWorker.Engine;
+using DwsimWorker.Adapters;
+using DwsimWorker.Models;
+
+// Initialize flowsheet context
+var config = new FlowsheetContextConfigBuilder()
+    .WithAssemblyPath("C:\\Path\\To\\DWSIM")
+    .WithFlowsheetName("MySeparator")
+    .Build();
+
+var context = new FlowsheetContext(logger, config);
+context.Initialize();
+
+// Initialize adapters
+var compoundAdapter = new CompoundAdapter(logger, context);
+var propertyPackageAdapter = new PropertyPackageAdapter(logger, context);
+var streamAdapter = new StreamAdapter(logger, context);
+var unitOpAdapter = new UnitOpAdapter(logger, context);
+var connectionAdapter = new ConnectionAdapter(logger, context);
+
+// Add compounds
+compoundAdapter.AddCompound("Methane");
+compoundAdapter.AddCompound("Ethane");
+compoundAdapter.AddCompound("Propane");
+compoundAdapter.AddCompound("Water");
+
+// Set property package
+propertyPackageAdapter.SetPropertyPackage("Peng-Robinson");
+
+// Create inlet stream
+var inletProps = new StreamProperties(
+    new PhysicalProperties("Temperature", new Measurements(new Temperature(), 298.15, kelvinUnit)),
+    new PhysicalProperties("Pressure", new Measurements(new Pressure(), 500000, pascalUnit)),
+    new PhysicalProperties("MolarFlow", new Measurements(new MolarFlowRate(), 100.0, molPerSecUnit)),
+    new Composition(new[] { 0.4, 0.3, 0.2, 0.1 })
+);
+var inletResult = streamAdapter.CreateStream("INLET", inletProps);
+
+// Create three-phase separator
+var separatorConfig = new UnitOpConfig(new Dictionary<string, object>
+{
+    { "PressureDrop", 5000.0 }  // 0.05 bar pressure drop
+});
+var separatorResult = unitOpAdapter.AddThreePhaseSeparator("SEP-101", separatorConfig);
+
+// Create outlet streams
+streamAdapter.CreateStream("VAPOR_OUT", vaporProps);
+streamAdapter.CreateStream("LIQUID1_OUT", liquid1Props);
+streamAdapter.CreateStream("LIQUID2_OUT", liquid2Props);
+
+// Connect streams
+connectionAdapter.ConnectStream(inletResult.Message, separatorResult.Message, "Inlet");
+connectionAdapter.ConnectStream("VAPOR_OUT", separatorResult.Message, "VaporOutlet");
+connectionAdapter.ConnectStream("LIQUID1_OUT", separatorResult.Message, "LiquidOutlet1");
+connectionAdapter.ConnectStream("LIQUID2_OUT", separatorResult.Message, "LiquidOutlet2");
+
+// Validate topology
+var validation = connectionAdapter.ValidateTopology();
+if (validation.Success)
+{
+    Console.WriteLine("Flowsheet configured successfully!");
+}
+```
+
+#### Property Operations
+
+```csharp
+// Set stream property
+streamAdapter.SetProperty("INLET", "Temperature", 310.15);  // Change to 310.15 K
+
+// Get stream property
+var result = streamAdapter.GetProperty("INLET", "Temperature");
+if (result.Success)
+{
+    var temperature = (double)result.Data;
+    Console.WriteLine($"Inlet temperature: {temperature} K");
+}
+
+// Get all stream properties
+var propsResult = streamAdapter.GetProperties("INLET");
+if (propsResult.Success)
+{
+    var props = (StreamProperties)propsResult.Data;
+    Console.WriteLine($"T={props.Temperature.Value.Value} K, P={props.Pressure.Value.Value} Pa");
+}
+```
+
+### Testing
+
+Spec 1.2 includes comprehensive tests:
+
+#### Unit Tests
+- **CompoundAdapterTests** - 17 tests for compound operations
+- **PropertyPackageAdapterTests** - 22 tests for property package configuration
+- **StreamAdapterTests** - 21 tests for stream creation and property round-trip
+- **UnitOpAdapterTests** - 20 tests for unit operation management
+- **ConnectionAdapterTests** - 22 tests for stream connections and topology validation
+
+#### Integration Tests
+- **ThreePhaseSeparatorIntegrationTests** - Golden test validating complete workflow
+  - End-to-end flowsheet configuration
+  - Error scenario testing (invalid connections, duplicates)
+
+#### Performance Tests
+- **PropertySetPerformanceTests** - NFR performance validation
+  - Individual operation latencies (AddCompound < 100ms, CreateStream < 200ms, etc.)
+  - Full workflow performance (4 compounds + 4 streams + 1 separator < 2 seconds)
+  - Memory footprint validation (< 50MB)
+  - Performance baseline metrics for regression detection
+
+Run tests:
+```bash
+# All tests
+dotnet test DwsimWorker.Tests
+
+# Unit tests only
+dotnet test DwsimWorker.Tests --filter Category!=Integration&Category!=Performance
+
+# Integration tests
+dotnet test DwsimWorker.Tests --filter Category=Integration
+
+# Performance tests
+dotnet test DwsimWorker.Tests --filter Category=Performance
+```
+
+### Requirements Satisfied
+
+Spec 1.2 implements:
+- **Req 1**: Compound management via CompoundAdapter
+- **Req 2**: Property package configuration via PropertyPackageAdapter
+- **Req 3**: Material stream properties with round-trip validation via StreamAdapter
+- **Req 4**: Three-phase separator support via UnitOpAdapter
+- **Req 5**: Stream connections via ConnectionAdapter
+- **Req 6**: Flowsheet consistency validation
+
+### Design Principles
+
+- **Result Pattern**: All operations return Result types (LoadResult, PropertySetResult, ValidationResult, ConnectionResult) instead of throwing exceptions for expected failures
+- **Immutability**: Models are immutable value types
+- **Type Safety**: Strong typing for physical quantities with units
+- **Validation**: Input validation at adapter boundaries
+- **Logging**: Comprehensive structured logging using Serilog
+- **Testability**: All adapters accept logger and context via constructor injection
+
 ## API Reference
 
 The worker exposes the following JSON-RPC methods to the MCP server:

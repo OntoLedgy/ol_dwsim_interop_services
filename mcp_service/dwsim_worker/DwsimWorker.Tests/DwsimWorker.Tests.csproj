@@ -47,7 +47,9 @@
     <Compile Include="Adapters\ConnectionAdapterTests.cs" />
     <Compile Include="Utilities\PathResolverTests.cs" />
     <Compile Include="Integration\AssemblyLoadingIntegrationTests.cs" />
+    <Compile Include="Integration\ThreePhaseSeparatorIntegrationTests.cs" />
     <Compile Include="Performance\AssemblyLoadingPerformanceTests.cs" />
+    <Compile Include="Performance\PropertySetPerformanceTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">
