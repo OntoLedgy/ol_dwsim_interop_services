@@ -119,7 +119,7 @@ namespace DwsimWorker.Adapters
             if (!SupportedPackages.Contains(packageName))
             {
                 var message = $"Unsupported property package: '{packageName}'. " +
-                             $"Supported packages: {string.Join(", ", GetAvailablePackages().Data)}";
+                             $"Supported packages: {string.Join(", ", GetAvailablePackages().ValidatedTypes)}";
                 _logger.Warning("Property package validation failed: {PackageName}", packageName);
                 return LoadResult.FailureResult(message, new ArgumentException(message, nameof(packageName)));
             }

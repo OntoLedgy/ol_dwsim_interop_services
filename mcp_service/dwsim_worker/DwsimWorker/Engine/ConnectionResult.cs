@@ -26,6 +26,12 @@ namespace DwsimWorker.Engine
         public ConnectionInfo Connection { get; }
 
         /// <summary>
+        /// Gets the data returned from an operation (e.g., list of connections).
+        /// Only set for get operations that return collections.
+        /// </summary>
+        public object Data { get; }
+
+        /// <summary>
         /// Gets the exception that caused the failure, if any.
         /// Null if the operation succeeded or failed without an exception.
         /// </summary>
@@ -38,16 +44,19 @@ namespace DwsimWorker.Engine
         /// <param name="success">Whether the operation succeeded.</param>
         /// <param name="message">A message describing the result.</param>
         /// <param name="connection">The connection information if successful.</param>
+        /// <param name="data">The data returned from a get operation.</param>
         /// <param name="error">The exception that caused the failure, if any.</param>
         private ConnectionResult(
             bool success,
             string message,
             ConnectionInfo connection = null,
+            object data = null,
             Exception error = null)
         {
             Success = success;
             Message = message ?? string.Empty;
             Connection = connection;
+            Data = data;
             Error = error;
         }
 
@@ -79,6 +88,20 @@ namespace DwsimWorker.Engine
             return new ConnectionResult(
                 success: true,
                 message: message ?? "Stream disconnected successfully");
+        }
+
+        /// <summary>
+        /// Creates a success result with data returned from a get operation.
+        /// </summary>
+        /// <param name="data">The data being returned (e.g., list of connections).</param>
+        /// <param name="message">Optional success message.</param>
+        /// <returns>A ConnectionResult indicating success with data.</returns>
+        public static ConnectionResult SuccessResultWithData(object data, string message = null)
+        {
+            return new ConnectionResult(
+                success: true,
+                message: message ?? "Data retrieved successfully",
+                data: data);
         }
 
         /// <summary>

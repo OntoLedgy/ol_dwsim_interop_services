@@ -205,13 +205,14 @@ namespace DwsimWorker.Adapters
                 }
 
                 // Step 3: Remove connection
-                _context.RemoveConnection(connection);
+                _context.RemoveConnection(connection.StreamId);
 
                 // Step 4: Log success
                 _logger.Information("Stream disconnected successfully: {StreamId} (was connected to {UnitId}.{PortName})",
                     streamId, connection.UnitId, connection.PortName);
 
-                return ConnectionResult.SuccessResult(connection);
+                return ConnectionResult.SuccessResultForDisconnect(
+                    $"Stream '{streamId}' disconnected successfully (was connected to {connection.UnitId}.{connection.PortName})");
             }
             catch (Exception ex)
             {
@@ -319,7 +320,7 @@ namespace DwsimWorker.Adapters
                 _logger.Information("Retrieved {ConnectionCount} connections", connections.Count);
 
                 // Return as a list
-                return ConnectionResult.SuccessResult(connections.ToList());
+                return ConnectionResult.SuccessResultWithData(connections.ToList());
             }
             catch (Exception ex)
             {

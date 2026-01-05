@@ -300,7 +300,7 @@ namespace DwsimWorker.Adapters
                 _logger.Debug("Parameter retrieved: {UnitId}.{ParameterName}={Value}",
                     unitId, parameterName, value);
 
-                return PropertySetResult.SuccessResult(value);
+                return PropertySetResult.SuccessResultWithData(value);
             }
             catch (Exception ex)
             {

@@ -316,7 +316,7 @@ namespace DwsimWorker.Adapters
                 _logger.Debug("Property retrieved: {StreamId}.{PropertyName}={Value}",
                     streamId, propertyName, value);
 
-                return PropertySetResult.SuccessResult(value);
+                return PropertySetResult.SuccessResultWithData(value);
             }
             catch (Exception ex)
             {
@@ -420,7 +420,7 @@ namespace DwsimWorker.Adapters
 
                 _logger.Debug("All properties retrieved from stream {StreamId}", streamId);
 
-                return PropertySetResult.SuccessResult(properties);
+                return PropertySetResult.SuccessResultWithData(properties);
             }
             catch (Exception ex)
             {

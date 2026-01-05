@@ -31,6 +31,12 @@ namespace DwsimWorker.Engine
         public string PropertyName { get; }
 
         /// <summary>
+        /// Gets the data returned from a get operation (e.g., property value).
+        /// Only set for get operations.
+        /// </summary>
+        public object Data { get; }
+
+        /// <summary>
         /// Gets the exception that caused the failure, if any.
         /// Null if the operation succeeded or failed without an exception.
         /// </summary>
@@ -44,18 +50,21 @@ namespace DwsimWorker.Engine
         /// <param name="message">A message describing the result.</param>
         /// <param name="objectId">The ID of the created/modified object.</param>
         /// <param name="propertyName">The name of the property that was set.</param>
+        /// <param name="data">The data returned from a get operation.</param>
         /// <param name="error">The exception that caused the failure, if any.</param>
         private PropertySetResult(
             bool success,
             string message,
             string objectId = null,
             string propertyName = null,
+            object data = null,
             Exception error = null)
         {
             Success = success;
             Message = message ?? string.Empty;
             ObjectId = objectId;
             PropertyName = propertyName;
+            Data = data;
             Error = error;
         }
 
@@ -102,6 +111,20 @@ namespace DwsimWorker.Engine
             return new PropertySetResult(
                 success: true,
                 message: message ?? "Operation completed successfully");
+        }
+
+        /// <summary>
+        /// Creates a success result with data returned from a get operation.
+        /// </summary>
+        /// <param name="data">The data being returned (e.g., property value).</param>
+        /// <param name="message">Optional success message.</param>
+        /// <returns>A PropertySetResult indicating success with data.</returns>
+        public static PropertySetResult SuccessResultWithData(object data, string message = null)
+        {
+            return new PropertySetResult(
+                success: true,
+                message: message ?? "Data retrieved successfully",
+                data: data);
         }
 
         /// <summary>

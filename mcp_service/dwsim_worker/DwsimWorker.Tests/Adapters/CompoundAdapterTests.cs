@@ -40,7 +40,7 @@ namespace DwsimWorker.Tests.Adapters
             var logger = _mockLogger.Object;
             var config = new FlowsheetContextConfigBuilder()
                 .WithAssemblyPath(TestConfiguration.DwsimAssemblyPath)
-                .WithValidationEnabled(false)  // Disable validation for faster tests
+                .WithValidation(false)  // Disable validation for faster tests
                 .Build();
 
             _context = new FlowsheetContext(logger, config);
