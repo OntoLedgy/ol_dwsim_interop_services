@@ -40,6 +40,7 @@
     <Compile Include="Engine\AssemblyLoaderTests.cs" />
     <Compile Include="Engine\DwsimValidatorTests.cs" />
     <Compile Include="Engine\FlowsheetContextTests.cs" />
+    <Compile Include="Adapters\CompoundAdapterTests.cs" />
     <Compile Include="Utilities\PathResolverTests.cs" />
     <Compile Include="Integration\AssemblyLoadingIntegrationTests.cs" />
     <Compile Include="Performance\AssemblyLoadingPerformanceTests.cs" />
