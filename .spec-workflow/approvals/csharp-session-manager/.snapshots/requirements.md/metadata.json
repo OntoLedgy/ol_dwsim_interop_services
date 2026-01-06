@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/csharp-session-manager/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-06T15:23:27.302Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767713007283_r31sg796c",
+      "approvalTitle": "Spec 2.2: Session Manager Requirements"
+    }
+  ]
+}

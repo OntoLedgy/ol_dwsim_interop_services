@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/csharp-session-manager/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-06T16:20:43.219Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767716443204_x9lnyd27q",
+      "approvalTitle": "Spec 2.2: Session Manager Tasks"
+    }
+  ]
+}
