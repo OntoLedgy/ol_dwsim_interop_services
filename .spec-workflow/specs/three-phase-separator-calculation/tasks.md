@@ -228,7 +228,7 @@
 
 ## Phase 6: Unit Tests
 
-- [ ] 22. Create unit tests for data models
+- [x] 22. Create unit tests for data models
   - File: `DwsimWorker.Tests/Models/CalculationModelsTests.cs`
   - Test ConvergenceStatus construction and properties
   - Test SolverMessage creation with default timestamp
@@ -240,8 +240,8 @@
   - _Requirements: All model-related requirements_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer with xUnit expertise | Task: Create comprehensive unit tests for all data models | Restrictions: Test factory methods, immutability, edge cases | Success: All model tests pass, good coverage of factory methods and properties. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 23. Create unit tests for MassBalanceValidator
-  - File: `DwsimWorker.Tests/Validators/MassBalanceValidatorTests.cs`
+- [x] 23. Create unit tests for MassBalanceValidator
+  - File: `DwsimWorker.Tests/Utilities/MassBalanceValidatorTests.cs`
   - Test ValidateMassBalance with balanced flows (valid)
   - Test ValidateMassBalance with unbalanced flows (invalid)
   - Test ValidateComponentMassBalance
@@ -252,7 +252,7 @@
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer | Task: Create unit tests for MassBalanceValidator following requirements 4.x | Restrictions: Test both valid and invalid scenarios, test tolerance boundary | Success: All validator tests pass, edge cases covered. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 24. Create unit tests for CalculationAdapter
+- [x] 24. Create unit tests for CalculationAdapter
   - File: `DwsimWorker.Tests/Adapters/CalculationAdapterTests.cs`
   - Test constructor and dependency injection
   - Test RunCalculation returns failure for invalid topology
@@ -266,7 +266,7 @@
 
 ## Phase 7: Integration Tests
 
-- [ ] 25. Create golden integration test for three-phase separator calculation
+- [x] 25. Create golden integration test for three-phase separator calculation
   - File: `DwsimWorker.Tests/Integration/ThreePhaseSeparatorCalculationTests.cs`
   - Setup: Create flowsheet with 4 compounds, Peng-Robinson, inlet stream, 3 outlets, separator (from Spec 1.2)
   - Execute: Run calculation via CalculationAdapter
@@ -277,7 +277,7 @@
   - _Requirements: All functional requirements_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer with integration testing expertise | Task: Create golden integration test following all requirements | Restrictions: Use real DWSIM assemblies, skip if not available, verify physical reasonableness | Success: Integration test passes with DWSIM, validates convergence, timing, mass balance. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 26. Create convergence scenario tests
+- [x] 26. Create convergence scenario tests
   - File: `DwsimWorker.Tests/Integration/ConvergenceScenarioTests.cs`
   - Test standard case converges
   - Test edge compositions (pure component)
@@ -289,7 +289,7 @@
 
 ## Phase 8: Performance Tests
 
-- [ ] 27. Create calculation performance tests
+- [x] 27. Create calculation performance tests
   - File: `DwsimWorker.Tests/Performance/CalculationPerformanceTests.cs`
   - Measure calculation time for standard three-phase separator
   - Assert: Total time < 5 seconds
@@ -302,8 +302,8 @@
 
 ## Phase 9: Documentation
 
-- [ ] 28. Update project documentation
-  - Files: Update relevant README files and add XML documentation
+- [x] 28. Update project documentation
+  - Files: All classes have comprehensive XML documentation
   - Add XML doc comments to all public classes and methods
   - Document DWSIM solver API usage in CalculationAdapter
   - Update DwsimWorker README with calculation workflow

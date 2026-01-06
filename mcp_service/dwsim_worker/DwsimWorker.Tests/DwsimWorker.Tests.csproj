@@ -45,11 +45,17 @@
     <Compile Include="Adapters\PropertyPackageAdapterTests.cs" />
     <Compile Include="Adapters\UnitOpAdapterTests.cs" />
     <Compile Include="Adapters\ConnectionAdapterTests.cs" />
+    <Compile Include="Adapters\CalculationAdapterTests.cs" />
+    <Compile Include="Models\CalculationModelsTests.cs" />
     <Compile Include="Utilities\PathResolverTests.cs" />
+    <Compile Include="Utilities\MassBalanceValidatorTests.cs" />
     <Compile Include="Integration\AssemblyLoadingIntegrationTests.cs" />
     <Compile Include="Integration\ThreePhaseSeparatorIntegrationTests.cs" />
+    <Compile Include="Integration\ThreePhaseSeparatorCalculationTests.cs" />
+    <Compile Include="Integration\ConvergenceScenarioTests.cs" />
     <Compile Include="Performance\AssemblyLoadingPerformanceTests.cs" />
     <Compile Include="Performance\PropertySetPerformanceTests.cs" />
+    <Compile Include="Performance\CalculationPerformanceTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">

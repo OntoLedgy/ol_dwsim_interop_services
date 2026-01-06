@@ -1,6 +1,15 @@
 # Building
 
-use ./build.bat to build the project.
+## Build Command
+
+Always use this exact command to build:
+```bash
+cd "D:\S\C#\dwsim_interop_services\mcp_service\dwsim_worker" && ./build.bat 2>&1
+
+Key points:
+- Change to the mcp_service\dwsim_worker directory first
+- Use ./build.bat (not cmd /c build.bat or just build.bat)
+- Include 2>&1 to capture all output including errors
 
 
 # Task Management
