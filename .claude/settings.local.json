@@ -5,7 +5,11 @@
       "mcp__spec-workflow__spec-status",
       "mcp__spec-workflow__log-implementation",
       "Bash(awk:*)",
-      "mcp__spec-workflow__spec-workflow-guide"
+      "mcp__spec-workflow__spec-workflow-guide",
+      "Bash(dotnet test:*)",
+      "Bash(./build.bat)",
+      "Bash(msbuild:*)",
+      "Bash(git add:*)"
     ]
   }
 }
