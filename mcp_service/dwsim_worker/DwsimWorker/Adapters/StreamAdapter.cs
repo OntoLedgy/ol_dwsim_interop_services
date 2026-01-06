@@ -582,6 +582,182 @@ namespace DwsimWorker.Adapters
         }
 
         /// <summary>
+        /// Gets calculated properties from a stream after a calculation has been performed.
+        /// </summary>
+        /// <param name="streamId">The unique stream identifier.</param>
+        /// <param name="streamName">Optional stream name. If not provided, uses streamId.</param>
+        /// <returns>A StreamResult containing all calculated properties.</returns>
+        /// <remarks>
+        /// This method should be called after a flowsheet calculation to retrieve the computed
+        /// thermodynamic properties, phase fractions, and compositions. It returns a StreamResult
+        /// object with all relevant data for analysis and validation.
+        /// </remarks>
+        public StreamResult GetCalculatedProperties(string streamId, string streamName = null)
+        {
+            if (string.IsNullOrWhiteSpace(streamId))
+                throw new ArgumentNullException(nameof(streamId));
+
+            _logger.Debug("Getting calculated properties from stream {StreamId}", streamId);
+
+            try
+            {
+                // Validate stream exists
+                var stream = _context.GetStream(streamId);
+                if (stream == null)
+                {
+                    throw new StreamNotFoundException(streamId);
+                }
+
+                // Get cached properties (in full implementation, this would query DWSIM MaterialStream)
+                if (!_streamPropertiesCache.TryGetValue(streamId, out var properties))
+                {
+                    throw new InvalidOperationException($"No properties available for stream '{streamId}'");
+                }
+
+                // TODO: In full implementation, extract calculated properties from DWSIM MaterialStream
+                // including phase properties, equilibrium data, and all thermodynamic properties
+
+                // For now, create StreamResult from cached data
+                var result = new StreamResult(
+                    streamId: streamId,
+                    streamName: streamName ?? streamId,
+                    temperatureK: properties.Temperature.Measurement.Value,
+                    pressurePa: properties.Pressure.Measurement.Value,
+                    molarFlowMolPerSec: properties.MolarFlow.Measurement.Value,
+                    massFlowKgPerSec: properties.MolarFlow.Measurement.Value * 18.0 / 1000.0, // Placeholder: assumes water MW
+                    overallComposition: properties.Composition,
+                    vaporFraction: 0.0, // TODO: Get from DWSIM after calculation
+                    liquidFraction: 1.0, // TODO: Get from DWSIM after calculation
+                    phases: null); // TODO: Get phase properties from DWSIM
+
+                _logger.Information("Calculated properties retrieved for stream {StreamId}", streamId);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to get calculated properties for stream {StreamId}", streamId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets phase-specific properties for a given phase in a stream.
+        /// </summary>
+        /// <param name="streamId">The unique stream identifier.</param>
+        /// <param name="phaseName">The phase name (e.g., "Vapor", "Liquid1", "Liquid2", "Overall").</param>
+        /// <returns>PhaseProperties for the specified phase.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when streamId or phaseName is null/empty.</exception>
+        /// <exception cref="StreamNotFoundException">Thrown when the stream is not found.</exception>
+        /// <exception cref="ArgumentException">Thrown when the phase is not found in the stream.</exception>
+        public PhaseProperties GetPhaseProperties(string streamId, string phaseName)
+        {
+            if (string.IsNullOrWhiteSpace(streamId))
+                throw new ArgumentNullException(nameof(streamId));
+
+            if (string.IsNullOrWhiteSpace(phaseName))
+                throw new ArgumentNullException(nameof(phaseName));
+
+            _logger.Debug("Getting phase properties for {PhaseName} in stream {StreamId}", phaseName, streamId);
+
+            try
+            {
+                // Validate stream exists
+                var stream = _context.GetStream(streamId);
+                if (stream == null)
+                {
+                    throw new StreamNotFoundException(streamId);
+                }
+
+                // TODO: In full implementation, query DWSIM MaterialStream for phase-specific properties
+                // This would include phase equilibrium data, compositions, and thermophysical properties
+
+                // For now, return placeholder phase properties
+                if (!_streamPropertiesCache.TryGetValue(streamId, out var properties))
+                {
+                    throw new InvalidOperationException($"No properties available for stream '{streamId}'");
+                }
+
+                // Create placeholder phase properties
+                var phaseProperties = new PhaseProperties(
+                    phaseName: phaseName,
+                    molarFlowMolPerSec: properties.MolarFlow.Measurement.Value,
+                    massFlowKgPerSec: properties.MolarFlow.Measurement.Value * 18.0 / 1000.0,
+                    phaseFraction: phaseName == "Overall" ? 1.0 : (phaseName == "Liquid1" ? 1.0 : 0.0),
+                    composition: properties.Composition,
+                    densityKgPerM3: 1000.0, // Placeholder
+                    viscosityPaS: 0.001, // Placeholder
+                    molecularWeightKgPerKmol: 18.0); // Placeholder
+
+                _logger.Information("Phase properties retrieved for {PhaseName} in stream {StreamId}", phaseName, streamId);
+                return phaseProperties;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to get phase properties for {PhaseName} in stream {StreamId}", phaseName, streamId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets all phase properties from a stream.
+        /// </summary>
+        /// <param name="streamId">The unique stream identifier.</param>
+        /// <returns>A dictionary of phase properties keyed by phase name.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when streamId is null/empty.</exception>
+        /// <exception cref="StreamNotFoundException">Thrown when the stream is not found.</exception>
+        public IReadOnlyDictionary<string, PhaseProperties> GetAllPhaseProperties(string streamId)
+        {
+            if (string.IsNullOrWhiteSpace(streamId))
+                throw new ArgumentNullException(nameof(streamId));
+
+            _logger.Debug("Getting all phase properties for stream {StreamId}", streamId);
+
+            try
+            {
+                // Validate stream exists
+                var stream = _context.GetStream(streamId);
+                if (stream == null)
+                {
+                    throw new StreamNotFoundException(streamId);
+                }
+
+                // TODO: In full implementation, query DWSIM MaterialStream for all phases
+                // and their properties after calculation
+
+                var phases = new Dictionary<string, PhaseProperties>();
+
+                // Get properties for each phase
+                // In a full implementation, this would detect which phases are present
+                var phaseNames = new[] { "Vapor", "Liquid1", "Liquid2", "Overall" };
+
+                foreach (var phaseName in phaseNames)
+                {
+                    try
+                    {
+                        var phaseProps = GetPhaseProperties(streamId, phaseName);
+                        if (phaseProps != null)
+                        {
+                            phases[phaseName] = phaseProps;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Debug(ex, "Phase {PhaseName} not available for stream {StreamId}", phaseName, streamId);
+                        // Continue with other phases
+                    }
+                }
+
+                _logger.Information("Retrieved {PhaseCount} phases for stream {StreamId}", phases.Count, streamId);
+                return phases;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to get all phase properties for stream {StreamId}", streamId);
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Creates a DWSIM MaterialStream instance using reflection.
         /// </summary>
         /// <param name="name">The name for the stream.</param>

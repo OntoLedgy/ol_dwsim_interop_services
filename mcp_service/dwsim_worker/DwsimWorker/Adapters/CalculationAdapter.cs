@@ -1,0 +1,370 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using Serilog;
+using DwsimWorker.Engine;
+using DwsimWorker.Models;
+using DwsimWorker.Exceptions;
+using DwsimWorker.Utilities;
+
+namespace DwsimWorker.Adapters
+{
+    /// <summary>
+    /// Adapter for running flowsheet calculations and extracting results.
+    /// Orchestrates solver invocation, convergence monitoring, result extraction, and mass balance validation.
+    /// </summary>
+    /// <remarks>
+    /// The CalculationAdapter provides a high-level interface for:
+    /// - Running DWSIM flowsheet calculations with timeout support
+    /// - Monitoring convergence status and capturing solver diagnostics
+    /// - Extracting calculated properties from all streams
+    /// - Validating mass balances across the flowsheet
+    /// - Collecting performance metrics and timing information
+    ///
+    /// This adapter wraps the low-level DWSIM solver API and provides a clean,
+    /// immutable result pattern for all calculation operations.
+    /// </remarks>
+    public sealed class CalculationAdapter
+    {
+        private readonly ILogger _logger;
+        private readonly FlowsheetContext _context;
+        private readonly StreamAdapter _streamAdapter;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CalculationAdapter"/> class.
+        /// </summary>
+        /// <param name="logger">The logger instance for calculation operation logging.</param>
+        /// <param name="context">The flowsheet context that manages calculation state.</param>
+        /// <param name="streamAdapter">The stream adapter for extracting calculated properties.</param>
+        /// <exception cref="ArgumentNullException">Thrown when any parameter is null.</exception>
+        public CalculationAdapter(ILogger logger, FlowsheetContext context, StreamAdapter streamAdapter)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _streamAdapter = streamAdapter ?? throw new ArgumentNullException(nameof(streamAdapter));
+
+            _logger.Debug("CalculationAdapter initialized");
+        }
+
+        /// <summary>
+        /// Runs the flowsheet calculation without timeout.
+        /// </summary>
+        /// <returns>A CalculationResult containing the complete calculation results.</returns>
+        public CalculationResult RunCalculation()
+        {
+            return RunCalculation(TimeSpan.Zero);
+        }
+
+        /// <summary>
+        /// Runs the flowsheet calculation with the specified timeout.
+        /// </summary>
+        /// <param name="timeout">The maximum time to allow for the calculation. Use TimeSpan.Zero for no timeout.</param>
+        /// <returns>A CalculationResult containing the complete calculation results or timeout information.</returns>
+        public CalculationResult RunCalculation(TimeSpan timeout)
+        {
+            _logger.Information("Starting flowsheet calculation (timeout: {Timeout})",
+                timeout == TimeSpan.Zero ? "none" : timeout.ToString());
+
+            var startTime = DateTime.UtcNow;
+            var sw = Stopwatch.StartNew();
+
+            try
+            {
+                // Step 1: Validate flowsheet is ready
+                var flowsheet = _context.GetFlowsheet();
+                if (flowsheet == null)
+                {
+                    return CalculationResult.FailureResult(
+                        "Flowsheet is not initialized",
+                        new InvalidOperationException("Flowsheet is null"));
+                }
+
+                // Step 2: Run calculation with optional timeout
+                bool calculationSuccess;
+                if (timeout > TimeSpan.Zero)
+                {
+                    calculationSuccess = RunCalculationWithTimeout(flowsheet, timeout, sw);
+                }
+                else
+                {
+                    calculationSuccess = RunCalculationCore(flowsheet);
+                }
+
+                sw.Stop();
+                var endTime = DateTime.UtcNow;
+
+                // Step 3: Create timing information
+                var timing = CalculationTiming.FromTimestamps(startTime, endTime);
+
+                // Step 4: Check convergence status
+                var convergenceStatus = GetConvergenceStatus(flowsheet);
+
+                // Step 5: Capture solver messages
+                var messages = GetSolverMessages(flowsheet);
+
+                // If calculation failed or didn't converge, return appropriate result
+                if (!calculationSuccess || convergenceStatus.State == ConvergenceState.Error)
+                {
+                    return CalculationResult.FailureResult(
+                        convergenceStatus.Message ?? "Calculation failed",
+                        null,
+                        convergenceStatus,
+                        timing,
+                        messages);
+                }
+
+                if (convergenceStatus.State != ConvergenceState.Converged)
+                {
+                    return CalculationResult.NotConvergedResult(
+                        convergenceStatus,
+                        timing,
+                        messages,
+                        "Calculation did not converge");
+                }
+
+                // Step 6: Extract stream results
+                var streamResults = ExtractStreamResults();
+
+                // Step 7: Validate mass balance
+                var massBalance = ValidateMassBalance(streamResults);
+
+                // Step 8: Return successful result
+                _logger.Information("Calculation completed successfully in {Duration}ms", timing.TotalMilliseconds);
+
+                return CalculationResult.SuccessResult(
+                    convergenceStatus,
+                    timing,
+                    streamResults,
+                    massBalance,
+                    messages);
+            }
+            catch (CalculationTimeoutException)
+            {
+                // Re-throw timeout exceptions
+                throw;
+            }
+            catch (Exception ex)
+            {
+                sw.Stop();
+                var timing = CalculationTiming.FromTimestamps(startTime, DateTime.UtcNow);
+
+                _logger.Error(ex, "Calculation failed with exception");
+
+                return CalculationResult.FailureResult(
+                    $"Calculation failed: {ex.Message}",
+                    ex,
+                    ConvergenceStatus.Error(ex.Message),
+                    timing);
+            }
+        }
+
+        /// <summary>
+        /// Runs the calculation with a timeout.
+        /// </summary>
+        private bool RunCalculationWithTimeout(object flowsheet, TimeSpan timeout, Stopwatch sw)
+        {
+            // TODO: In full implementation, use Task.Run with CancellationToken
+            // For now, just run synchronously and check elapsed time
+            var success = RunCalculationCore(flowsheet);
+
+            if (sw.Elapsed > timeout)
+            {
+                throw new CalculationTimeoutException(timeout, sw.Elapsed);
+            }
+
+            return success;
+        }
+
+        /// <summary>
+        /// Core calculation logic that invokes the DWSIM solver.
+        /// </summary>
+        private bool RunCalculationCore(object flowsheet)
+        {
+            _logger.Debug("Invoking DWSIM solver");
+
+            try
+            {
+                // TODO: In full implementation, call DWSIM solver API
+                // Example: flowsheet.RequestCalculation() or FlowsheetSolver.SolveFlowsheet(flowsheet)
+
+                // For now, return success (placeholder)
+                _logger.Information("DWSIM solver completed");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "DWSIM solver failed");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Gets the convergence status from the flowsheet after calculation.
+        /// </summary>
+        private ConvergenceStatus GetConvergenceStatus(object flowsheet)
+        {
+            _logger.Debug("Checking convergence status");
+
+            try
+            {
+                // TODO: In full implementation, check flowsheet.Solved property
+                // and extract iteration count, residual error, etc.
+
+                // For now, return a placeholder converged status
+                return ConvergenceStatus.Converged(0, 0.0);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to get convergence status");
+                return ConvergenceStatus.Error($"Failed to get convergence status: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Captures solver diagnostic messages during/after calculation.
+        /// </summary>
+        private IReadOnlyList<SolverMessage> GetSolverMessages(object flowsheet)
+        {
+            _logger.Debug("Capturing solver messages");
+
+            var messages = new List<SolverMessage>();
+
+            try
+            {
+                // TODO: In full implementation, capture messages from DWSIM solver events/logs
+                // Example: Subscribe to flowsheet message events during calculation
+
+                // For now, return empty list
+                return messages.AsReadOnly();
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning(ex, "Failed to capture solver messages");
+                return messages.AsReadOnly();
+            }
+        }
+
+        /// <summary>
+        /// Extracts calculated properties from all streams in the flowsheet.
+        /// </summary>
+        private IReadOnlyList<StreamResult> ExtractStreamResults()
+        {
+            _logger.Debug("Extracting stream results");
+
+            var results = new List<StreamResult>();
+
+            try
+            {
+                // Get all stream IDs from context
+                var streamIds = _context.GetStreamIds();
+
+                foreach (var streamId in streamIds)
+                {
+                    try
+                    {
+                        var streamResult = _streamAdapter.GetCalculatedProperties(streamId);
+                        results.Add(streamResult);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Warning(ex, "Failed to extract results for stream {StreamId}", streamId);
+                        // Continue with other streams
+                    }
+                }
+
+                _logger.Information("Extracted results for {StreamCount} streams", results.Count);
+                return results.AsReadOnly();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to extract stream results");
+                return results.AsReadOnly();
+            }
+        }
+
+        /// <summary>
+        /// Validates mass balance across the flowsheet.
+        /// </summary>
+        private MassBalanceResult ValidateMassBalance(IReadOnlyList<StreamResult> streamResults)
+        {
+            _logger.Debug("Validating mass balance");
+
+            try
+            {
+                // TODO: In full implementation, identify inlet/outlet streams from connections
+                // For now, use a simple approach: assume first stream is inlet, rest are outlets
+
+                if (streamResults.Count < 2)
+                {
+                    _logger.Warning("Insufficient streams for mass balance validation");
+                    return null;
+                }
+
+                var inletStreams = new List<StreamResult> { streamResults[0] };
+                var outletStreams = streamResults.Skip(1).ToList();
+
+                var massBalance = MassBalanceValidator.Validate(
+                    inletStreams,
+                    outletStreams,
+                    MassBalanceValidator.DefaultTolerancePercent);
+
+                if (!massBalance.IsValid)
+                {
+                    _logger.Warning("Mass balance validation failed: {Error}%", massBalance.RelativeErrorPercent);
+                }
+                else
+                {
+                    _logger.Information("Mass balance validation passed");
+                }
+
+                return massBalance;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Mass balance validation failed");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets unit operation-specific metrics.
+        /// </summary>
+        /// <param name="unitId">The unit operation ID.</param>
+        /// <returns>A dictionary of metrics, or null if unit not found or metrics unavailable.</returns>
+        public IDictionary<string, object> GetUnitMetrics(string unitId)
+        {
+            if (string.IsNullOrWhiteSpace(unitId))
+            {
+                _logger.Warning("Unit ID cannot be null or empty");
+                return null;
+            }
+
+            _logger.Debug("Getting metrics for unit {UnitId}", unitId);
+
+            try
+            {
+                // TODO: In full implementation, query DWSIM unit operation for metrics
+                // Example: For separator, get actual pressure drop, phase split ratios, etc.
+
+                var unit = _context.GetUnit(unitId);
+                if (unit == null)
+                {
+                    _logger.Warning("Unit {UnitId} not found", unitId);
+                    return null;
+                }
+
+                // Placeholder: return empty dictionary
+                var metrics = new Dictionary<string, object>();
+
+                _logger.Debug("Retrieved {MetricCount} metrics for unit {UnitId}", metrics.Count, unitId);
+                return metrics;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to get metrics for unit {UnitId}", unitId);
+                return null;
+            }
+        }
+    }
+}

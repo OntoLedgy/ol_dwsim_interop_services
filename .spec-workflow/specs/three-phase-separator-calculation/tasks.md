@@ -2,7 +2,7 @@
 
 ## Phase 1: Data Models
 
-- [ ] 1. Create ConvergenceStatus model and ConvergenceState enum
+- [x] 1. Create ConvergenceStatus model and ConvergenceState enum
   - File: `DwsimWorker/Models/ConvergenceStatus.cs`, `DwsimWorker/Models/ConvergenceState.cs`
   - Define ConvergenceState enum: NotStarted, InProgress, Converged, NotConverged, Error
   - Create ConvergenceStatus class with State, Message, Iterations, ResidualError, UnitConvergence
@@ -12,7 +12,7 @@
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer specializing in .NET Framework and domain modeling | Task: Create ConvergenceStatus model and ConvergenceState enum following requirement 2.x for solver convergence tracking, using the immutable model pattern from DwsimWorker/Models/Composition.cs | Restrictions: Do not add DWSIM dependencies to model classes, follow one-file-per-class rule, use readonly properties | Success: ConvergenceStatus compiles, enum has all states, properties are immutable, follows existing model patterns. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 2. Create SolverMessage model and SolverMessageLevel enum
+- [x] 2. Create SolverMessage model and SolverMessageLevel enum
   - File: `DwsimWorker/Models/SolverMessage.cs`, `DwsimWorker/Models/SolverMessageLevel.cs`
   - Define SolverMessageLevel enum: Debug, Info, Warning, Error
   - Create SolverMessage class with Level, Message, Source, Timestamp
@@ -21,7 +21,7 @@
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer | Task: Create SolverMessage model and SolverMessageLevel enum following requirements 6.x for capturing solver diagnostics | Restrictions: Keep models simple and immutable, no external dependencies | Success: SolverMessage compiles with all properties, timestamp defaults to UtcNow if not provided. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 3. Create CalculationTiming model
+- [x] 3. Create CalculationTiming model
   - File: `DwsimWorker/Models/CalculationTiming.cs`
   - Properties: TotalTime (TimeSpan), StartedAt, CompletedAt (DateTime)
   - Optional breakdown: InitializationTime, SolverTime, ResultExtractionTime
@@ -31,7 +31,7 @@
   - _Requirements: 7.1, 7.2, 7.3_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer | Task: Create CalculationTiming model following requirements 7.x for performance tracking | Restrictions: Use TimeSpan for durations, DateTime for timestamps, all timing values non-negative | Success: CalculationTiming compiles, TotalMilliseconds computed correctly, follows immutable pattern. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 4. Create PhaseProperties model
+- [x] 4. Create PhaseProperties model
   - File: `DwsimWorker/Models/PhaseProperties.cs`
   - Properties: PhaseName, MolarFlowMolPerSec, MassFlowKgPerSec, PhaseFraction
   - Include Composition property for phase composition
@@ -41,7 +41,7 @@
   - _Requirements: 3.2, 3.4_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer | Task: Create PhaseProperties model following requirements 3.2 and 3.4 for phase-specific property storage | Restrictions: Reuse existing Composition class, nullable for optional properties | Success: PhaseProperties compiles with all properties, integrates with Composition class. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 5. Create StreamResult model
+- [x] 5. Create StreamResult model
   - File: `DwsimWorker/Models/StreamResult.cs`
   - Properties: StreamId, StreamName, TemperatureK, PressurePa, MolarFlowMolPerSec, MassFlowKgPerSec
   - Include OverallComposition, VaporFraction, LiquidFraction
@@ -51,7 +51,7 @@
   - _Requirements: 3.1, 3.2, 3.3, 3.5_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer | Task: Create StreamResult model following requirements 3.x for complete stream result storage | Restrictions: Use IReadOnlyDictionary for Phases, immutable model | Success: StreamResult compiles with all properties, phases dictionary properly typed. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 6. Create MassBalanceResult and ComponentMassBalance models
+- [x] 6. Create MassBalanceResult and ComponentMassBalance models
   - File: `DwsimWorker/Models/MassBalanceResult.cs`, `DwsimWorker/Models/ComponentMassBalance.cs`
   - MassBalanceResult: IsValid, InletMolarFlow, OutletMolarFlow, AbsoluteError, RelativeErrorPercent, TolerancePercent
   - ComponentMassBalance: CompoundName, InletMoles, OutletMoles, RelativeErrorPercent, IsValid
@@ -61,7 +61,7 @@
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer | Task: Create MassBalanceResult and ComponentMassBalance models following requirements 4.x for mass balance validation | Restrictions: Use factory methods for creation, include per-component validation | Success: Both models compile, factory methods work correctly, RelativeErrorPercent calculated properly. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 7. Create CalculationResult model
+- [x] 7. Create CalculationResult model
   - File: `DwsimWorker/Models/CalculationResult.cs`
   - Properties: Success, ConvergenceStatus, Message, Timing, StreamResults, MassBalance, Messages, Error
   - Factory methods: SuccessResult(), FailureResult(), NotConvergedResult()
@@ -72,7 +72,7 @@
 
 ## Phase 2: Exceptions
 
-- [ ] 8. Create CalculationException class
+- [x] 8. Create CalculationException class
   - File: `DwsimWorker/Exceptions/CalculationException.cs`
   - Inherit from DwsimException
   - Properties: ConvergenceStatus, Messages (IReadOnlyList<SolverMessage>)
@@ -81,7 +81,7 @@
   - _Requirements: 6.2_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer | Task: Create CalculationException extending DwsimException following requirement 6.2 | Restrictions: Follow existing exception hierarchy pattern, include diagnostic context | Success: CalculationException compiles, inherits correctly, includes ConvergenceStatus and Messages. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 9. Create CalculationTimeoutException class
+- [x] 9. Create CalculationTimeoutException class
   - File: `DwsimWorker/Exceptions/CalculationTimeoutException.cs`
   - Inherit from CalculationException
   - Properties: Timeout, ElapsedTime (TimeSpan)
@@ -92,13 +92,13 @@
 
 ## Phase 3: Validators
 
-- [ ] 10. Create MassBalanceValidator class
-  - File: `DwsimWorker/Validators/MassBalanceValidator.cs`
-  - Create Validators folder if not exists
-  - Constructor accepts ILogger
-  - Method: ValidateMassBalance(StreamResult inlet, IReadOnlyList<StreamResult> outlets) → MassBalanceResult
-  - Method: ValidateComponentMassBalance(...) → ComponentMassBalanceResult
-  - Configurable Tolerance property (default 0.01 = 1%)
+- [x] 10. Create MassBalanceValidator class
+  - File: `DwsimWorker/Utilities/MassBalanceValidator.cs`
+  - Create Utilities folder if not exists
+  - Static class with validation methods
+  - Method: Validate(IEnumerable<StreamResult> inlets, IEnumerable<StreamResult> outlets) → MassBalanceResult
+  - Method: ValidateComponentBalances(...) → IReadOnlyList<ComponentMassBalance>
+  - Configurable Tolerance parameter (default 1%)
   - Purpose: Validate mass conservation in simulation results
   - _Leverage: DwsimWorker/Models/MassBalanceResult.cs, DwsimWorker/Models/StreamResult.cs_
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
@@ -106,9 +106,9 @@
 
 ## Phase 4: StreamAdapter Extension
 
-- [ ] 11. Extend StreamAdapter with GetCalculatedProperties method
+- [x] 11. Extend StreamAdapter with GetCalculatedProperties method
   - File: `DwsimWorker/Adapters/StreamAdapter.cs` (modify existing)
-  - Add method: GetCalculatedProperties(string streamId) → Result<StreamResult>
+  - Add method: GetCalculatedProperties(string streamId) → StreamResult
   - Extract temperature, pressure, flow, composition from DWSIM stream after calculation
   - Handle case where stream not yet calculated
   - Purpose: Retrieve calculated stream properties after solver runs
@@ -116,9 +116,9 @@
   - _Requirements: 3.1, 3.2, 3.3_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer with DWSIM API knowledge | Task: Extend StreamAdapter with GetCalculatedProperties method following requirements 3.x | Restrictions: Do not break existing methods, return Result type, handle uncalculated streams | Success: GetCalculatedProperties works on calculated streams, returns failure for uncalculated, integrates with StreamResult model. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 12. Add GetPhaseProperties method to StreamAdapter
+- [x] 12. Add GetPhaseProperties method to StreamAdapter
   - File: `DwsimWorker/Adapters/StreamAdapter.cs` (continue from task 11)
-  - Add method: GetPhaseProperties(string streamId, string phaseName) → Result<PhaseProperties>
+  - Add method: GetPhaseProperties(string streamId, string phaseName) → PhaseProperties
   - Access DWSIM stream Phases collection (indices: 0=Overall, 2=Vapor, 3=Liquid1, 4=Liquid2)
   - Extract phase-specific: molar flow, mass flow, composition, density, viscosity
   - Purpose: Retrieve phase-specific calculated properties
@@ -126,9 +126,9 @@
   - _Requirements: 3.2, 3.5_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer with DWSIM API expertise | Task: Add GetPhaseProperties method to StreamAdapter following requirements 3.2 and 3.5 | Restrictions: Handle missing phases gracefully, use correct DWSIM phase indices | Success: GetPhaseProperties returns correct phase data, handles non-existent phases with appropriate result. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 13. Add GetAllPhaseProperties method to StreamAdapter
+- [x] 13. Add GetAllPhaseProperties method to StreamAdapter
   - File: `DwsimWorker/Adapters/StreamAdapter.cs` (continue from task 12)
-  - Add method: GetAllPhaseProperties(string streamId) → Result<IReadOnlyDictionary<string, PhaseProperties>>
+  - Add method: GetAllPhaseProperties(string streamId) → IReadOnlyDictionary<string, PhaseProperties>
   - Iterate over all existing phases in stream
   - Return dictionary keyed by phase name ("Vapor", "Liquid1", "Liquid2")
   - Purpose: Retrieve all phase results at once for efficiency
@@ -138,7 +138,7 @@
 
 ## Phase 5: CalculationAdapter
 
-- [ ] 14. Create CalculationAdapter class with constructor and dependencies
+- [x] 14. Create CalculationAdapter class with constructor and dependencies
   - File: `DwsimWorker/Adapters/CalculationAdapter.cs`
   - Constructor: ILogger, FlowsheetContext, StreamAdapter, ConnectionAdapter, MassBalanceValidator
   - Store dependencies as private readonly fields
@@ -148,7 +148,7 @@
   - _Requirements: 1.1 (setup for solver invocation)_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer | Task: Create CalculationAdapter class structure with constructor and dependencies | Restrictions: Follow existing adapter patterns, inject all dependencies, no direct DWSIM references in constructor | Success: CalculationAdapter compiles with all dependencies injected, follows naming conventions. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 15. Implement RunCalculation method (basic solver invocation)
+- [x] 15. Implement RunCalculation method (basic solver invocation)
   - File: `DwsimWorker/Adapters/CalculationAdapter.cs` (continue from task 14)
   - Add method: RunCalculation() → CalculationResult
   - Validate topology via ConnectionAdapter before calculation
@@ -161,7 +161,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer with DWSIM solver expertise | Task: Implement RunCalculation method following requirements 1.x for solver invocation | Restrictions: Validate topology first, capture timing, handle exceptions gracefully | Success: RunCalculation invokes DWSIM solver, captures timing, returns appropriate result for success/failure. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 16. Add convergence status handling to CalculationAdapter
+- [x] 16. Add convergence status handling to CalculationAdapter
   - File: `DwsimWorker/Adapters/CalculationAdapter.cs` (continue from task 15)
   - Add method: GetConvergenceStatus() → ConvergenceStatus
   - Check flowsheet.Solved property
@@ -173,7 +173,7 @@
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer | Task: Add convergence status handling following requirements 2.x | Restrictions: Check both overall and per-unit convergence, capture error messages | Success: GetConvergenceStatus returns correct state, integrated with RunCalculation result. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 17. Add solver message capture to CalculationAdapter
+- [x] 17. Add solver message capture to CalculationAdapter
   - File: `DwsimWorker/Adapters/CalculationAdapter.cs` (continue from task 16)
   - Capture DWSIM solver messages during calculation
   - Convert to List<SolverMessage> with appropriate levels
@@ -183,7 +183,7 @@
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer | Task: Add solver message capture following requirements 6.x | Restrictions: Capture all message levels, include source if available | Success: Messages captured during calculation, included in result, empty list (not null) when no messages. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 18. Add result extraction to CalculationAdapter
+- [x] 18. Add result extraction to CalculationAdapter
   - File: `DwsimWorker/Adapters/CalculationAdapter.cs` (continue from task 17)
   - Add method: GetStreamResult(string streamId) → Result<StreamResult>
   - Add method: GetAllStreamResults() → Result<IReadOnlyList<StreamResult>>
@@ -194,7 +194,7 @@
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer | Task: Add result extraction methods following requirements 3.x | Restrictions: Use StreamAdapter for extraction, handle partial failures | Success: GetStreamResult and GetAllStreamResults work correctly, results included in CalculationResult. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 19. Add mass balance validation to CalculationAdapter
+- [x] 19. Add mass balance validation to CalculationAdapter
   - File: `DwsimWorker/Adapters/CalculationAdapter.cs` (continue from task 18)
   - Identify inlet and outlet streams from connections
   - Call MassBalanceValidator.ValidateMassBalance
@@ -205,7 +205,7 @@
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer | Task: Add mass balance validation following requirements 4.x | Restrictions: Identify inlet/outlet from topology, log warnings for failures | Success: Mass balance validated after calculation, result includes MassBalanceResult. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 20. Add timeout support to CalculationAdapter
+- [x] 20. Add timeout support to CalculationAdapter
   - File: `DwsimWorker/Adapters/CalculationAdapter.cs` (continue from task 19)
   - Add overload: RunCalculation(TimeSpan timeout) → CalculationResult
   - Use CancellationTokenSource with timeout
@@ -216,7 +216,7 @@
   - _Requirements: 7.1 (timeout handling from NFRs)_
   - _Prompt: Implement the task for spec three-phase-separator-calculation, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer with async/Task expertise | Task: Add timeout support to RunCalculation | Restrictions: Use CancellationTokenSource, handle timeout gracefully, include elapsed time in result | Success: RunCalculation with timeout works, returns timeout error when exceeded. After completion, mark task [-] as in_progress in tasks.md before starting, log implementation with log-implementation tool, then mark [x] as complete._
 
-- [ ] 21. Add GetUnitMetrics method to CalculationAdapter
+- [x] 21. Add GetUnitMetrics method to CalculationAdapter
   - File: `DwsimWorker/Adapters/CalculationAdapter.cs` (continue from task 20)
   - Add method: GetUnitMetrics(string unitId) → Result<IDictionary<string, object>>
   - Extract separator-specific metrics: actual pressure drop, etc.

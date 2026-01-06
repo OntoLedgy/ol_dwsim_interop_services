@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/three-phase-separator-calculation/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-05T16:41:54.481Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767631314436_qwqqcsoio",
+      "approvalTitle": "Tasks for Spec 1.3: Three-Phase Separator Calculation Execution"
+    }
+  ]
+}

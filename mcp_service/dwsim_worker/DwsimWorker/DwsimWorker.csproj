@@ -13,6 +13,7 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
     <LangVersion>latest</LangVersion>
+    <RuntimeIdentifiers>win</RuntimeIdentifiers>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -87,6 +88,7 @@
     <Compile Include="Adapters\StreamAdapter.cs" />
     <Compile Include="Adapters\UnitOpAdapter.cs" />
     <Compile Include="Adapters\ConnectionAdapter.cs" />
+    <Compile Include="Adapters\CalculationAdapter.cs" />
     <Compile Include="Converters\CapeOpenPropertyConverter.cs" />
     <Compile Include="Exceptions\DwsimException.cs" />
     <Compile Include="Exceptions\PropertySetException.cs" />
@@ -94,6 +96,8 @@
     <Compile Include="Exceptions\InvalidPropertyValueException.cs" />
     <Compile Include="Exceptions\StreamNotFoundException.cs" />
     <Compile Include="Exceptions\UnitNotFoundException.cs" />
+    <Compile Include="Exceptions\CalculationException.cs" />
+    <Compile Include="Exceptions\CalculationTimeoutException.cs" />
     <Compile Include="Models\Ranges.cs" />
     <Compile Include="Models\PhysicalQuantities.cs" />
     <Compile Include="Models\UnitsOfMeasure.cs" />
@@ -101,9 +105,20 @@
     <Compile Include="Models\PhysicalProperties.cs" />
     <Compile Include="Models\StreamProperties.cs" />
     <Compile Include="Models\Composition.cs" />
+    <Compile Include="Models\ConvergenceState.cs" />
+    <Compile Include="Models\ConvergenceStatus.cs" />
+    <Compile Include="Models\SolverMessage.cs" />
+    <Compile Include="Models\SolverMessageLevel.cs" />
+    <Compile Include="Models\CalculationTiming.cs" />
+    <Compile Include="Models\PhaseProperties.cs" />
+    <Compile Include="Models\StreamResult.cs" />
+    <Compile Include="Models\ComponentMassBalance.cs" />
+    <Compile Include="Models\MassBalanceResult.cs" />
+    <Compile Include="Models\CalculationResult.cs" />
     <Compile Include="Models\UnitOpConfig.cs" />
     <Compile Include="Models\ConnectionInfo.cs" />
     <Compile Include="Utilities\PathResolver.cs" />
+    <Compile Include="Utilities\MassBalanceValidator.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
