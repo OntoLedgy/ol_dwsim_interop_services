@@ -81,6 +81,7 @@
     <Compile Include="Engine\FlowsheetContext.cs" />
     <Compile Include="Engine\FlowsheetContextConfig.cs" />
     <Compile Include="Engine\FlowsheetContextConfigBuilder.cs" />
+    <Compile Include="Engine\SessionManager.cs" />
     <Compile Include="Engine\PropertySetResult.cs" />
     <Compile Include="Engine\ConnectionResult.cs" />
     <Compile Include="Adapters\CompoundAdapter.cs" />
@@ -117,6 +118,8 @@
     <Compile Include="Models\CalculationResult.cs" />
     <Compile Include="Models\UnitOpConfig.cs" />
     <Compile Include="Models\ConnectionInfo.cs" />
+    <Compile Include="Models\OperationResult.cs" />
+    <Compile Include="Models\SessionInfo.cs" />
     <Compile Include="Utilities\PathResolver.cs" />
     <Compile Include="Utilities\MassBalanceValidator.cs" />
   </ItemGroup>

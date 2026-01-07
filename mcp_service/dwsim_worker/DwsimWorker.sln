@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DwsimWorker", "DwsimWorker\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DwsimWorker.Tests", "DwsimWorker.Tests\DwsimWorker.Tests.csproj", "{87654321-4321-4321-4321-CBA987654321}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SessionManagerManualValidation", "SessionManagerManualValidation\SessionManagerManualValidation.csproj", "{B9E4E404-7A3D-4E8B-8A36-9DE8856E3B8F}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "specs", "specs", "{AD9159A6-85B1-496E-B2A3-A31694C6FEBB}"
 	ProjectSection(SolutionItems) = preProject
 		..\..\.spec-workflow\specs\plan.md = ..\..\.spec-workflow\specs\plan.md
@@ -32,6 +34,10 @@ Global
 		{87654321-4321-4321-4321-CBA987654321}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{87654321-4321-4321-4321-CBA987654321}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{87654321-4321-4321-4321-CBA987654321}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9E4E404-7A3D-4E8B-8A36-9DE8856E3B8F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9E4E404-7A3D-4E8B-8A36-9DE8856E3B8F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9E4E404-7A3D-4E8B-8A36-9DE8856E3B8F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9E4E404-7A3D-4E8B-8A36-9DE8856E3B8F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
