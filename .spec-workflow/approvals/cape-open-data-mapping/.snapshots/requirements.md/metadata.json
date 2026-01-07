@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/cape-open-data-mapping/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-07T06:38:46.996Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767767926967_fgkh0l1op",
+      "approvalTitle": "Approve requirements for cape-open-data-mapping"
+    }
+  ]
+}

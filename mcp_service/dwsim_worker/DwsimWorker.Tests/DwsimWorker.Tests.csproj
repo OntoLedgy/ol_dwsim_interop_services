@@ -31,6 +31,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="Moq" Version="4.20.70" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.0" />
     <PackageReference Include="Serilog" Version="3.1.1" />
     <PackageReference Include="Serilog.Sinks.XUnit" Version="3.0.5" />
   </ItemGroup>
@@ -50,6 +51,8 @@
     <Compile Include="Models\CalculationModelsTests.cs" />
     <Compile Include="Utilities\PathResolverTests.cs" />
     <Compile Include="Utilities\MassBalanceValidatorTests.cs" />
+    <Compile Include="DtoSerializationTests.cs" />
+    <Compile Include="CapeOpenConverterTests.cs" />
     <Compile Include="Integration\AssemblyLoadingIntegrationTests.cs" />
     <Compile Include="Integration\ThreePhaseSeparatorIntegrationTests.cs" />
     <Compile Include="Integration\ThreePhaseSeparatorCalculationTests.cs" />

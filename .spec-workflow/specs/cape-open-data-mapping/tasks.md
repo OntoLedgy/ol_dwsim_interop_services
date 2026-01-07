@@ -1,0 +1,72 @@
+# Tasks Document
+
+- [x] 1. Add CAPE-OPEN property registry
+  - File: mcp_service/dwsim_worker/DwsimWorker/Converters/CapeOpenPropertyRegistry.cs
+  - Define canonical CAPE-OPEN property names and expected units
+  - Centralize property metadata for converters
+  - Purpose: Ensure consistent property name usage and unit expectations
+  - _Leverage: mcp_service/dwsim_worker/DwsimWorker/Converters/CapeOpenConverter.cs_
+  - _Requirements: 3, 4_
+  - _Prompt: Implement the task for spec cape-open-data-mapping, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer specializing in domain modeling | Task: Create a property registry that centralizes CAPE-OPEN property names and expected units for use by converters | Restrictions: Avoid scattered string literals, keep registry read-only, follow one-file-per-class rule | _Leverage: mcp_service/dwsim_worker/DwsimWorker/Converters/CapeOpenConverter.cs | _Requirements: 3, 4 | Success: Registry exposes canonical names and unit metadata with simple lookup methods | Instructions: Update tasks.md to mark this task [-] when starting, run log-implementation with full artifacts after completion, then mark [x] when done_
+
+- [x] 2. Create material stream DTOs
+  - File: mcp_service/dwsim_worker/DwsimWorker/Contracts/CapeOpen/MaterialStreamDto.cs
+  - File: mcp_service/dwsim_worker/DwsimWorker/Contracts/CapeOpen/PhaseDto.cs
+  - File: mcp_service/dwsim_worker/DwsimWorker/Contracts/CapeOpen/CompoundFractionDto.cs
+  - Define DTOs for material streams, phases, and composition
+  - Purpose: Provide JSON-serializable CAPE-OPEN material stream models
+  - _Leverage: mcp_service/dwsim_worker/DwsimWorker/Contracts_
+  - _Requirements: 1, 4, 5_
+  - _Prompt: Implement the task for spec cape-open-data-mapping, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer specializing in DTO design | Task: Create CAPE-OPEN DTOs for material streams, phases, and compound fractions with explicit SI-normalized fields | Restrictions: One class per file, no business logic, use clear property names aligned with CAPE-OPEN | _Leverage: mcp_service/dwsim_worker/DwsimWorker/Contracts | _Requirements: 1, 4, 5 | Success: DTOs compile, serialize with Newtonsoft.Json, and cover required fields | Instructions: Update tasks.md to mark this task [-] when starting, run log-implementation with full artifacts after completion, then mark [x] when done_
+
+- [x] 3. Create property package and unit operation DTOs
+  - File: mcp_service/dwsim_worker/DwsimWorker/Contracts/CapeOpen/PropertyPackageDto.cs
+  - File: mcp_service/dwsim_worker/DwsimWorker/Contracts/CapeOpen/UnitOperationDto.cs
+  - Define DTOs for property packages and unit operations
+  - Purpose: Provide structured configuration models for CAPE-OPEN types
+  - _Leverage: mcp_service/dwsim_worker/DwsimWorker/Contracts_
+  - _Requirements: 1, 5_
+  - _Prompt: Implement the task for spec cape-open-data-mapping, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer specializing in DTO design | Task: Create CAPE-OPEN DTOs for property packages and unit operations with explicit identifiers and parameter dictionaries | Restrictions: One class per file, avoid domain logic, keep fields JSON-friendly | _Leverage: mcp_service/dwsim_worker/DwsimWorker/Contracts | _Requirements: 1, 5 | Success: DTOs compile and serialize with stable field names | Instructions: Update tasks.md to mark this task [-] when starting, run log-implementation with full artifacts after completion, then mark [x] when done_
+
+- [x] 4. Create flash result DTO
+  - File: mcp_service/dwsim_worker/DwsimWorker/Contracts/CapeOpen/FlashResultDto.cs
+  - Define DTO for flash calculation results using PhaseDto references
+  - Purpose: Provide structured flash output for CAPE-OPEN calculations
+  - _Leverage: mcp_service/dwsim_worker/DwsimWorker/Contracts/CapeOpen/PhaseDto.cs_
+  - _Requirements: 1, 5_
+  - _Prompt: Implement the task for spec cape-open-data-mapping, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer with thermodynamics domain familiarity | Task: Create a flash result DTO that captures calculation type, conditions, and phase results | Restrictions: Use existing PhaseDto for phase data, no calculation logic | _Leverage: mcp_service/dwsim_worker/DwsimWorker/Contracts/CapeOpen/PhaseDto.cs | _Requirements: 1, 5 | Success: FlashResultDto compiles and is JSON-serializable | Instructions: Update tasks.md to mark this task [-] when starting, run log-implementation with full artifacts after completion, then mark [x] when done_
+
+- [x] 5. Implement unit conversion utilities
+  - File: mcp_service/dwsim_worker/DwsimWorker/Utilities/UnitConversion.cs
+  - File: mcp_service/dwsim_worker/DwsimWorker/Utilities/UnitConversionException.cs
+  - Add SI normalization helpers and clear error reporting
+  - Purpose: Ensure consistent SI units for DTOs
+  - _Leverage: mcp_service/dwsim_worker/DwsimWorker/Utilities/ValidationHelper.cs_
+  - _Requirements: 4, 6_
+  - _Prompt: Implement the task for spec cape-open-data-mapping, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer specializing in unit systems | Task: Implement unit conversion utilities that normalize to SI and throw descriptive errors for unsupported units | Restrictions: No external unit libraries, keep conversion tables explicit, follow one-file-per-class rule | _Leverage: mcp_service/dwsim_worker/DwsimWorker/Utilities/ValidationHelper.cs | _Requirements: 4, 6 | Success: Unit conversion helpers cover common CAPE-OPEN units and fail fast with clear errors | Instructions: Update tasks.md to mark this task [-] when starting, run log-implementation with full artifacts after completion, then mark [x] when done_
+
+- [x] 6. Implement CAPE-OPEN converter mappings
+  - File: mcp_service/dwsim_worker/DwsimWorker/Converters/CapeOpenConverter.cs
+  - Add ToDto and ApplyDto methods for MaterialStream, PropertyPackage, UnitOperation, FlashResult
+  - Use CAPE-OPEN interfaces for property access and apply unit normalization
+  - Purpose: Enable bidirectional conversion between DWSIM objects and DTOs
+  - _Leverage: mcp_service/dwsim_worker/DwsimWorker/Converters/CapeOpenPropertyRegistry.cs, mcp_service/dwsim_worker/DwsimWorker/Utilities/UnitConversion.cs_
+  - _Requirements: 2, 3, 4, 6_
+  - _Prompt: Implement the task for spec cape-open-data-mapping, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer specializing in DWSIM/CAPE-OPEN integration | Task: Implement converter methods that map CAPE-OPEN interfaces to DTOs and apply DTO values back to DWSIM objects with validation and unit normalization | Restrictions: Use CAPE-OPEN interface methods only, keep mappings explicit, return clear errors for unsupported properties | _Leverage: mcp_service/dwsim_worker/DwsimWorker/Converters/CapeOpenPropertyRegistry.cs, mcp_service/dwsim_worker/DwsimWorker/Utilities/UnitConversion.cs | _Requirements: 2, 3, 4, 6 | Success: Converters perform round-trip mapping with deterministic results and clear failures | Instructions: Update tasks.md to mark this task [-] when starting, run log-implementation with full artifacts after completion, then mark [x] when done_
+
+- [x] 7. Add DTO validation helpers
+  - File: mcp_service/dwsim_worker/DwsimWorker/Utilities/ValidationHelper.cs
+  - Add validation methods for required fields and composition tolerance
+  - Purpose: Ensure DTOs are validated before applying to DWSIM
+  - _Leverage: mcp_service/dwsim_worker/DwsimWorker/Utilities/UnitConversionException.cs_
+  - _Requirements: 6_
+  - _Prompt: Implement the task for spec cape-open-data-mapping, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer specializing in validation utilities | Task: Extend ValidationHelper with DTO validation helpers for required fields and composition sum checks | Restrictions: Keep helper methods small, return structured errors, avoid side effects | _Leverage: mcp_service/dwsim_worker/DwsimWorker/Utilities/UnitConversionException.cs | _Requirements: 6 | Success: Validation helpers provide clear error messages and are reusable by converters | Instructions: Update tasks.md to mark this task [-] when starting, run log-implementation with full artifacts after completion, then mark [x] when done_
+
+- [x] 8. Add DTO serialization and conversion tests
+  - File: mcp_service/dwsim_worker/DwsimWorker.Tests/DtoSerializationTests.cs
+  - File: mcp_service/dwsim_worker/DwsimWorker.Tests/CapeOpenConverterTests.cs
+  - Verify Newtonsoft.Json round-trip, validation errors, and conversion behavior
+  - Purpose: Ensure DTOs and converters work as designed
+  - _Leverage: mcp_service/dwsim_worker/DwsimWorker.Tests/IntegrationTests.cs_
+  - _Requirements: 1, 2, 4, 5, 6_
+  - _Prompt: Implement the task for spec cape-open-data-mapping, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer specializing in .NET testing | Task: Add unit tests for DTO serialization, validation, and converter mappings using existing xUnit patterns | Restrictions: Avoid external dependencies, keep tests deterministic, isolate DWSIM-dependent tests | _Leverage: mcp_service/dwsim_worker/DwsimWorker.Tests/IntegrationTests.cs | _Requirements: 1, 2, 4, 5, 6 | Success: Tests cover serialization round-trip, validation failures, and basic converter behavior | Instructions: Update tasks.md to mark this task [-] when starting, run log-implementation with full artifacts after completion, then mark [x] when done_

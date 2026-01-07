@@ -43,7 +43,7 @@
     <Reference Include="Microsoft.CSharp" />
 
     <!-- JSON serialization -->
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.0" />
 
     <!-- Logging -->
     <PackageReference Include="Serilog" Version="3.1.1" />
@@ -91,6 +91,8 @@
     <Compile Include="Adapters\ConnectionAdapter.cs" />
     <Compile Include="Adapters\CalculationAdapter.cs" />
     <Compile Include="Converters\CapeOpenPropertyConverter.cs" />
+    <Compile Include="Converters\CapeOpenPropertyRegistry.cs" />
+    <Compile Include="Converters\CapeOpenConverter.cs" />
     <Compile Include="Exceptions\DwsimException.cs" />
     <Compile Include="Exceptions\PropertySetException.cs" />
     <Compile Include="Exceptions\CompoundNotFoundException.cs" />
@@ -120,8 +122,17 @@
     <Compile Include="Models\ConnectionInfo.cs" />
     <Compile Include="Models\OperationResult.cs" />
     <Compile Include="Models\SessionInfo.cs" />
+    <Compile Include="Contracts\CapeOpen\CompoundFractionDto.cs" />
+    <Compile Include="Contracts\CapeOpen\PhaseDto.cs" />
+    <Compile Include="Contracts\CapeOpen\MaterialStreamDto.cs" />
+    <Compile Include="Contracts\CapeOpen\PropertyPackageDto.cs" />
+    <Compile Include="Contracts\CapeOpen\UnitOperationDto.cs" />
+    <Compile Include="Contracts\CapeOpen\FlashResultDto.cs" />
     <Compile Include="Utilities\PathResolver.cs" />
     <Compile Include="Utilities\MassBalanceValidator.cs" />
+    <Compile Include="Utilities\UnitConversion.cs" />
+    <Compile Include="Utilities\UnitConversionException.cs" />
+    <Compile Include="Utilities\ValidationHelper.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -134,6 +145,8 @@
     <Folder Include="Exceptions\" />
     <Folder Include="Limits\" />
     <Folder Include="Models\" />
+    <Folder Include="Contracts\" />
+    <Folder Include="Contracts\CapeOpen\" />
     <Folder Include="Utilities\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
