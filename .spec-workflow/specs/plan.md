@@ -201,172 +201,131 @@ Create DWSIM MaterialStream, convert to DTO, serialize to JSON, deserialize, con
 
 ---
 
-## Phase 3: RPC Infrastructure (C# Worker)
+## Phase 3: Python MCP Server with pythonnet Integration (SIMPLIFIED)
 
-### Spec 3.1: JSON-RPC Server over Named Pipes (C# Side)
+### Spec 3.1: Convert DwsimWorker to Class Library
 
-**Spec Name**: `csharp-jsonrpc-server`
+**Spec Name**: `dwsim-worker-class-library`
 
 **Description**:
-Implement JSON-RPC 2.0 server using Named Pipes for Windows IPC. This establishes the communication channel between Python and C# before implementing all tools.
+Convert DwsimWorker from console application (Exe) to class library (Dll) so it can be loaded by Python via pythonnet. This is a simple refactoring of the existing code.
 
 **Key Deliverables**:
-- Named Pipe server listener (Windows)
-- JSON-RPC 2.0 message parsing and dispatch
-- Request/response correlation (id matching)
-- Method routing to handler functions
-- Error response formatting (JSON-RPC error object)
-- Async message handling (non-blocking)
-- Connection lifecycle management
-- Basic authentication/authorization (optional for MVP)
+- Change `<OutputType>` from `Exe` to `Library` in DwsimWorker.csproj
+- Remove `Program.cs` (no longer needed)
+- Ensure SessionManager and all adapters are public
+- Verify all DTOs are public and serializable
+- Add XML documentation comments for public API
+- Build DwsimWorker.dll successfully
 
 **Success Criteria**:
-- Server starts and listens on named pipe
-- Accepts multiple client connections
-- Parses valid JSON-RPC requests
-- Returns properly formatted JSON-RPC responses
-- Handles malformed requests gracefully
-- Latency < 10ms for echo request
+- DwsimWorker.dll builds without errors
+- All existing unit tests pass
+- SessionManager is publicly accessible
+- No breaking changes to existing C# API
 
 **Validation Test**:
-Start server, send JSON-RPC request via named pipe (using native Windows tools or Python test client), verify response structure, test error cases.
+Build DwsimWorker.dll, reference from test project, verify SessionManager can be instantiated.
 
 ---
 
-### Spec 3.2: Core DWSIM Operations as JSON-RPC Methods
+### Spec 3.2: pythonnet Bridge and Assembly Loading
 
-**Spec Name**: `dwsim-jsonrpc-methods`
+**Spec Name**: `pythonnet-bridge`
 
 **Description**:
-Expose core DWSIM operations as JSON-RPC methods, integrating SessionManager and DTO converters. This creates the functional API surface for Python.
+Implement Python module to load DwsimWorker.dll via pythonnet and provide clean Python API for interop. This establishes the in-process bridge.
 
 **Key Deliverables**:
-- JSON-RPC method handlers:
-  - `session.create`: Create new session → sessionId
-  - `session.close`: Close session
-  - `flowsheet.add_compound`: Add compound to session
-  - `flowsheet.set_property_package`: Configure thermo
-  - `flowsheet.add_stream`: Create material stream
-  - `flowsheet.add_unit`: Create unit operation
-  - `flowsheet.connect`: Connect streams to units
-  - `simulation.run`: Execute flowsheet calculation
-  - `simulation.get_results`: Extract results as DTOs
-- Input validation (required parameters, types)
-- Session context lookup (sessionId → SessionContext)
-- Exception to JSON-RPC error mapping
-- Structured logging (method name, sessionId, duration)
+- `clr_loader.py`: Load .NET Framework 4.8 assemblies via pythonnet
+- `session_client.py`: Python wrapper around C# SessionManager
+- Error handling: Convert C# exceptions to Python exceptions
+- Type conversion: Map C# types to Python types (str, int, float, dict)
+- Resource management: Ensure C# IDisposable objects are properly disposed
+- Configuration: Assembly path resolution
+- Logging: Python logging integrated with C# Serilog output
 
 **Success Criteria**:
-- All methods callable via JSON-RPC
-- Three-phase separator workflow completable through RPC
-- Errors return standard JSON-RPC error codes
-- Methods idempotent where applicable
+- Can load DwsimWorker.dll from Python
+- Can instantiate SessionManager from Python
+- Can call SessionManager methods (CreateSession, CloseSession)
+- C# exceptions propagate to Python correctly
+- No memory leaks after repeated calls
 
 **Validation Test**:
-Execute three-phase separator workflow entirely through JSON-RPC calls (create session, configure, calculate, get results), verify same results as direct C# test.
+Python script loads DwsimWorker.dll, creates session, runs three-phase separator calculation, extracts results, verifies same results as C# tests.
 
 ---
 
-### Spec 3.3: Resource Limits and Timeout Enforcement
+### Spec 3.3: Resource Limits and Timeout Enforcement (Python Side)
 
-**Spec Name**: `worker-resource-limits`
+**Spec Name**: `python-resource-limits`
 
 **Description**:
-Implement safety mechanisms: timeouts, memory limits, and quota enforcement. This ensures the worker cannot be abused by malicious or buggy agents.
+Implement safety mechanisms in Python: timeouts, memory monitoring, and quota enforcement. Since pythonnet runs in-process, implement safeguards at Python layer.
 
 **Key Deliverables**:
-- Per-request timeout enforcement (configurable)
-- Per-session memory monitoring (Windows performance counters)
-- Calculation timeout with graceful cancellation
-- Session lifetime limits (max duration)
-- Configurable limits (config file or environment variables)
-- Limit violation error responses
+- Per-request timeout using Python's asyncio.wait_for
+- Memory monitoring using psutil (process memory usage)
+- Calculation timeout with thread interruption
+- Session lifetime limits (max duration tracking)
+- Configurable limits via environment variables or config file
+- Limit violation error responses to MCP client
 - Diagnostic logging on limit breach
 
 **Success Criteria**:
 - Long-running calculation terminates on timeout
-- Out-of-memory condition caught before process crash
+- Memory usage tracked and reported
 - Limits configurable per deployment environment
-- Graceful degradation (no data corruption on timeout)
+- Graceful error reporting to MCP client
 
 **Validation Test**:
-Trigger timeout condition (infinite loop simulation), verify process terminates cleanly and returns timeout error via JSON-RPC.
+Trigger timeout condition, verify Python catches it and returns proper MCP error response.
 
 ---
 
-## Phase 4: Python MCP Server and RPC Client
+## Phase 4: Python MCP Server Implementation (SIMPLIFIED)
 
-### Spec 4.1: JSON-RPC Client (Python Side)
-
-**Spec Name**: `python-jsonrpc-client`
-
-**Description**:
-Implement Python JSON-RPC client communicating with C# worker over Named Pipes. This establishes Python → C# communication bridge.
-
-**Key Deliverables**:
-- Named Pipe client for Windows (pywin32 or similar)
-- JSON-RPC request builder and sender
-- Response parsing and error handling
-- Async/await support (asyncio)
-- Connection pooling (optional for MVP)
-- Retry logic for transient failures
-- Timeout configuration
-- Structured logging (correlate with C# logs)
-
-**Success Criteria**:
-- Can send requests to C# worker
-- Receives and parses responses correctly
-- Handles network errors gracefully
-- Async operations don't block event loop
-- Latency comparable to direct Named Pipe (< 20ms overhead)
-
-**Validation Test**:
-Python test script calls all JSON-RPC methods exposed by C# worker, verifies responses, checks error handling, measures latency.
-
----
-
-### Spec 4.2: Pydantic DTOs and Request/Response Models
+### Spec 4.1: Pydantic DTOs and Python Model Classes
 
 **Spec Name**: `python-dto-models`
 
 **Description**:
-Create Pydantic models for all DTOs matching C# JSON schema. This provides type safety and validation on Python side.
+Create Pydantic models for validating MCP tool inputs and converting between Python and C# types. This provides type safety and validation.
 
 **Key Deliverables**:
-- Pydantic models in `models/` directory (one per file):
+- Pydantic models in `models/` directory:
   - `cape_open/material_stream.py`
   - `cape_open/thermo_property_package.py`
   - `cape_open/unit_operation.py`
-  - `requests/create_session_request.py`
-  - `requests/add_stream_request.py`
-  - `requests/run_simulation_request.py`
-  - `responses/create_session_response.py`
-  - `responses/simulation_result_response.py`
-- JSON schema validation
+  - `mcp_inputs/session_inputs.py` (create_session, close_session)
+  - `mcp_inputs/flowsheet_inputs.py` (add_stream, add_unit, connect)
+  - `mcp_inputs/simulation_inputs.py` (run, get_results)
 - Type hints for all fields
 - Default values where applicable
 - Custom validators (e.g., positive pressure)
+- Conversion helpers: Python dict ↔ C# DTO objects
 
 **Success Criteria**:
-- All models JSON-serializable
-- Validation catches invalid inputs before sending to C#
-- Models match C# DTOs exactly (schema compatibility test)
+- All models validate MCP tool inputs correctly
+- Validation catches invalid inputs before calling C#
+- Type conversion works seamlessly (Python → C# → Python)
 - mypy type checking passes
 
 **Validation Test**:
-Round-trip test: Python DTO → JSON → C# DTO → JSON → Python DTO, verify equality.
+Create Python model, convert to C# DTO via pythonnet, convert back, verify equality.
 
 ---
 
-### Spec 4.3: Python Service Layer (High-Level DWSIM Operations)
+### Spec 4.2: Python Service Layer (High-Level DWSIM Operations)
 
 **Spec Name**: `python-dwsim-service`
 
 **Description**:
-Build Python service layer providing high-level DWSIM operations using JSON-RPC client. This abstracts RPC details from MCP tools.
+Build Python service layer providing high-level DWSIM operations using pythonnet bridge. This abstracts C# interop details from MCP tools.
 
 **Key Deliverables**:
-- `DwsimService` class wrapping JSON-RPC client
+- `DwsimService` class wrapping pythonnet SessionManager
 - High-level methods:
   - `create_session(name: Optional[str]) → str`
   - `close_session(session_id: str) → None`
@@ -377,18 +336,19 @@ Build Python service layer providing high-level DWSIM operations using JSON-RPC 
   - `connect_streams(session_id, source, target, port) → None`
   - `run_simulation(session_id) → SimulationResult`
   - `get_stream_properties(session_id, stream_id) → MaterialStreamDTO`
-- Error mapping (RPC errors → Python exceptions)
+- Error mapping (C# exceptions → Python exceptions)
+- Type conversion helpers
 - Structured logging
 - Type hints and docstrings
 
 **Success Criteria**:
 - Three-phase separator workflow implementable in ~20 lines of Python
 - Clear exceptions for all error cases
-- Async methods return Awaitable types
-- Service testable with mock IPC client
+- Methods can be called synchronously or wrapped in async
+- Service testable with mock SessionManager
 
 **Validation Test**:
-Python script using DwsimService to run three-phase separator, verify results match C# direct and JSON-RPC tests.
+Python script using DwsimService to run three-phase separator, verify results match C# direct tests.
 
 ---
 
@@ -902,17 +862,55 @@ Add authentication, authorization, and multi-tenancy support for shared server d
 
 This plan provides a structured, incremental approach to building the DWSIM MCP Server. Each spec builds on validated assumptions, reducing risk and rework.
 
-**Total Specs**: 26 (9 core phases + 3 future phases)
+### Architectural Decision Update (2026-01-08)
 
-**Estimated Timeline**:
-- Phase 1-2: 1-2 weeks (critical path)
-- Phase 3-4: 1-2 weeks
-- Phase 5-6: 2-3 weeks
-- Phase 7-8: 1-2 weeks
-- **Total MVP**: 5-9 weeks
+**Selected Approach**: Python MCP Server with pythonnet (in-process interop)
+
+**Key Changes from Original Plan**:
+- **Phase 3 Simplified**: Eliminated JSON-RPC over Named Pipes
+  - ~~Spec 3.1: JSON-RPC Server (C# Side)~~ → **REMOVED**
+  - ~~Spec 3.2: JSON-RPC Methods~~ → **REMOVED**
+  - **New Spec 3.1**: Convert DwsimWorker to Class Library (simple refactoring)
+  - **New Spec 3.2**: pythonnet Bridge (simpler than JSON-RPC)
+  - Spec 3.3: Resource Limits moved to Python side
+
+- **Phase 4 Simplified**: No JSON-RPC client needed
+  - ~~Spec 4.1: JSON-RPC Client~~ → **REMOVED**
+  - **New Spec 4.1**: Pydantic DTOs (simplified for MCP inputs)
+  - **New Spec 4.2**: DwsimService (direct C# calls via pythonnet)
+
+**Benefits of New Approach**:
+- ✅ **Single process** (simpler deployment, debugging)
+- ✅ **Zero IPC overhead** (better performance)
+- ✅ **Less code** (no JSON-RPC server/client)
+- ✅ **Faster development** (2 weeks saved)
+- ✅ **Right language for users** (Python-native)
+
+**Specs Eliminated**: 3 (3.1, 3.2, 4.1 JSON-RPC components)
+**Specs Simplified**: 2 (3.3, 4.2 no longer need IPC)
+**New Specs Added**: 2 (3.1 class library, 3.2 pythonnet bridge)
+
+**Total Specs**: 23 (reduced from 26)
+
+**Updated Timeline**:
+- Phase 1-2: 1-2 weeks (critical path) - **UNCHANGED**
+- Phase 3-4: **1 week** (reduced from 1-2 weeks due to simpler architecture)
+- Phase 5-6: 2-3 weeks - **UNCHANGED**
+- Phase 7-8: 1-2 weeks - **UNCHANGED**
+- **Total MVP**: **4-8 weeks** (reduced from 5-9 weeks)
+
+**Current Status** (as of 2026-01-08):
+- ✅ Phase 1: Complete (Specs 1.1, 1.2, 1.3)
+- ✅ Phase 2: Complete (Specs 2.1, 2.2, 2.3)
+- 🔄 Phase 3: Ready to start with new pythonnet approach
 
 **Next Steps**:
-1. Review and approve this plan
-2. Begin Spec 1.1 (DWSIM Assembly Loading)
-3. Iterate on specs as learnings emerge
-4. Maintain living document as architecture evolves
+1. ✅ Architectural decision documented (see docs/architecture/interop-strategy.md)
+2. **Begin Spec 3.1**: Convert DwsimWorker.csproj from Exe to Library
+3. **Then Spec 3.2**: Implement pythonnet bridge (clr_loader.py, session_client.py)
+4. **Then Spec 3.3**: Add Python-side resource limits
+5. Continue with Phase 4: Python MCP Server implementation
+
+**References**:
+- [Architectural Decision](docs/architecture/interop-strategy.md)
+- [Updated Tech Stack](.spec-workflow/steering/tech.md)

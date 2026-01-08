@@ -2,10 +2,10 @@
 
 ## Project Type
 
-**MCP Server (Model Context Protocol Server)** - A polyglot client-server application consisting of:
+**MCP Server (Model Context Protocol Server)** - A single-process application consisting of:
 - Python-based MCP server façade providing standardized LLM agent interface
-- .NET Framework 4.8 engine worker hosting DWSIM simulation engine
-- Inter-process communication layer bridging the two components
+- .NET Framework 4.8 class library (DwsimWorker) hosting DWSIM simulation engine
+- pythonnet for direct in-process .NET interop (no IPC overhead)
 
 This is a **service/daemon application** designed to run as a background process, exposing MCP tools and resources to LLM agents while managing DWSIM simulation sessions.
 
@@ -20,9 +20,10 @@ This is a **service/daemon application** designed to run as a background process
 - **Type Checking**: mypy with type hints for static analysis
 - **Virtual Environments**: venv or virtualenv for isolated dependencies
 
-**C# (.NET Framework Engine Worker)**
+**C# (.NET Framework Class Library)**
 - **Language**: C# 10+ (with .NET Framework 4.8 compatibility)
 - **Runtime**: .NET Framework 4.8 (required for DWSIM compatibility)
+- **Output Type**: Class Library (DLL) - loaded by Python via pythonnet
 - **Build Tool**: MSBuild via Visual Studio 2019/2022 or newer
 - **Target Platform**: Windows x64 (primary), Windows x86 (legacy support)
 
@@ -31,20 +32,17 @@ This is a **service/daemon application** designed to run as a background process
 **Python Stack:**
 - **mcp**: Official Model Context Protocol SDK for Python (tools, resources, prompts)
 - **pydantic**: Data validation and settings management with type hints
-- **pythonnet (Python.NET)**: Optional direct .NET assembly interop (alternative to Named Pipes)
-- **jsonrpcclient/jsonrpcserver**: JSON-RPC 2.0 implementation for IPC
+- **pythonnet (Python.NET)**: Primary .NET assembly interop for in-process C# calls
 - **structlog**: Structured logging with context and filtering
 - **opentelemetry-api**: Distributed tracing and observability
 - **asyncio**: Built-in async/await for concurrent operations
 - **typer or click**: CLI framework for server configuration and management
-- **comtypes**: Optional COM interop for CAPE-OPEN interface access (if needed)
 
 **.NET Framework Stack:**
 - **DWSIM Assemblies**: Core simulation engine (DWSIM.Thermodynamics, DWSIM.UnitOperations, DWSIM.FlowsheetSolver, etc.)
 - **CapeOpen.dll**: CAPE-OPEN standard interface definitions
 - **Newtonsoft.Json**: JSON serialization for DTO marshalling and CAPE-OPEN data exchange
 - **Serilog**: Structured logging with sinks for console, file, Seq
-- **System.IO.Pipes**: Named Pipe server for Windows IPC
 - **System.Threading.Tasks**: Async/await support for concurrent sessions
 - **xUnit or NUnit**: Unit testing framework
 
@@ -58,7 +56,7 @@ This is a **service/daemon application** designed to run as a background process
 
 ### Application Architecture
 
-**Polyglot Client-Server with Inter-Process Communication (IPC)**
+**Single-Process with pythonnet In-Process Interop**
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -66,36 +64,32 @@ This is a **service/daemon application** designed to run as a background process
 └───────────────────────┬─────────────────────────────────────┘
                         │ MCP Protocol (stdio)
 ┌───────────────────────▼─────────────────────────────────────┐
-│  MCP Server (Python 3.11+)                                  │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ Tools Registry (create_session, add_unit, run, etc.)│   │
-│  │ Resources (docs, results, sample cases)             │   │
-│  │ Observability (logging, metrics, tracing)           │   │
-│  └────────────────────┬────────────────────────────────┘   │
-└───────────────────────┼─────────────────────────────────────┘
-                        │ JSON-RPC 2.0 (Named Pipe/TCP)
-                        │ OR pythonnet (direct .NET interop)
-┌───────────────────────▼─────────────────────────────────────┐
-│  Engine Worker (.NET Framework 4.8 Console App)             │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ IPC Server (Named Pipe listener, JSON-RPC handler)  │   │
-│  │ Session Manager (concurrent session registry)       │   │
-│  │ EngineHost (STA thread, DWSIM lifecycle)            │   │
-│  │ Adapters (typed wrappers around DWSIM APIs)         │   │
-│  │ Limits (timeout, memory, quota enforcement)         │   │
-│  └────────────────────┬────────────────────────────────┘   │
-└───────────────────────┼─────────────────────────────────────┘
-                        │
-┌───────────────────────▼─────────────────────────────────────┐
-│  DWSIM Engine (Multiple Assemblies)                         │
-│  - DWSIM.Interfaces, DWSIM.Thermodynamics                   │
-│  - DWSIM.UnitOperations, DWSIM.FlowsheetSolver              │
-│  - DWSIM.MathOps, DWSIM.SharedClasses                       │
+│  Single Process (Python Runtime)                            │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ Python MCP Server (Python 3.11+)                     │   │
+│  │ ┌──────────────────────────────────────────────────┐ │   │
+│  │ │ MCP Tools (create_session, add_unit, run, etc.) │ │   │
+│  │ │ Resources (docs, results, sample cases)          │ │   │
+│  │ │ Observability (logging, metrics, tracing)        │ │   │
+│  │ └────────────────────┬─────────────────────────────┘ │   │
+│  └──────────────────────┼───────────────────────────────┘   │
+│                         │ pythonnet (in-process calls)      │
+│  ┌──────────────────────▼───────────────────────────────┐   │
+│  │ DwsimWorker (.NET Framework 4.8 Class Library)      │   │
+│  │ ┌──────────────────────────────────────────────────┐ │   │
+│  │ │ SessionManager (concurrent session registry)    │ │   │
+│  │ │ Adapters (StreamAdapter, CalculationAdapter)    │ │   │
+│  │ │ Converters (CapeOpenConverter)                  │ │   │
+│  │ │ DWSIM Engine (Thermodynamics, UnitOps, Solver) │ │   │
+│  │ └──────────────────────────────────────────────────┘ │   │
+│  └──────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **Key Architectural Patterns:**
-- **Façade Pattern**: Python layer presents clean MCP interface hiding IPC/interop complexity
+- **Façade Pattern**: Python layer presents clean MCP interface hiding pythonnet complexity
+- **In-Process Interop**: pythonnet loads .NET Framework 4.8 assemblies directly
 - **Session-Based Isolation**: Each simulation session is independent with isolated state
 - **STA Threading**: DWSIM hosted on Single-Threaded Apartment threads (COM compatibility)
 - **Adapter Pattern**: Strongly-typed wrappers around DWSIM's legacy APIs
@@ -448,26 +442,29 @@ MCP Server Response:
      - Additional runtime dependency (Python + .NET vs just .NET)
      - More straightforward for users vs. potential performance edge
 
-2. **Interop Strategy: Named Pipes/JSON-RPC with pythonnet as Alternative**
+2. **Interop Strategy: pythonnet (In-Process) as Primary**
    - **Rationale**:
-     - **Primary: JSON-RPC 2.0 over Named Pipes**:
-       - Structured, versioned protocol with clear request/response semantics
-       - Process isolation: separate .NET worker process with independent crash domain
-       - Named Pipes: low-latency, secure Windows-native IPC
-       - TCP fallback enables future cross-host deployment
-     - **Alternative: pythonnet (Python.NET) for direct interop**:
-       - Can load .NET assemblies directly into Python process
-       - Zero-copy data transfer, lower latency
-       - Simpler deployment (no separate worker process)
-       - Trade-off: shared crash domain, harder to isolate/sandbox
+     - **Primary: pythonnet (Python.NET) for direct in-process interop**:
+       - Can load .NET Framework 4.8 assemblies directly into Python process
+       - Zero IPC overhead: direct method calls, no serialization
+       - Simpler deployment: single process, no process management
+       - Simpler architecture: no JSON-RPC server/client to implement
+       - Better performance: no Named Pipes latency, no marshalling overhead
+       - Easier debugging: single process, standard debuggers work
+     - **Optional Future: Named Pipes for isolation mode**:
+       - Add as opt-in for high-security scenarios
+       - Process isolation if untrusted agents require sandboxing
+       - Remote worker scenarios (cross-host deployment)
    - **Alternatives Considered**:
+     - JSON-RPC over Named Pipes (original plan: rejected due to IPC complexity)
+     - All C# with .NET 10 MCP SDK (rejected: requires two .NET runtimes, wrong audience)
      - gRPC (rejected: overkill for single-binary communication)
-     - Raw TCP sockets (rejected: no standard framing/error handling)
      - IronPython (rejected: outdated, Python 2.7 compatibility only)
-   - **Trade-offs**:
-     - Named Pipes: IPC overhead, separate process management vs. isolation benefits
-     - pythonnet: Performance gain, simpler deployment vs. reduced isolation
-   - **Decision**: Start with Named Pipes for safety, provide pythonnet mode as option
+   - **Trade-offs Accepted**:
+     - Shared crash domain (mitigated by comprehensive exception handling)
+     - pythonnet dependency (mature library, acceptable)
+   - **Decision**: pythonnet as primary interop, Named Pipes as optional future enhancement
+   - **See**: docs/architecture/interop-strategy.md for detailed analysis
 
 3. **Session-Based State Model (No Persistent Sessions)**
    - **Rationale**:
