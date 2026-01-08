@@ -11,6 +11,20 @@ namespace DwsimWorker.Converters
     /// </summary>
     public sealed class CapeOpenConverter
     {
+        /// <summary>
+        /// Converts a CAPE-OPEN material object into a DTO with SI-normalized values.
+        /// </summary>
+        /// <param name="materialObject">CAPE-OPEN material object instance (ICapeThermoMaterialObject).</param>
+        /// <returns>Material stream DTO populated from CAPE-OPEN properties.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when materialObject is null.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when required CAPE-OPEN properties are unavailable.</exception>
+        /// <example>
+        /// <code>
+        /// // Python (pythonnet)
+        /// converter = DwsimWorker.Converters.CapeOpenConverter()
+        /// dto = converter.ToMaterialStreamDto(materialObject)
+        /// </code>
+        /// </example>
         public MaterialStreamDto ToMaterialStreamDto(dynamic materialObject)
         {
             if (materialObject == null)
@@ -42,6 +56,20 @@ namespace DwsimWorker.Converters
             };
         }
 
+        /// <summary>
+        /// Applies DTO values to a CAPE-OPEN material object using CAPE-OPEN property setters.
+        /// </summary>
+        /// <param name="materialObject">CAPE-OPEN material object instance (ICapeThermoMaterialObject).</param>
+        /// <param name="dto">Material stream DTO to apply.</param>
+        /// <exception cref="ArgumentNullException">Thrown when materialObject or dto is null.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when validation fails.</exception>
+        /// <example>
+        /// <code>
+        /// // Python (pythonnet)
+        /// converter = DwsimWorker.Converters.CapeOpenConverter()
+        /// converter.ApplyMaterialStreamDto(materialObject, dto)
+        /// </code>
+        /// </example>
         public void ApplyMaterialStreamDto(dynamic materialObject, MaterialStreamDto dto)
         {
             if (materialObject == null)
@@ -61,6 +89,12 @@ namespace DwsimWorker.Converters
             SetScalarProperty(materialObject, "totalFlow", dto.TotalMolarFlowMolPerS);
         }
 
+        /// <summary>
+        /// Converts a CAPE-OPEN property package into a DTO.
+        /// </summary>
+        /// <param name="propertyPackage">CAPE-OPEN property package instance (ICapeThermoPropertyPackage).</param>
+        /// <returns>Property package DTO.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when propertyPackage is null.</exception>
         public PropertyPackageDto ToPropertyPackageDto(dynamic propertyPackage)
         {
             if (propertyPackage == null)
@@ -77,6 +111,13 @@ namespace DwsimWorker.Converters
             };
         }
 
+        /// <summary>
+        /// Validates and applies DTO settings to a CAPE-OPEN property package.
+        /// </summary>
+        /// <param name="propertyPackage">CAPE-OPEN property package instance (ICapeThermoPropertyPackage).</param>
+        /// <param name="dto">Property package DTO to validate.</param>
+        /// <exception cref="ArgumentNullException">Thrown when propertyPackage or dto is null.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when validation fails.</exception>
         public void ApplyPropertyPackageDto(dynamic propertyPackage, PropertyPackageDto dto)
         {
             if (propertyPackage == null)
@@ -92,6 +133,12 @@ namespace DwsimWorker.Converters
             ValidationHelper.ValidatePropertyPackageDto(dto);
         }
 
+        /// <summary>
+        /// Converts a CAPE-OPEN unit operation into a DTO.
+        /// </summary>
+        /// <param name="unitOperation">CAPE-OPEN unit operation instance.</param>
+        /// <returns>Unit operation DTO.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when unitOperation is null.</exception>
         public UnitOperationDto ToUnitOperationDto(dynamic unitOperation)
         {
             if (unitOperation == null)
@@ -108,6 +155,13 @@ namespace DwsimWorker.Converters
             };
         }
 
+        /// <summary>
+        /// Validates and applies DTO settings to a CAPE-OPEN unit operation.
+        /// </summary>
+        /// <param name="unitOperation">CAPE-OPEN unit operation instance.</param>
+        /// <param name="dto">Unit operation DTO to validate.</param>
+        /// <exception cref="ArgumentNullException">Thrown when unitOperation or dto is null.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when validation fails.</exception>
         public void ApplyUnitOperationDto(dynamic unitOperation, UnitOperationDto dto)
         {
             if (unitOperation == null)
@@ -123,6 +177,15 @@ namespace DwsimWorker.Converters
             ValidationHelper.ValidateUnitOperationDto(dto);
         }
 
+        /// <summary>
+        /// Creates a flash result DTO from calculated conditions and phase data.
+        /// </summary>
+        /// <param name="calculationType">Flash calculation type (e.g., TP, PH, PS).</param>
+        /// <param name="temperatureK">Temperature in Kelvin.</param>
+        /// <param name="pressurePa">Pressure in Pascals.</param>
+        /// <param name="phases">Phase results for the flash calculation.</param>
+        /// <returns>Flash result DTO.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when validation fails.</exception>
         public FlashResultDto CreateFlashResultDto(string calculationType, double temperatureK, double pressurePa, IList<PhaseDto> phases)
         {
             ValidationHelper.ValidateFlashInputs(calculationType, temperatureK, pressurePa);

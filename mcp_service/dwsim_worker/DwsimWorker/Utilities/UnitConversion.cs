@@ -7,6 +7,13 @@ namespace DwsimWorker.Utilities
     /// </summary>
     public static class UnitConversion
     {
+        /// <summary>
+        /// Converts a temperature value to Kelvin.
+        /// </summary>
+        /// <param name="value">Temperature value.</param>
+        /// <param name="unit">Unit label (e.g., K, C, F).</param>
+        /// <returns>Temperature in Kelvin.</returns>
+        /// <exception cref="UnitConversionException">Thrown when the unit is unsupported.</exception>
         public static double TemperatureToKelvin(double value, string unit)
         {
             switch (NormalizeUnit(unit))
@@ -27,6 +34,13 @@ namespace DwsimWorker.Utilities
             }
         }
 
+        /// <summary>
+        /// Converts a pressure value to Pascals.
+        /// </summary>
+        /// <param name="value">Pressure value.</param>
+        /// <param name="unit">Unit label (e.g., Pa, kPa, bar).</param>
+        /// <returns>Pressure in Pascals.</returns>
+        /// <exception cref="UnitConversionException">Thrown when the unit is unsupported.</exception>
         public static double PressureToPascal(double value, string unit)
         {
             switch (NormalizeUnit(unit))
@@ -49,6 +63,13 @@ namespace DwsimWorker.Utilities
             }
         }
 
+        /// <summary>
+        /// Converts a molar flow value to mol/s.
+        /// </summary>
+        /// <param name="value">Molar flow value.</param>
+        /// <param name="unit">Unit label (e.g., mol/s, mol/h, kmol/h).</param>
+        /// <returns>Molar flow in mol/s.</returns>
+        /// <exception cref="UnitConversionException">Thrown when the unit is unsupported.</exception>
         public static double MolarFlowToMolPerSecond(double value, string unit)
         {
             switch (NormalizeUnit(unit))

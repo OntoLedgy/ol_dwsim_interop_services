@@ -12,6 +12,12 @@ namespace DwsimWorker.Utilities
     {
         private const double CompositionTolerance = 1e-6;
 
+        /// <summary>
+        /// Validates a material stream DTO for required fields and composition rules.
+        /// </summary>
+        /// <param name="dto">Material stream DTO to validate.</param>
+        /// <exception cref="ArgumentNullException">Thrown when dto is null.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when validation fails.</exception>
         public static void ValidateMaterialStreamDto(MaterialStreamDto dto)
         {
             var errors = new List<string>();
@@ -56,6 +62,12 @@ namespace DwsimWorker.Utilities
             ThrowIfErrors(errors);
         }
 
+        /// <summary>
+        /// Validates a property package DTO for required fields.
+        /// </summary>
+        /// <param name="dto">Property package DTO to validate.</param>
+        /// <exception cref="ArgumentNullException">Thrown when dto is null.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when validation fails.</exception>
         public static void ValidatePropertyPackageDto(PropertyPackageDto dto)
         {
             var errors = new List<string>();
@@ -78,6 +90,12 @@ namespace DwsimWorker.Utilities
             ThrowIfErrors(errors);
         }
 
+        /// <summary>
+        /// Validates a unit operation DTO for required fields.
+        /// </summary>
+        /// <param name="dto">Unit operation DTO to validate.</param>
+        /// <exception cref="ArgumentNullException">Thrown when dto is null.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when validation fails.</exception>
         public static void ValidateUnitOperationDto(UnitOperationDto dto)
         {
             var errors = new List<string>();
@@ -100,6 +118,13 @@ namespace DwsimWorker.Utilities
             ThrowIfErrors(errors);
         }
 
+        /// <summary>
+        /// Validates flash calculation inputs.
+        /// </summary>
+        /// <param name="calculationType">Flash calculation type.</param>
+        /// <param name="temperatureK">Temperature in Kelvin.</param>
+        /// <param name="pressurePa">Pressure in Pascals.</param>
+        /// <exception cref="InvalidOperationException">Thrown when validation fails.</exception>
         public static void ValidateFlashInputs(string calculationType, double temperatureK, double pressurePa)
         {
             var errors = new List<string>();
