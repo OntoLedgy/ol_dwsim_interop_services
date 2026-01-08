@@ -1,4 +1,10 @@
 from pathlib import Path
+import sys
+
+_server_root = Path(__file__).resolve().parent.parent
+_repo_root = _server_root.parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
 
 import pytest
 

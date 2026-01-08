@@ -1,7 +1,7 @@
 """CreateSessionRequest DTO for MCP create_session tool."""
 
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CreateSessionRequest(BaseModel):
@@ -24,11 +24,11 @@ class CreateSessionRequest(BaseModel):
         le=86400
     )
 
-    class Config:
-        """Pydantic configuration."""
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Distillation Column Design",
-                "timeout": 7200
+                "timeout": 7200,
             }
         }
+    )

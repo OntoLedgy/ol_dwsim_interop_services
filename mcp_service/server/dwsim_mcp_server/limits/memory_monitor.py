@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import time
 import threading
 from typing import Optional
 
@@ -30,6 +31,8 @@ class MemoryMonitor:
         self._lock = threading.Lock()
         self._breached = False
         self._last_rss_bytes = 0
+        self._recovery_pending = False
+        self._last_sample_at: Optional[float] = None
         self._task: Optional[asyncio.Task[None]] = None
         self._running = False
 
@@ -57,6 +60,14 @@ class MemoryMonitor:
     def is_exceeded(self) -> bool:
         """Return True if the memory limit breach flag is set."""
         with self._lock:
+            if self._breached and self._recovery_pending and self._last_sample_at is not None:
+                recovery_threshold = int(self._limit_bytes * self._recovery_ratio)
+                if (
+                    self._last_rss_bytes <= recovery_threshold
+                    and (time.monotonic() - self._last_sample_at) >= self._poll_interval
+                ):
+                    self._breached = False
+                    self._recovery_pending = False
             return self._breached
 
     def snapshot(self) -> dict:
@@ -71,13 +82,17 @@ class MemoryMonitor:
 
     async def _run(self) -> None:
         while self._running:
+            await asyncio.sleep(self._poll_interval)
             try:
                 rss_bytes = self._process.memory_info().rss
+                now = time.monotonic()
                 recovery_threshold = int(self._limit_bytes * self._recovery_ratio)
                 with self._lock:
                     self._last_rss_bytes = rss_bytes
+                    self._last_sample_at = now
                     if rss_bytes > self._limit_bytes and not self._breached:
                         self._breached = True
+                        self._recovery_pending = False
                         self._logger.warning(
                             "memory_limit_exceeded",
                             extra={
@@ -85,16 +100,21 @@ class MemoryMonitor:
                                 "limit_bytes": self._limit_bytes,
                             },
                         )
-                    elif self._breached and rss_bytes <= recovery_threshold:
-                        self._breached = False
-                        self._logger.info(
-                            "memory_limit_recovered",
-                            extra={
-                                "rss_bytes": rss_bytes,
-                                "recovery_threshold_bytes": recovery_threshold,
-                            },
-                        )
+                    elif self._breached:
+                        if rss_bytes <= recovery_threshold:
+                            if self._recovery_pending:
+                                self._breached = False
+                                self._recovery_pending = False
+                                self._logger.info(
+                                    "memory_limit_recovered",
+                                    extra={
+                                        "rss_bytes": rss_bytes,
+                                        "recovery_threshold_bytes": recovery_threshold,
+                                    },
+                                )
+                            else:
+                                self._recovery_pending = True
+                        else:
+                            self._recovery_pending = False
             except Exception:
                 self._logger.exception("memory_monitor_failed")
-
-            await asyncio.sleep(self._poll_interval)

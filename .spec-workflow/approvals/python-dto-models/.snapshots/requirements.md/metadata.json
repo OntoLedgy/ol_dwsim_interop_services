@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/python-dto-models/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-08T17:41:47.417Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767894107378_kyo6ha8ap",
+      "approvalTitle": "Approve requirements for python-dto-models"
+    }
+  ]
+}

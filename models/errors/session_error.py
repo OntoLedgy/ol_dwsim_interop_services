@@ -1,7 +1,7 @@
 """SessionError model for session-related errors."""
 
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SessionError(BaseModel):
@@ -12,12 +12,12 @@ class SessionError(BaseModel):
     session_id: Optional[str] = Field(None, description="Session ID if applicable")
     details: Optional[dict] = Field(None, description="Additional error details")
 
-    class Config:
-        """Pydantic configuration."""
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "code": "SESSION_NOT_FOUND",
                 "message": "Session with ID '550e8400-e29b-41d4-a716-446655440000' does not exist",
-                "session_id": "550e8400-e29b-41d4-a716-446655440000"
+                "session_id": "550e8400-e29b-41d4-a716-446655440000",
             }
         }
+    )

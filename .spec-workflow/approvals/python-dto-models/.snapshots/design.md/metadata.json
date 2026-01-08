@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/python-dto-models/design.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-08T17:43:35.249Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767894215223_tj0rjy48s",
+      "approvalTitle": "Approve design for python-dto-models"
+    }
+  ]
+}

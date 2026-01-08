@@ -1,7 +1,7 @@
 """ResourceLimitError model for limit violations."""
 
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ResourceLimitError(BaseModel):
@@ -12,9 +12,8 @@ class ResourceLimitError(BaseModel):
     session_id: Optional[str] = Field(None, description="Session ID if applicable")
     details: Optional[dict] = Field(None, description="Additional error details")
 
-    class Config:
-        """Pydantic configuration."""
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "code": "TIMEOUT",
                 "message": "Operation timed out after 300 seconds.",
@@ -22,3 +21,4 @@ class ResourceLimitError(BaseModel):
                 "details": {"timeout_seconds": 300, "elapsed_seconds": 305.2},
             }
         }
+    )
