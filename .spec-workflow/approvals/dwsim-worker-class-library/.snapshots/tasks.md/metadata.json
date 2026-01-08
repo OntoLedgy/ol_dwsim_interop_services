@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/dwsim-worker-class-library/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-08T10:43:02.160Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767868982096_z588ku67v",
+      "approvalTitle": "Tasks: Convert DwsimWorker to Class Library"
+    }
+  ]
+}

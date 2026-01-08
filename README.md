@@ -89,6 +89,9 @@ cd mcp_service/dwsim_worker/DwsimWorker/bin/Debug
 cd mcp_service/server
 pytest tests/
 
+# Fuller run (includes smoke; requires DwsimWorker.dll built in Debug)
+pytest tests/smoke tests/unit tests/integration
+
 # C# tests
 cd mcp_service/dwsim_worker
 dotnet test

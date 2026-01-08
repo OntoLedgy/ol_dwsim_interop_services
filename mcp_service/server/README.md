@@ -86,6 +86,9 @@ pytest --cov=dwsim_mcp_server --cov-report=html
 
 # Specific test file
 pytest tests/unit/test_session.py
+
+# Fuller run (includes smoke; requires DwsimWorker.dll built in Debug)
+pytest tests/smoke tests/unit tests/integration
 ```
 
 ### Code Quality
