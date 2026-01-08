@@ -190,7 +190,7 @@ This component directly supports the Product Vision outlined in product.md:
 - **Configuration**: The application SHALL support configuration via:
   - App.config file (for binding redirects)
   - Environment variable: DWSIM_PATH (path to DWSIM assemblies)
-  - Command-line argument: --dwsim-path <path> (overrides environment variable)
+  - Command-line argument: `--dwsim-path <path>` (overrides environment variable)
 
 ## Success Metrics
 
