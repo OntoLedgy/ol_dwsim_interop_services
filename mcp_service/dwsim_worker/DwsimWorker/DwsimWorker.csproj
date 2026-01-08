@@ -41,15 +41,12 @@
     <Reference Include="System.IO.Pipes" />
     <Reference Include="System.Threading.Tasks" />
     <Reference Include="Microsoft.CSharp" />
-
     <!-- JSON serialization -->
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.0" />
-
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <!-- Logging -->
     <PackageReference Include="Serilog" Version="3.1.1" />
     <PackageReference Include="Serilog.Sinks.Console" Version="5.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
-
     <!-- DWSIM assemblies - reference from parent repo or install separately -->
     <!-- These paths will need to be adjusted based on your setup -->
     <!--
@@ -139,15 +136,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="IPC\" />
-    <Folder Include="Engine\" />
-    <Folder Include="Adapters\" />
-    <Folder Include="Converters\" />
-    <Folder Include="Exceptions\" />
     <Folder Include="Limits\" />
-    <Folder Include="Models\" />
-    <Folder Include="Contracts\" />
-    <Folder Include="Contracts\CapeOpen\" />
-    <Folder Include="Utilities\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

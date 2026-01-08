@@ -220,7 +220,6 @@ namespace DwsimWorker.Tests.Performance
             // Performance target: < 500 ms
             // Note: This includes re-running calculation, so actual extraction is faster
             // In production, extraction would be a separate operation
-            const int performanceTarget = 5000; // Using calculation target as baseline
 
             _logger.Information($"✓ Extraction completed: {extractionTime}ms");
             _logger.Information($"  Streams per ms: {(double)result.StreamResults.Count / extractionTime:F4}");
