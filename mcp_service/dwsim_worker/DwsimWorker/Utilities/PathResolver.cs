@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Serilog;
 
 namespace DwsimWorker.Utilities
@@ -110,6 +111,13 @@ namespace DwsimWorker.Utilities
         /// <returns>The path from configuration, or null if not set.</returns>
         public static string GetConfigPath()
         {
+            var mappedPath = GetMappedConfigValue("DwsimPath");
+            if (!string.IsNullOrWhiteSpace(mappedPath))
+            {
+                Log.Debug("Found DwsimPath in mapped config: {Path}", mappedPath);
+                return mappedPath;
+            }
+
             try
             {
                 var path = ConfigurationManager.AppSettings["DwsimPath"];
@@ -128,6 +136,71 @@ namespace DwsimWorker.Utilities
             catch (Exception ex)
             {
                 Log.Warning(ex, "Error reading App.config");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets extra dependency probe paths from App.config appSettings["DwsimDependencyPaths"].
+        /// </summary>
+        /// <returns>Sequence of dependency paths.</returns>
+        public static IReadOnlyList<string> GetDependencyPaths()
+        {
+            var mappedValue = GetMappedConfigValue("DwsimDependencyPaths");
+            var appValue = ConfigurationManager.AppSettings["DwsimDependencyPaths"];
+
+            var combined = string.Join(";", new[] { mappedValue, appValue }.Where(value => !string.IsNullOrWhiteSpace(value)));
+            if (string.IsNullOrWhiteSpace(combined))
+            {
+                return Array.Empty<string>();
+            }
+
+            return combined
+                .Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(path => path.Trim())
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .ToList()
+                .AsReadOnly();
+        }
+
+        private static string GetMappedConfigValue(string key)
+        {
+            try
+            {
+                var configPath = GetAssemblyConfigPath();
+                if (configPath == null)
+                {
+                    return null;
+                }
+
+                var map = new ExeConfigurationFileMap { ExeConfigFilename = configPath };
+                var config = ConfigurationManager.OpenMappedExeConfiguration(map, ConfigurationUserLevel.None);
+                var setting = config.AppSettings.Settings[key]?.Value;
+                return string.IsNullOrWhiteSpace(setting) ? null : setting;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Error reading mapped config for {Key}", key);
+                return null;
+            }
+        }
+
+        private static string GetAssemblyConfigPath()
+        {
+            try
+            {
+                var assemblyPath = Assembly.GetExecutingAssembly().Location;
+                if (string.IsNullOrWhiteSpace(assemblyPath))
+                {
+                    return null;
+                }
+
+                var configPath = assemblyPath + ".config";
+                return File.Exists(configPath) ? configPath : null;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Error locating assembly config file");
                 return null;
             }
         }

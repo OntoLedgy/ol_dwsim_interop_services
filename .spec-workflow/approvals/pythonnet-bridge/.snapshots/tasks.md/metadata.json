@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/pythonnet-bridge/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-08T12:13:14.816Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767874394723_e9zqcoyar",
+      "approvalTitle": "Spec 3.2 pythonnet-bridge tasks"
+    }
+  ]
+}

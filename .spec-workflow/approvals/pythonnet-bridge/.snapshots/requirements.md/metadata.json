@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/pythonnet-bridge/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-08T12:06:27.278Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767873987174_bcoe8espc",
+      "approvalTitle": "Spec 3.2 pythonnet-bridge requirements"
+    }
+  ]
+}

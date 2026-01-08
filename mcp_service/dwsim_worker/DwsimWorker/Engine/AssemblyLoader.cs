@@ -66,6 +66,8 @@ namespace DwsimWorker.Engine
                         ErrorCode.AssemblyNotFound);
                 }
 
+                AssemblyResolver.Register(_logger, basePath, PathResolver.GetDependencyPaths());
+
                 // Step 2: Load each required assembly
                 var loadedAssemblies = new List<AssemblyInfo>();
                 var startTime = DateTime.UtcNow;
