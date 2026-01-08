@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/python-resource-limits/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-08T14:42:03.244Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767883323203_7vzo2x8vs",
+      "approvalTitle": "Spec 3.3 requirements: python-resource-limits"
+    }
+  ]
+}
