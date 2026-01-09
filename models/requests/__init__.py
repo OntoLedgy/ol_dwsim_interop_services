@@ -6,7 +6,9 @@ from .close_session_request import CloseSessionRequest
 from .connect_request import ConnectRequest
 from .create_session_request import CreateSessionRequest
 from .get_results_request import GetResultsRequest
+from .load_case_request import LoadCaseRequest
 from .run_simulation_request import RunSimulationRequest
+from .save_case_request import SaveCaseRequest
 
 __all__ = [
     "AddStreamRequest",
@@ -15,5 +17,7 @@ __all__ = [
     "ConnectRequest",
     "CreateSessionRequest",
     "GetResultsRequest",
+    "LoadCaseRequest",
     "RunSimulationRequest",
+    "SaveCaseRequest",
 ]

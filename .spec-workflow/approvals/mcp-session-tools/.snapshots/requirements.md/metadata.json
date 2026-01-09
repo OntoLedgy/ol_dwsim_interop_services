@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-session-tools/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-09T14:38:33.825Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767969513791_ybug8rxc5",
+      "approvalTitle": "Spec mcp-session-tools requirements"
+    }
+  ]
+}

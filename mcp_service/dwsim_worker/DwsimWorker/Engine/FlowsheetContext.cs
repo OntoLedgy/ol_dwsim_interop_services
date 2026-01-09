@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Serilog;
 using DwsimWorker.Exceptions;
 using DwsimWorker.Models;
@@ -178,6 +179,43 @@ namespace DwsimWorker.Engine
         {
             EnsureInitialized();
             return _compounds.AsReadOnly();
+        }
+
+        /// <summary>
+        /// Saves the current flowsheet state to disk using the DWSIM flowsheet API.
+        /// </summary>
+        /// <param name="filePath">Destination file path.</param>
+        public void SaveCase(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentNullException(nameof(filePath), "File path cannot be null or empty.");
+
+            EnsureInitialized();
+            InvokeFlowsheetFileOperation(
+                new[] { "SaveToXML", "SaveToFile", "SaveAs", "SaveSimulation", "SaveFlowsheet", "Save" },
+                filePath,
+                "save");
+        }
+
+        /// <summary>
+        /// Loads a flowsheet state from disk using the DWSIM flowsheet API.
+        /// </summary>
+        /// <param name="filePath">Source file path.</param>
+        public void LoadCase(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentNullException(nameof(filePath), "File path cannot be null or empty.");
+
+            EnsureInitialized();
+            InvokeFlowsheetFileOperation(
+                new[] { "LoadFromXML", "LoadFromFile", "LoadSimulation", "LoadFlowsheet", "Open", "Load" },
+                filePath,
+                "load");
+
+            _compounds.Clear();
+            _streams.Clear();
+            _units.Clear();
+            _connections.Clear();
         }
 
         /// <summary>
@@ -531,6 +569,28 @@ namespace DwsimWorker.Engine
 
             if (!_isInitialized)
                 throw new InvalidOperationException("FlowsheetContext is not initialized. Call Initialize() first.");
+        }
+
+        private void InvokeFlowsheetFileOperation(IEnumerable<string> candidateMethods, string filePath, string operationName)
+        {
+            var flowsheetType = _flowsheet.GetType();
+            var methods = flowsheetType.GetMethods(BindingFlags.Instance | BindingFlags.Public);
+
+            foreach (var methodName in candidateMethods)
+            {
+                foreach (var method in methods.Where(m => m.Name == methodName))
+                {
+                    var parameters = method.GetParameters();
+                    if (parameters.Length == 1 && parameters[0].ParameterType == typeof(string))
+                    {
+                        _logger.Information("Flowsheet {Operation} using {Method}", operationName, methodName);
+                        method.Invoke(_flowsheet, new object[] { filePath });
+                        return;
+                    }
+                }
+            }
+
+            throw new InvalidOperationException($"Flowsheet does not expose a supported {operationName} method.");
         }
 
         /// <summary>

@@ -46,6 +46,36 @@ class SessionClient:
 
         return bool(result.Data)
 
+    def save_case(self, session_id: str, file_path: str) -> bool:
+        try:
+            guid = _parse_guid(session_id)
+            result = self._session_manager.SaveCase(guid, file_path)
+        except Exception as exc:
+            raise map_dotnet_exception(exc, kind="session") from exc
+
+        if not result.Success:
+            message = result.Message or "Failed to save case."
+            if result.Error is not None:
+                raise map_dotnet_exception(result.Error, kind="session")
+            raise SessionError(message)
+
+        return bool(result.Data)
+
+    def load_case(self, session_id: str, file_path: str) -> bool:
+        try:
+            guid = _parse_guid(session_id)
+            result = self._session_manager.LoadCase(guid, file_path)
+        except Exception as exc:
+            raise map_dotnet_exception(exc, kind="session") from exc
+
+        if not result.Success:
+            message = result.Message or "Failed to load case."
+            if result.Error is not None:
+                raise map_dotnet_exception(result.Error, kind="session")
+            raise SessionError(message)
+
+        return bool(result.Data)
+
     def dispose(self) -> None:
         try:
             if self._session_manager is not None:

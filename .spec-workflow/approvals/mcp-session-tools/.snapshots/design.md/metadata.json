@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-session-tools/design.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-09T18:56:13.336Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767984973309_2i8vtjffm",
+      "approvalTitle": "Spec mcp-session-tools design"
+    }
+  ]
+}

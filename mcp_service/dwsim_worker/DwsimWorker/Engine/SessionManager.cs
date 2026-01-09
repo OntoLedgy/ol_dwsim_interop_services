@@ -215,6 +215,68 @@ namespace DwsimWorker.Engine
         }
 
         /// <summary>
+        /// Saves a session flowsheet case to disk.
+        /// </summary>
+        /// <param name="sessionId">The session ID to save.</param>
+        /// <param name="filePath">Destination file path.</param>
+        /// <returns>An OperationResult indicating success or failure.</returns>
+        public OperationResult<bool> SaveCase(Guid sessionId, string filePath)
+        {
+            if (_disposed)
+                return OperationResult<bool>.FailureResult("SessionManager is disposed.");
+
+            if (string.IsNullOrWhiteSpace(filePath))
+                return OperationResult<bool>.FailureResult("File path cannot be null or empty.");
+
+            var sessionResult = GetSession(sessionId);
+            if (!sessionResult.Success || sessionResult.Data == null)
+                return OperationResult<bool>.FailureResult(sessionResult.Message ?? "Session not found.");
+
+            try
+            {
+                sessionResult.Data.SaveCase(filePath);
+                _logger.Information("Session case saved: {SessionId} {FilePath}", sessionId, filePath);
+                return OperationResult<bool>.SuccessResult(true, "Case saved successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to save case for session {SessionId}", sessionId);
+                return OperationResult<bool>.FailureResult($"Failed to save case: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Loads a flowsheet case from disk into a session.
+        /// </summary>
+        /// <param name="sessionId">The session ID to load into.</param>
+        /// <param name="filePath">Source file path.</param>
+        /// <returns>An OperationResult indicating success or failure.</returns>
+        public OperationResult<bool> LoadCase(Guid sessionId, string filePath)
+        {
+            if (_disposed)
+                return OperationResult<bool>.FailureResult("SessionManager is disposed.");
+
+            if (string.IsNullOrWhiteSpace(filePath))
+                return OperationResult<bool>.FailureResult("File path cannot be null or empty.");
+
+            var sessionResult = GetSession(sessionId);
+            if (!sessionResult.Success || sessionResult.Data == null)
+                return OperationResult<bool>.FailureResult(sessionResult.Message ?? "Session not found.");
+
+            try
+            {
+                sessionResult.Data.LoadCase(filePath);
+                _logger.Information("Session case loaded: {SessionId} {FilePath}", sessionId, filePath);
+                return OperationResult<bool>.SuccessResult(true, "Case loaded successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to load case for session {SessionId}", sessionId);
+                return OperationResult<bool>.FailureResult($"Failed to load case: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
         /// Closes all active sessions.
         /// </summary>
         /// <remarks>

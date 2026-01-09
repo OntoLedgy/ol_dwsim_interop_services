@@ -77,6 +77,18 @@ class LimitedSessionClient:
             self._session_tracker.remove(session_id)
         return result
 
+    async def save_case(self, session_id: str, file_path: str) -> bool:
+        def _save() -> bool:
+            return self._session_client.save_case(session_id, file_path)
+
+        return await self.run_session_operation(session_id, _save)
+
+    async def load_case(self, session_id: str, file_path: str) -> bool:
+        def _load() -> bool:
+            return self._session_client.load_case(session_id, file_path)
+
+        return await self.run_session_operation(session_id, _load)
+
     async def run_session_operation(self, session_id: str, func, *, timeout_override: Optional[float] = None):
         """Run an operation within a session with limit enforcement."""
         return await self._guard.run(

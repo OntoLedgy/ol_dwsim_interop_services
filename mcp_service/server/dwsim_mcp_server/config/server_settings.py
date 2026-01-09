@@ -30,6 +30,11 @@ class ServerSettings(BaseSettings):
         validation_alias="DWSIM_WORKER_ASSEMBLY_PATH",
         description="Optional path to DwsimWorker.dll if not using default discovery.",
     )
+    case_storage_roots: list[str] = Field(
+        default_factory=lambda: ["./cases"],
+        validation_alias="DWSIM_CASE_STORAGE_ROOTS",
+        description="Allowed base directories for case save/load operations.",
+    )
     resource_limits: ResourceLimitSettings = Field(
         default_factory=ResourceLimitSettings,
         description="Nested resource limit settings for sessions and operations.",

@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-session-tools/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-09T18:57:13.799Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767985033768_ph7smmwkm",
+      "approvalTitle": "Spec mcp-session-tools tasks"
+    }
+  ]
+}
