@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-server-bootstrap/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-09T09:44:00.029Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767951839994_kkbt98772",
+      "approvalTitle": "Approve requirements for mcp-server-bootstrap"
+    }
+  ]
+}

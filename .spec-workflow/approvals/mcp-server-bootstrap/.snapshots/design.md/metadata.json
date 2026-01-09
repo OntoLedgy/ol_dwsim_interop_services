@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-server-bootstrap/design.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-09T09:46:23.931Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767951983905_9zeo1k9qi",
+      "approvalTitle": "Approve design for mcp-server-bootstrap"
+    }
+  ]
+}

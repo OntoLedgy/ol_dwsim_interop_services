@@ -85,3 +85,7 @@ class LimitedSessionClient:
             timeout_override=timeout_override,
             on_expired=lambda: self._session_client.close_session(session_id),
         )
+
+    def dispose(self) -> None:
+        """Dispose underlying session resources."""
+        self._session_client.dispose()
