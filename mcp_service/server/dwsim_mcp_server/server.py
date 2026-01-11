@@ -7,18 +7,32 @@ import asyncio
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 
+from typing import Optional
+
 from dwsim_mcp_server.config import ServerSettings
+from dwsim_mcp_server.ipc.flowsheet_client import FlowsheetClient
 from dwsim_mcp_server.ipc.limited_session_client import LimitedSessionClient
 from dwsim_mcp_server.observability import configure_logging, get_logger
+from dwsim_mcp_server.service import FlowsheetService
 from dwsim_mcp_server.tools.registry import register_tools
 
 
 class ServerDependencies:
     """Container for server-scoped dependencies."""
 
-    def __init__(self, *, settings: ServerSettings) -> None:
+    def __init__(
+        self,
+        *,
+        settings: ServerSettings,
+        flowsheet_service: Optional[FlowsheetService] = None,
+    ) -> None:
         self.settings = settings
         self.session_client = LimitedSessionClient(settings.resource_limits)
+        self.flowsheet_client = FlowsheetClient(self.session_client)
+        self.flowsheet_service = flowsheet_service or FlowsheetService(
+            session_client=self.session_client,
+            flowsheet_client=self.flowsheet_client,
+        )
 
     async def start(self) -> None:
         self.session_client.start_monitoring()

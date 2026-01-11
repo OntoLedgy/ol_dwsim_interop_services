@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-flowsheet-tools/design.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-10T19:23:20.061Z",
+      "trigger": "initial",
+      "approvalId": "approval_1768073000034_gxyi2ph2q",
+      "approvalTitle": "Spec 5.3 design for mcp-flowsheet-tools"
+    }
+  ]
+}

@@ -273,6 +273,22 @@ namespace DwsimWorker.Engine
         }
 
         /// <summary>
+        /// Removes a stream and any associated connections.
+        /// </summary>
+        /// <param name="streamId">The stream identifier to remove.</param>
+        /// <param name="removedConnections">Connections removed as part of cleanup.</param>
+        /// <returns>True if the stream was removed; otherwise, false.</returns>
+        public bool RemoveStream(string streamId, out IReadOnlyList<ConnectionInfo> removedConnections)
+        {
+            EnsureInitialized();
+            if (string.IsNullOrWhiteSpace(streamId))
+                throw new ArgumentNullException(nameof(streamId), "Stream ID cannot be null or empty.");
+
+            removedConnections = RemoveConnectionsForObject(streamId);
+            return _streams.Remove(streamId);
+        }
+
+        /// <summary>
         /// Adds a unit operation to the flowsheet registry.
         /// </summary>
         /// <param name="unit">The unit operation object (DWSIM.UnitOperations.*).</param>
@@ -327,6 +343,22 @@ namespace DwsimWorker.Engine
         }
 
         /// <summary>
+        /// Removes a unit operation and any associated connections.
+        /// </summary>
+        /// <param name="unitId">The unit identifier to remove.</param>
+        /// <param name="removedConnections">Connections removed as part of cleanup.</param>
+        /// <returns>True if the unit was removed; otherwise, false.</returns>
+        public bool RemoveUnit(string unitId, out IReadOnlyList<ConnectionInfo> removedConnections)
+        {
+            EnsureInitialized();
+            if (string.IsNullOrWhiteSpace(unitId))
+                throw new ArgumentNullException(nameof(unitId), "Unit ID cannot be null or empty.");
+
+            removedConnections = RemoveConnectionsForObject(unitId);
+            return _units.Remove(unitId);
+        }
+
+        /// <summary>
         /// Adds a connection to the flowsheet's connection registry.
         /// </summary>
         /// <param name="connection">The connection information.</param>
@@ -360,6 +392,34 @@ namespace DwsimWorker.Engine
         {
             EnsureInitialized();
             return _connections.AsReadOnly();
+        }
+
+        /// <summary>
+        /// Removes all connections associated with a stream or unit identifier.
+        /// </summary>
+        /// <param name="objectId">Stream or unit identifier.</param>
+        /// <returns>Removed connections.</returns>
+        public IReadOnlyList<ConnectionInfo> RemoveConnectionsForObject(string objectId)
+        {
+            EnsureInitialized();
+            if (string.IsNullOrWhiteSpace(objectId))
+                throw new ArgumentNullException(nameof(objectId), "Object ID cannot be null or empty.");
+
+            var removed = _connections
+                .Where(c => string.Equals(c.StreamId, objectId, StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(c.UnitId, objectId, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (removed.Count == 0)
+            {
+                return removed.AsReadOnly();
+            }
+
+            _connections.RemoveAll(c =>
+                string.Equals(c.StreamId, objectId, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(c.UnitId, objectId, StringComparison.OrdinalIgnoreCase));
+
+            return removed.AsReadOnly();
         }
 
         /// <summary>

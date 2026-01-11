@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-flowsheet-tools/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-10T19:45:04.439Z",
+      "trigger": "initial",
+      "approvalId": "approval_1768074304407_u7tzwv4dw",
+      "approvalTitle": "Spec 5.3 tasks for mcp-flowsheet-tools"
+    }
+  ]
+}

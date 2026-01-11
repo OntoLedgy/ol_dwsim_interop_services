@@ -83,6 +83,11 @@ class SessionClient:
         except Exception as exc:
             raise map_dotnet_exception(exc, kind="session") from exc
 
+    @property
+    def session_manager(self):
+        """Expose the underlying SessionManager for dependent clients."""
+        return self._session_manager
+
     @staticmethod
     def _create_session_manager(default_flowsheet_name: Optional[str]):
         try:
