@@ -134,7 +134,7 @@ namespace DwsimWorker.Adapters
                 _logger.Debug("Separator parameters: {Parameters}",
                     string.Join(", ", parameters.Select(p => $"{p.Key}={p.Value}")));
 
-                return PropertySetResult.SuccessResult(unitId);
+                return PropertySetResult.SuccessResultForCreate(unitId);
             }
             catch (Exception ex)
             {

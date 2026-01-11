@@ -50,6 +50,14 @@ class FlowsheetClient:
         if mass_flow is not None and molar_flow is None:
             raise ValueError("mass_flow-only streams not supported; provide molar_flow")
         try:
+            # Convert Python dict to .NET Dictionary<string, double>
+            from System.Collections.Generic import Dictionary
+            from System import String, Double
+
+            net_composition = Dictionary[String, Double]()
+            for key, value in composition.items():
+                net_composition[key] = float(value)
+
             return str(
                 self._ops.AddStream(
                     session_id,
@@ -57,7 +65,7 @@ class FlowsheetClient:
                     temperature or 0.0,
                     pressure or 0.0,
                     molar_flow or 0.0,
-                    composition,
+                    net_composition,
                 )
             )
         except Exception as exc:
@@ -72,7 +80,20 @@ class FlowsheetClient:
         parameters: Dict[str, Any],
     ) -> tuple[str, str]:
         try:
-            return self._ops.AddUnit(session_id, unit_type, name, parameters)
+            # Convert Python dict to .NET Dictionary<string, object>
+            from System.Collections.Generic import Dictionary
+            from System import String, Object
+
+            net_parameters = Dictionary[String, Object]()
+            for key, value in parameters.items():
+                net_parameters[key] = value
+
+            # Call the .NET method which returns a Tuple<string, string>
+            result = self._ops.AddUnit(session_id, unit_type, name, net_parameters)
+
+            # Convert .NET Tuple to Python tuple
+            # .NET Tuple properties are Item1, Item2, etc.
+            return (str(result.Item1), str(result.Item2))
         except Exception as exc:
             raise map_dotnet_exception(exc, kind="interop") from exc
 
@@ -84,7 +105,37 @@ class FlowsheetClient:
 
     def list_objects(self, session_id: str) -> Dict[str, Any]:
         try:
-            return dict(self._ops.ListObjects(session_id))
+            # Get the .NET dictionary result
+            result = self._ops.ListObjects(session_id)
+
+            # Manually convert .NET collections to Python
+            python_result = {}
+
+            # Convert streams list - use ContainsKey instead of 'in'
+            if result.ContainsKey("streams"):
+                streams_list = []
+                for stream_dict in result["streams"]:
+                    py_dict = {str(k): str(v) for k, v in stream_dict.items()}
+                    streams_list.append(py_dict)
+                python_result["streams"] = streams_list
+
+            # Convert units list
+            if result.ContainsKey("units"):
+                units_list = []
+                for unit_dict in result["units"]:
+                    py_dict = {str(k): str(v) for k, v in unit_dict.items()}
+                    units_list.append(py_dict)
+                python_result["units"] = units_list
+
+            # Convert connections list
+            if result.ContainsKey("connections"):
+                connections_list = []
+                for conn_dict in result["connections"]:
+                    py_dict = {str(k): str(v) for k, v in conn_dict.items()}
+                    connections_list.append(py_dict)
+                python_result["connections"] = connections_list
+
+            return python_result
         except Exception as exc:
             raise map_dotnet_exception(exc, kind="interop") from exc
 

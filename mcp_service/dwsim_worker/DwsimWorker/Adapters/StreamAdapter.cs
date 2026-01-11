@@ -129,7 +129,7 @@ namespace DwsimWorker.Adapters
                 _logger.Debug("Stream properties: Temperature={Temperature}, Pressure={Pressure}, Flow={Flow}",
                     properties.Temperature.Measurement, properties.Pressure.Measurement, properties.MolarFlow.Measurement);
 
-                return PropertySetResult.SuccessResult(streamId);
+                return PropertySetResult.SuccessResultForCreate(streamId);
             }
             catch (Exception ex)
             {

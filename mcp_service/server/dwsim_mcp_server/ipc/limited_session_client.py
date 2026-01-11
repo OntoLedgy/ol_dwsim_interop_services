@@ -101,3 +101,8 @@ class LimitedSessionClient:
     def dispose(self) -> None:
         """Dispose underlying session resources."""
         self._session_client.dispose()
+
+    @property
+    def session_manager(self):
+        """Expose the underlying SessionManager for dependent clients."""
+        return self._session_client.session_manager

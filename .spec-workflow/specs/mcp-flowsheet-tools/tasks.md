@@ -32,7 +32,7 @@
   - _Requirements: 1, 2, 3_
   - _Prompt: Implement the task for spec mcp-flowsheet-tools, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# DWSIM adapter engineer | Task: Add/extend adapter methods to support flowsheet CRUD/topology with validation and CAPE-OPEN-aligned DTO mapping | Restrictions: Preserve one-class-per-file and existing patterns; no breaking API changes; keep operations atomic on failure; maintain SI units | _Leverage: current Adapters and Converters, DWSIM API, validation utilities | _Requirements: 1,2,3 | Success: Adapter methods callable from pythonnet; validation errors are descriptive; DTO round-trips succeed; unit tests/build pass_
 
-- [ ] 5. Add Python unit tests for models, service, and tool wiring
+- [x] 5. Add Python unit tests for models, service, and tool wiring
   - Files: mcp_service/server/tests/test_flowsheet_models.py; mcp_service/server/tests/test_flowsheet_service.py; mcp_service/server/tests/test_flowsheet_tools.py
   - Cover validation edge cases, service behavior (success/failure, idempotent add_compound), and tool integration with mocked service.
   - Purpose: Prevent regressions and enforce acceptance criteria at Python layer.
@@ -40,7 +40,7 @@
   - _Requirements: 1, 2, 3_
   - _Prompt: Implement the task for spec mcp-flowsheet-tools, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA engineer for Python services | Task: Write unit tests for flowsheet models/service/tools covering validation, happy paths, and error cases | Restrictions: Use mocks for pythonnet/worker calls; no external resources; ensure deterministic assertions | _Leverage: existing test helpers and fixtures | _Requirements: 1,2,3 | Success: Tests fail on invalid inputs, pass on valid flows, and run in CI locally; coverage includes error paths_
 
-- [ ] 6. Add integration test for agent-style flowsheet build
+- [x] 6. Add integration test for agent-style flowsheet build
   - File: integration-tests/test_flowsheet_tools.py
   - Run add_compound → set_property_package → add_stream → add_unit (separator) → connect → list_objects → set_object_parameter → delete_object against pythonnet-backed worker (or simulated if fixture available); assert IDs, topology, and non-destructive errors.
   - Purpose: Validate end-to-end flowsheet building via MCP tools.

@@ -80,6 +80,7 @@
     <Compile Include="Engine\FlowsheetContextConfig.cs" />
     <Compile Include="Engine\FlowsheetContextConfigBuilder.cs" />
     <Compile Include="Engine\SessionManager.cs" />
+    <Compile Include="Engine\FlowsheetOperations.cs" />
     <Compile Include="Engine\PropertySetResult.cs" />
     <Compile Include="Engine\ConnectionResult.cs" />
     <Compile Include="Adapters\CompoundAdapter.cs" />

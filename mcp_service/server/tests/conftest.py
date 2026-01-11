@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import sys
 
@@ -28,6 +29,13 @@ def dwsim_worker_dll_path(server_root_path: Path) -> Path:
     if not dll_path.exists():
         pytest.skip(f"DwsimWorker.dll not found at: {dll_path}")
     return dll_path
+
+
+@pytest.fixture(scope="session", autouse=True)
+def set_dwsim_worker_env(dwsim_worker_dll_path: Path):
+    """Ensure DWSIM worker DLL path is available for pythonnet loader."""
+    os.environ.setdefault("DWSIM_WORKER_DLL", str(dwsim_worker_dll_path))
+    yield
 
 
 @pytest.fixture(scope="session")
