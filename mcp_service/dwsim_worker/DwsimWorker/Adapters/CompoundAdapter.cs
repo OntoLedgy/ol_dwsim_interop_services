@@ -172,6 +172,13 @@ namespace DwsimWorker.Adapters
                 _logger.Error(ex, message);
                 return LoadResult.FailureResult(message, ex);
             }
+            catch (System.Reflection.TargetInvocationException ex)
+            {
+                var innerEx = ex.InnerException ?? ex;
+                var message = $"Unexpected error adding compound '{compoundName}': {innerEx.Message}";
+                _logger.Error(innerEx, message);
+                return LoadResult.FailureResult(message, innerEx);
+            }
             catch (Exception ex)
             {
                 var message = $"Unexpected error adding compound '{compoundName}': {ex.Message}";

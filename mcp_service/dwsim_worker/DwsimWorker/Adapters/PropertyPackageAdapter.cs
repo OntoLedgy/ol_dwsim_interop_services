@@ -158,6 +158,13 @@ namespace DwsimWorker.Adapters
 
                 return LoadResult.SuccessResult(new List<AssemblyInfo>());
             }
+            catch (System.Reflection.TargetInvocationException ex)
+            {
+                var innerEx = ex.InnerException ?? ex;
+                var message = $"Unexpected error setting property package '{packageName}': {innerEx.Message}";
+                _logger.Error(innerEx, message);
+                return LoadResult.FailureResult(message, innerEx);
+            }
             catch (Exception ex)
             {
                 var message = $"Unexpected error setting property package '{packageName}': {ex.Message}";

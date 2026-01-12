@@ -911,6 +911,39 @@ namespace DwsimWorker.Engine
                 LoadFromDatabase(thermodynamicsAssembly, "DWSIM.Thermodynamics.Databases.Electrolyte", targetDictionary, "Electrolyte");
 
                 _logger.Information("Compound database populated with {Count} compounds from DWSIM databases", targetDictionary.Count);
+
+                // Log a sample of loaded compounds for debugging
+                if (targetDictionary.Count > 0)
+                {
+                    var sampleCompounds = new List<string>();
+                    int count = 0;
+                    foreach (System.Collections.DictionaryEntry entry in targetDictionary)
+                    {
+                        sampleCompounds.Add(entry.Key.ToString());
+                        count++;
+                        if (count >= 10) break;
+                    }
+                    _logger.Debug("Sample of loaded compounds: {Compounds}", string.Join(", ", sampleCompounds));
+
+                    // Check if common compounds are present
+                    var commonCompounds = new[] { "Water", "Methane", "Ethane", "Propane", "Nitrogen", "Oxygen", "H2O", "CH4", "C2H6", "C3H8", "N2", "O2" };
+                    var foundCompounds = new List<string>();
+                    foreach (var name in commonCompounds)
+                    {
+                        if (targetDictionary.Contains(name))
+                        {
+                            foundCompounds.Add(name);
+                        }
+                    }
+                    if (foundCompounds.Count > 0)
+                    {
+                        _logger.Debug("Found common compounds: {Compounds}", string.Join(", ", foundCompounds));
+                    }
+                    else
+                    {
+                        _logger.Warning("Common compounds (Water, Methane, etc.) not found in database");
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -946,17 +979,73 @@ namespace DwsimWorker.Engine
                     return;
                 }
 
-                loadMethod.Invoke(dbInstance, null);
+                try
+                {
+                    loadMethod.Invoke(dbInstance, null);
+                    _logger.Debug("{DatabaseName}.Load() completed", databaseName);
+                }
+                catch (Exception ex)
+                {
+                    var innerEx = ex.InnerException ?? ex;
+                    _logger.Warning(innerEx, "Failed to call Load() on {DatabaseName}: {Message}", databaseName, innerEx.Message);
+                    return;
+                }
 
                 // Call Transfer() method to get compounds
-                var transferMethod = dbType.GetMethod("Transfer", BindingFlags.Instance | BindingFlags.Public);
-                if (transferMethod == null)
+                // ChemSep and some databases need a path parameter
+                var transferMethods = dbType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                    .Where(m => m.Name == "Transfer")
+                    .ToArray();
+
+                if (transferMethods.Length == 0)
                 {
                     _logger.Warning("Transfer() method not found on {DatabaseName}", databaseName);
                     return;
                 }
 
-                var compounds = transferMethod.Invoke(dbInstance, null);
+                // Try to find the parameterless overload, or one that takes optional parameters
+                MethodInfo transferMethod = transferMethods.FirstOrDefault(m => m.GetParameters().Length == 0);
+                if (transferMethod == null && transferMethods.Length > 0)
+                {
+                    // Try Transfer() with default parameters
+                    transferMethod = transferMethods[0];
+                    var parameters = transferMethod.GetParameters();
+                    _logger.Debug("{DatabaseName}.Transfer() requires {Count} parameters: {Params}",
+                        databaseName, parameters.Length,
+                        string.Join(", ", parameters.Select(p => $"{p.ParameterType.Name} {p.Name}{(p.IsOptional ? " (optional)" : "")}")));
+                }
+
+                object compounds;
+                try
+                {
+                    var parameters = transferMethod.GetParameters();
+                    object[] args = new object[parameters.Length];
+                    for (int i = 0; i < parameters.Length; i++)
+                    {
+                        // Provide default values for parameters
+                        if (parameters[i].IsOptional)
+                        {
+                            args[i] = parameters[i].DefaultValue;
+                        }
+                        else if (parameters[i].ParameterType == typeof(string))
+                        {
+                            args[i] = ""; // Empty string for path parameters
+                        }
+                        else
+                        {
+                            args[i] = null;
+                        }
+                    }
+
+                    compounds = transferMethod.Invoke(dbInstance, args);
+                    _logger.Debug("{DatabaseName}.Transfer() returned {Type}", databaseName, compounds?.GetType().Name ?? "null");
+                }
+                catch (Exception ex)
+                {
+                    var innerEx = ex.InnerException ?? ex;
+                    _logger.Warning(innerEx, "Failed to call Transfer() on {DatabaseName}: {Message}", databaseName, innerEx.Message);
+                    return;
+                }
 
                 // Add compounds to dictionary
                 int addedCount = 0;
