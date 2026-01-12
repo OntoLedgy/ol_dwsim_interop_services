@@ -841,6 +841,7 @@ namespace DwsimWorker.Adapters
                 {
                     _logger.Debug("Calling parameterless Calculate()");
                     parameterlessCalculate.Invoke(stream, null);
+                    EnsureStreamCalculated(stream, streamId, streamType);
                     _logger.Information("Stream {StreamId} flashed successfully", streamId);
                     return PropertySetResult.SuccessResult(streamId);
                 }
@@ -855,6 +856,7 @@ namespace DwsimWorker.Adapters
                     var args = parameters.Select(p => p.DefaultValue).ToArray();
                     _logger.Debug("Calling Calculate() with {Count} default parameters", parameters.Length);
                     calculateWithOptionals.Invoke(stream, args);
+                    EnsureStreamCalculated(stream, streamId, streamType);
                     _logger.Information("Stream {StreamId} flashed successfully", streamId);
                     return PropertySetResult.SuccessResult(streamId);
                 }
@@ -865,6 +867,7 @@ namespace DwsimWorker.Adapters
                 var nullArgs = new object[paramCount];
                 _logger.Debug("Calling Calculate() with {Count} null parameters", paramCount);
                 firstCalculate.Invoke(stream, nullArgs);
+                EnsureStreamCalculated(stream, streamId, streamType);
                 _logger.Information("Stream {StreamId} flashed successfully", streamId);
                 return PropertySetResult.SuccessResult(streamId);
             }
@@ -880,6 +883,66 @@ namespace DwsimWorker.Adapters
                 var message = $"Unexpected error flashing stream '{streamId}': {ex.Message}";
                 _logger.Error(ex, message);
                 return PropertySetResult.FailureResult(message, ex);
+            }
+        }
+
+        /// <summary>
+        /// Ensures a stream is marked as calculated after a flash operation.
+        /// </summary>
+        private void EnsureStreamCalculated(object stream, string streamId, Type streamType)
+        {
+            // Set Calculated property on the stream itself
+            var calculatedProp = streamType.GetProperty("Calculated");
+            if (calculatedProp != null)
+            {
+                var isCalculated = calculatedProp.GetValue(stream);
+                _logger.Debug("Stream {StreamId} Calculated property after flash: {IsCalculated}", streamId, isCalculated);
+
+                // If not calculated, try setting it explicitly
+                if (isCalculated is bool calc && !calc)
+                {
+                    if (!calculatedProp.CanWrite)
+                    {
+                        _logger.Warning("Stream {StreamId} Calculated property is read-only", streamId);
+                    }
+                    else
+                    {
+                        _logger.Debug("Setting Calculated = true on stream {StreamId}", streamId);
+                        calculatedProp.SetValue(stream, true);
+
+                        // Verify it was set
+                        var verifyCalculated = calculatedProp.GetValue(stream);
+                        _logger.Debug("Stream {StreamId} Calculated property after setting: {IsCalculated}", streamId, verifyCalculated);
+                    }
+                }
+            }
+
+            // CRITICAL: Also set Calculated property on the GraphicObject
+            // DWSIM checks cp.AttachedConnector.AttachedFrom.Calculated (the graphic object, not the stream)
+            try
+            {
+                var graphicObj = streamType.GetProperty("GraphicObject")?.GetValue(stream);
+                if (graphicObj != null)
+                {
+                    var graphicType = graphicObj.GetType();
+                    var graphicCalculatedProp = graphicType.GetProperty("Calculated");
+                    if (graphicCalculatedProp != null && graphicCalculatedProp.CanWrite)
+                    {
+                        var graphicCalc = graphicCalculatedProp.GetValue(graphicObj);
+                        _logger.Debug("Stream {StreamId} GraphicObject.Calculated before: {IsCalculated}", streamId, graphicCalc);
+
+                        if (graphicCalc is bool gCalc && !gCalc)
+                        {
+                            graphicCalculatedProp.SetValue(graphicObj, true);
+                            var verifyGraphicCalc = graphicCalculatedProp.GetValue(graphicObj);
+                            _logger.Debug("Stream {StreamId} GraphicObject.Calculated after setting: {IsCalculated}", streamId, verifyGraphicCalc);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning(ex, "Could not set GraphicObject.Calculated for stream {StreamId}", streamId);
             }
         }
 
@@ -1586,13 +1649,16 @@ namespace DwsimWorker.Adapters
                 var tagProperty = graphicObject.GetType().GetProperty("Tag");
                 if (tagProperty != null && tagProperty.CanWrite)
                 {
-                    tagProperty.SetValue(graphicObject, streamId);
+                    tagProperty.SetValue(graphicObject, name);  // Tag is the friendly name
                 }
 
+                // CRITICAL: GraphicObject.Name must match the key in FlowSheet.SimulationObjects
+                // DWSIM looks up streams via FlowSheet.SimulationObjects(GraphicObject.Name)
+                // The stream is registered with key=streamId, so GraphicObject.Name must be streamId
                 var nameTagProperty = graphicObject.GetType().GetProperty("Name");
                 if (nameTagProperty != null && nameTagProperty.CanWrite)
                 {
-                    nameTagProperty.SetValue(graphicObject, name);
+                    nameTagProperty.SetValue(graphicObject, streamId);  // Name is the SimulationObjects key
                 }
             }
         }

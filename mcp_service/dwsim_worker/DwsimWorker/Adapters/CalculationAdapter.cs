@@ -305,10 +305,69 @@ namespace DwsimWorker.Adapters
 
                                             // Check if unit is calculated
                                             var calculatedProp = unit.GetType().GetProperty("Calculated");
+                                            object calculated = null;
                                             if (calculatedProp != null)
                                             {
-                                                var calculated = calculatedProp.GetValue(unit);
+                                                calculated = calculatedProp.GetValue(unit);
                                                 _logger.Debug("Unit {UnitId} Calculated property: {Calculated}", unitId, calculated);
+                                            }
+
+                                            // Check GraphicObject connector states
+                                            try
+                                            {
+                                                var graphicObj = unit.GetType().GetProperty("GraphicObject")?.GetValue(unit);
+                                                if (graphicObj != null)
+                                                {
+                                                    var inputConnectors = graphicObj.GetType().GetProperty("InputConnectors")?.GetValue(graphicObj);
+                                                    var outputConnectors = graphicObj.GetType().GetProperty("OutputConnectors")?.GetValue(graphicObj);
+
+                                                    if (inputConnectors is System.Collections.IList inputList)
+                                                    {
+                                                        _logger.Debug("Unit {UnitId} has {Count} input connectors", unitId, inputList.Count);
+                                                        for (int i = 0; i < inputList.Count; i++)
+                                                        {
+                                                            var connector = inputList[i];
+                                                            var isAttached = connector?.GetType().GetProperty("IsAttached")?.GetValue(connector);
+                                                            _logger.Debug("  InputConnector[{Index}].IsAttached = {IsAttached}", i, isAttached);
+                                                        }
+                                                    }
+
+                                                    if (outputConnectors is System.Collections.IList outputList)
+                                                    {
+                                                        _logger.Debug("Unit {UnitId} has {Count} output connectors", unitId, outputList.Count);
+                                                        for (int i = 0; i < outputList.Count; i++)
+                                                        {
+                                                            var connector = outputList[i];
+                                                            var isAttached = connector?.GetType().GetProperty("IsAttached")?.GetValue(connector);
+                                                            _logger.Debug("  OutputConnector[{Index}].IsAttached = {IsAttached}", i, isAttached);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            catch (Exception connEx)
+                                            {
+                                                _logger.Debug(connEx, "Could not check connector states for unit {UnitId}", unitId);
+                                            }
+
+                                            // Try calling Calculate directly to see what error we get
+                                            if (calculated is bool calc && !calc)
+                                            {
+                                                _logger.Debug("Attempting direct Calculate() on unit {UnitId} to diagnose issue", unitId);
+                                                try
+                                                {
+                                                    var calculateMethod = unit.GetType().GetMethod("Calculate");
+                                                    if (calculateMethod != null)
+                                                    {
+                                                        calculateMethod.Invoke(unit, new object[] { null });
+                                                        _logger.Information("Direct Calculate() on unit {UnitId} succeeded", unitId);
+                                                    }
+                                                }
+                                                catch (System.Reflection.TargetInvocationException directCalcEx)
+                                                {
+                                                    var innerEx = directCalcEx.InnerException ?? directCalcEx;
+                                                    _logger.Warning(innerEx, "Direct Calculate() on unit {UnitId} failed: {Message}", unitId, innerEx.Message);
+                                                    errorMessage += $"; Direct calculate error: {innerEx.Message}";
+                                                }
                                             }
                                         }
                                         catch { }

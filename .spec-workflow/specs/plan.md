@@ -914,3 +914,9 @@ This plan provides a structured, incremental approach to building the DWSIM MCP 
 **References**:
 - [Architectural Decision](docs/architecture/interop-strategy.md)
 - [Updated Tech Stack](.spec-workflow/steering/tech.md)
+
+
+## Refactoring and Clean Coding Tasks
+
+- StreamAdapter is too monolithic; break into smaller classes, one for creating streams and seperateone for propety packages and validation
+- 
