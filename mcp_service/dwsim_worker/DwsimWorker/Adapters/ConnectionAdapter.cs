@@ -26,6 +26,20 @@ namespace DwsimWorker.Adapters
     {
         private readonly ILogger _logger;
         private readonly FlowsheetContext _context;
+        /// <summary>
+        /// Maps port names to connector indices for Vessel (Three-Phase Separator) unit operations.
+        /// Based on DWSIM.Drawing.GraphicObjects.VesselGraphic connector layout:
+        /// - InputConnectors: 0-5 (material inlets), 6 (energy inlet)
+        /// - OutputConnectors: 0 (vapor), 1 (liquid 1), 2 (liquid 2)
+        /// </summary>
+        private static readonly Dictionary<string, int> VesselPortNameToIndex = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Inlet", 0 },
+            { "VaporOutlet", 0 },
+            { "LiquidOutlet1", 1 },
+            { "LiquidOutlet2", 2 }
+        };
+
         private static readonly Dictionary<string, string> PortNameToConnectorName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             { "Inlet", "Inlet" },
@@ -191,7 +205,6 @@ namespace DwsimWorker.Adapters
             }
 
             var isInlet = portName.IndexOf("inlet", StringComparison.OrdinalIgnoreCase) >= 0;
-            var connectorName = PortNameToConnectorName.TryGetValue(portName, out var mapped) ? mapped : portName;
 
             object fromGraphic;
             object toGraphic;
@@ -203,13 +216,36 @@ namespace DwsimWorker.Adapters
                 fromGraphic = streamGraphic;
                 toGraphic = unitGraphic;
                 fromIndex = FindConnectorIndex(streamGraphic, output: true, preferredName: null);
-                toIndex = FindConnectorIndex(unitGraphic, output: false, preferredName: connectorName);
+
+                // For inlet connections, use the mapped index if available (Vessel-specific)
+                if (VesselPortNameToIndex.TryGetValue(portName, out var inletIndex))
+                {
+                    toIndex = inletIndex;
+                    _logger.Debug("Using mapped inlet index {Index} for port {PortName}", toIndex, portName);
+                }
+                else
+                {
+                    var connectorName = PortNameToConnectorName.TryGetValue(portName, out var mapped) ? mapped : portName;
+                    toIndex = FindConnectorIndex(unitGraphic, output: false, preferredName: connectorName);
+                }
             }
             else
             {
                 fromGraphic = unitGraphic;
                 toGraphic = streamGraphic;
-                fromIndex = FindConnectorIndex(unitGraphic, output: true, preferredName: connectorName);
+
+                // For outlet connections, use the mapped index if available (Vessel-specific)
+                if (VesselPortNameToIndex.TryGetValue(portName, out var outletIndex))
+                {
+                    fromIndex = outletIndex;
+                    _logger.Debug("Using mapped outlet index {Index} for port {PortName}", fromIndex, portName);
+                }
+                else
+                {
+                    var connectorName = PortNameToConnectorName.TryGetValue(portName, out var mapped) ? mapped : portName;
+                    fromIndex = FindConnectorIndex(unitGraphic, output: true, preferredName: connectorName);
+                }
+
                 toIndex = FindConnectorIndex(streamGraphic, output: false, preferredName: null);
             }
 
