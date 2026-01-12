@@ -25,6 +25,7 @@ namespace DwsimWorker.Engine
             "DWSIM.UI.Desktop.Shared",
             "DWSIM",  // Main DWSIM executable assembly
             "CapeOpen"
+            // Note: DWSIM.Automation not loaded - it's x64 only and we handle UI exceptions instead
         };
 
         /// <summary>

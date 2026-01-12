@@ -142,6 +142,30 @@ namespace DwsimWorker.Adapters
                 if (anyUnitNotCalculated)
                 {
                     _logger.Warning("FALLBACK USED: Some units were not calculated by the solver. This suggests GlobalSettings initialization may have failed.");
+
+                    // Check if fallback successfully calculated all units
+                    bool allUnitsNowCalculated = true;
+                    foreach (var unitId in _context.GetUnitIds())
+                    {
+                        var unit = _context.GetUnit(unitId);
+                        var calculatedProp = unit?.GetType().GetProperty("Calculated");
+                        var isCalculated = calculatedProp?.GetValue(unit) as bool?;
+                        if (isCalculated == false)
+                        {
+                            allUnitsNowCalculated = false;
+                            break;
+                        }
+                    }
+
+                    if (allUnitsNowCalculated)
+                    {
+                        _logger.Information("Fallback succeeded - all units calculated successfully");
+                        calculationSuccess = true; // Mark as success since fallback completed all calculations
+                    }
+                    else
+                    {
+                        _logger.Error("Fallback failed - some units still not calculated");
+                    }
                 }
 
                 // Step 3: Create timing information
@@ -470,6 +494,7 @@ namespace DwsimWorker.Adapters
                         if (globalSettingsType != null)
                         {
                             var calculatorActivated = globalSettingsType.GetProperty("CalculatorActivated");
+                            var calculatorBusy = globalSettingsType.GetProperty("CalculatorBusy");
                             var solverBreakOnException = globalSettingsType.GetProperty("SolverBreakOnException");
                             var solverMode = globalSettingsType.GetProperty("SolverMode");
 
@@ -477,6 +502,13 @@ namespace DwsimWorker.Adapters
                             {
                                 calculatorActivated.SetValue(null, true);
                                 _logger.Debug("Set GlobalSettings.CalculatorActivated = true");
+                            }
+                            // CRITICAL: Set CalculatorBusy = false BEFORE calling solver
+                            // The solver checks this at lines 1133 and 1179 and returns immediately if true
+                            if (calculatorBusy != null)
+                            {
+                                calculatorBusy.SetValue(null, false);
+                                _logger.Debug("Set GlobalSettings.CalculatorBusy = false");
                             }
                             if (solverBreakOnException != null)
                             {
@@ -499,8 +531,84 @@ namespace DwsimWorker.Adapters
                         _logger.Warning(ex, "Failed to set GlobalSettings properties");
                     }
 
+                    // CRITICAL: Replace UpdateInterface with a no-op to prevent NullReferenceException in headless mode
+                    // UpdateInterface is called repeatedly in the solver's wait loop, and we can't properly initialize Eto.Forms
+                    try
+                    {
+                        var updateInterfaceMethod = flowsheet.GetType().GetMethod("UpdateInterface");
+                        if (updateInterfaceMethod != null)
+                        {
+                            _logger.Debug("Attempting to override UpdateInterface with no-op delegate");
+
+                            // Create a delegate that does nothing
+                            Action noOpAction = () => { };
+
+                            // Try to replace the method using a dynamic approach
+                            // Unfortunately, we can't directly replace instance methods in C#
+                            // So this is more of a documentation of the issue
+                            _logger.Debug("Cannot directly override UpdateInterface - will handle exceptions instead");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Debug(ex, "Could not inspect UpdateInterface method");
+                    }
+
                     _logger.Debug("Calling flowsheet.RequestCalculationAndWait()");
-                    var result = requestAndWait.Invoke(flowsheet, null);
+                    object result = null;
+                    try
+                    {
+                        result = requestAndWait.Invoke(flowsheet, null);
+                    }
+                    catch (System.Reflection.TargetInvocationException tex)
+                    {
+                        // Check if it's a NullReferenceException from UpdateInterface - this is expected in headless mode
+                        if (tex.InnerException is NullReferenceException nullRefEx &&
+                            nullRefEx.StackTrace?.Contains("UpdateInterface") == true)
+                        {
+                            _logger.Warning("UpdateInterface NullRef (expected in headless mode) - waiting for background calculation to complete");
+
+                            // The calculation runs in a background thread. Even though UpdateInterface threw,
+                            // the background calculation might still be running. Wait a bit to give it time to complete.
+                            System.Threading.Thread.Sleep(2000); // Wait 2 seconds for background thread to finish
+
+                            _logger.Debug("Checking if units were calculated by background thread...");
+
+                            // Check if units were calculated by the background thread
+                            bool allUnitsCalculated = true;
+                            foreach (var unitId in _context.GetUnitIds())
+                            {
+                                var unit = _context.GetUnit(unitId);
+                                if (unit != null)
+                                {
+                                    var calculatedProp = unit.GetType().GetProperty("Calculated");
+                                    var isCalculated = calculatedProp?.GetValue(unit) as bool?;
+                                    if (isCalculated == false)
+                                    {
+                                        allUnitsCalculated = false;
+                                        _logger.Debug("Unit {UnitId} not calculated", unitId);
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        _logger.Debug("Unit {UnitId} calculated successfully", unitId);
+                                    }
+                                }
+                            }
+
+                            if (allUnitsCalculated)
+                            {
+                                _logger.Information("All units calculated successfully by background thread despite UpdateInterface exception - solver succeeded");
+                                return true; // Calculation actually succeeded
+                            }
+                            else
+                            {
+                                _logger.Warning("Units not calculated after waiting - UpdateInterface exception interrupted solver before completion");
+                                return false; // Will trigger fallback Calculate()
+                            }
+                        }
+                        throw;
+                    }
                     _logger.Debug("RequestCalculationAndWait returned: {ResultType}", result?.GetType().Name ?? "null");
 
                     if (result is System.Collections.IEnumerable enumerable)
@@ -514,6 +622,14 @@ namespace DwsimWorker.Adapters
                             {
                                 exceptionCount++;
                                 _logger.Error(ex, "DWSIM solver returned exception {Count}: {Message}", exceptionCount, ex.Message);
+
+                                // Log inner exception details
+                                if (ex.InnerException != null)
+                                {
+                                    _logger.Error("  Inner exception: {InnerType}: {InnerMessage}",
+                                        ex.InnerException.GetType().Name, ex.InnerException.Message);
+                                }
+
                                 return false;
                             }
                             else
@@ -522,6 +638,12 @@ namespace DwsimWorker.Adapters
                             }
                         }
                         _logger.Debug("RequestCalculationAndWait returned {Count} items, {ExceptionCount} exceptions", itemCount, exceptionCount);
+
+                        // Empty list means successful calculation (no exceptions)
+                        if (itemCount == 0)
+                        {
+                            _logger.Information("Solver returned empty list - this indicates successful calculation with no exceptions");
+                        }
                     }
 
                     _logger.Information("DWSIM solver completed (RequestCalculationAndWait)");

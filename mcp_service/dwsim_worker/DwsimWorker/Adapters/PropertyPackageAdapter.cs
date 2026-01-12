@@ -424,17 +424,17 @@ namespace DwsimWorker.Adapters
                 var interactionParamType = innerDict.GetType().GetGenericArguments()[1];
                 var interactionParam = Activator.CreateInstance(interactionParamType);
 
-                // Set the kij property
-                var kijField = interactionParamType.GetField("kij");
-                if (kijField != null)
+                // Set the kij property (it's a property, not a field)
+                var kijProperty = interactionParamType.GetProperty("kij");
+                if (kijProperty != null && kijProperty.CanWrite)
                 {
-                    kijField.SetValue(interactionParam, value);
+                    kijProperty.SetValue(interactionParam, value);
                     innerSetItemMethod.Invoke(innerDict, new[] { compound2, interactionParam });
                     _logger.Information("Set BIP {Compound1}-{Compound2} = {Value}", compound1, compound2, value);
                 }
                 else
                 {
-                    _logger.Warning("InteractionParameter does not have kij field");
+                    _logger.Warning("InteractionParameter does not have writable kij property");
                 }
             }
             catch (Exception ex)

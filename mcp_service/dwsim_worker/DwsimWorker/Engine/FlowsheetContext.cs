@@ -593,12 +593,10 @@ namespace DwsimWorker.Engine
         private object CreateFlowsheetInstance()
         {
             // Try multiple possible type names for Flowsheet
-            // CRITICAL: DWSIM has NO headless flowsheet type - all require GUI components
-            // We must use UI.Desktop.Shared.Flowsheet and work around FlowsheetSurface being NULL
-            // Our TryManualConnect() workaround in ConnectionAdapter handles this
+            // Using UI.Desktop.Shared.Flowsheet - we handle the NullRef from UpdateInterface
             var possibleTypeNames = new[]
             {
-                "DWSIM.UI.Desktop.Shared.Flowsheet",    // GUI flowsheet (FlowsheetSurface=NULL in headless mode, we work around this)
+                "DWSIM.UI.Desktop.Shared.Flowsheet",    // GUI flowsheet - UpdateInterface throws NullRef but we catch it
                 "DWSIM.FlowsheetBase.FlowsheetBase",    // Abstract base class (may not instantiate)
                 "DWSIM.SharedClasses.Flowsheet",         // Legacy fallback
                 "DWSIM.Flowsheet.Flowsheet",
@@ -671,6 +669,70 @@ namespace DwsimWorker.Engine
 
                     try
                     {
+                        // Initialize Eto.Forms application if not already initialized
+                        // This prevents NullReferenceException in UpdateInterface() calls during solving
+                        try
+                        {
+                            var etoPlatform = Type.GetType("Eto.Forms.Application, Eto");
+                            if (etoPlatform != null)
+                            {
+                                var instanceProp = etoPlatform.GetProperty("Instance");
+                                var etoAppInstance = instanceProp?.GetValue(null);
+
+                                if (etoAppInstance == null)
+                                {
+                                    _logger.Debug("Initializing minimal Eto.Forms application for headless mode");
+
+                                    // Try to find and call Initialize method - try different signatures
+                                    var methods = etoPlatform.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                                    var initMethods = methods.Where(m => m.Name == "Initialize").ToList();
+
+                                    _logger.Debug("Found {Count} Initialize methods on Eto.Forms.Application", initMethods.Count);
+                                    foreach (var m in initMethods)
+                                    {
+                                        var parms = m.GetParameters();
+                                        _logger.Debug("  Initialize({Params})", string.Join(", ", parms.Select(p => p.ParameterType.Name)));
+                                    }
+
+                                    // Try Initialize with Platform parameter (most common)
+                                    var platformType = Type.GetType("Eto.Platform, Eto");
+                                    if (platformType != null)
+                                    {
+                                        var getPlatformMethod = platformType.GetMethod("Get", new Type[] { typeof(string) });
+                                        if (getPlatformMethod != null)
+                                        {
+                                            var platform = getPlatformMethod.Invoke(null, new object[] { "WinForms" });
+                                            var initWithPlatform = etoPlatform.GetMethod("Initialize", new Type[] { platformType });
+                                            if (initWithPlatform != null && platform != null)
+                                            {
+                                                initWithPlatform.Invoke(null, new object[] { platform });
+                                                _logger.Information("Eto.Forms application initialized with WinForms platform");
+                                            }
+                                        }
+                                    }
+
+                                    // Fallback: try parameterless Initialize
+                                    if (instanceProp?.GetValue(null) == null)
+                                    {
+                                        var parameterlessInit = etoPlatform.GetMethod("Initialize", Type.EmptyTypes);
+                                        if (parameterlessInit != null)
+                                        {
+                                            parameterlessInit.Invoke(null, null);
+                                            _logger.Information("Eto.Forms application initialized (parameterless)");
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    _logger.Debug("Eto.Forms application already initialized");
+                                }
+                            }
+                        }
+                        catch (Exception etoEx)
+                        {
+                            _logger.Warning(etoEx, "Could not initialize Eto.Forms (non-critical)");
+                        }
+
                         var instance = Activator.CreateInstance(flowsheetType);
                         if (!HasRequiredFlowsheetApi(instance))
                         {
