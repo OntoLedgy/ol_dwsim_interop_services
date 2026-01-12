@@ -131,7 +131,20 @@ namespace DwsimWorker.Engine
                     // Don't throw - allow flowsheet to work even if compound database fails
                 }
 
-                // Step 4: Optional validation
+                // Step 4: Initialize property package database
+                try
+                {
+                    _logger.Information("Initializing DWSIM property package database...");
+                    InitializePropertyPackageDatabase();
+                    _logger.Information("Property package database initialized successfully");
+                }
+                catch (Exception ppEx)
+                {
+                    _logger.Warning(ppEx, "Failed to initialize property package database - property packages may not be available");
+                    // Don't throw - allow flowsheet to work even if property package database fails
+                }
+
+                // Step 5: Optional validation
                 if (_config.ValidateAfterInit)
                 {
                     _logger.Information("Validating flowsheet...");
@@ -1082,6 +1095,137 @@ namespace DwsimWorker.Engine
             catch (Exception ex)
             {
                 _logger.Warning(ex, "Failed to load compounds from {DatabaseName}", databaseName);
+            }
+        }
+
+        /// <summary>
+        /// Initializes the DWSIM property package database to enable property package selection.
+        /// This follows the exact initialization pattern from DWSIM.Automation.Automation3 class.
+        /// </summary>
+        private void InitializePropertyPackageDatabase()
+        {
+            if (_flowsheet == null)
+            {
+                _logger.Warning("Cannot initialize property package database - flowsheet is null");
+                return;
+            }
+
+            try
+            {
+                var flowsheetType = _flowsheet.GetType();
+
+                // Get the AvailablePropertyPackages property
+                var availablePropertyPackagesProperty = flowsheetType.GetProperty("AvailablePropertyPackages");
+                if (availablePropertyPackagesProperty == null)
+                {
+                    _logger.Warning("AvailablePropertyPackages property not found on flowsheet");
+                    return;
+                }
+
+                var availablePropertyPackages = availablePropertyPackagesProperty.GetValue(_flowsheet);
+                if (availablePropertyPackages == null)
+                {
+                    _logger.Warning("AvailablePropertyPackages is null");
+                    return;
+                }
+
+                if (!(availablePropertyPackages is System.Collections.IDictionary dict))
+                {
+                    _logger.Warning("AvailablePropertyPackages is not a dictionary");
+                    return;
+                }
+
+                _logger.Debug("AvailablePropertyPackages dictionary found with {Count} entries", dict.Count);
+
+                // Check if already populated
+                if (dict.Count > 0)
+                {
+                    _logger.Information("AvailablePropertyPackages already contains {Count} property packages", dict.Count);
+                    return;
+                }
+
+                // Populate the property packages dictionary
+                _logger.Information("Populating property package database");
+
+                var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+                var thermodynamicsAssembly = assemblies.FirstOrDefault(a => a.FullName.Contains("DWSIM.Thermodynamics"));
+
+                if (thermodynamicsAssembly == null)
+                {
+                    _logger.Warning("DWSIM.Thermodynamics assembly not found");
+                    return;
+                }
+
+                // Add Peng-Robinson property package
+                // Note: Keys must match canonical names in PropertyPackageAdapter
+                AddPropertyPackage(thermodynamicsAssembly, "DWSIM.Thermodynamics.PropertyPackages.PengRobinsonPropertyPackage",
+                    "Peng-Robinson", dict);
+
+                // Add SRK property package
+                AddPropertyPackage(thermodynamicsAssembly, "DWSIM.Thermodynamics.PropertyPackages.SRKPropertyPackage",
+                    "SRK", dict);
+
+                // Add NRTL property package
+                AddPropertyPackage(thermodynamicsAssembly, "DWSIM.Thermodynamics.PropertyPackages.NRTLPropertyPackage",
+                    "NRTL", dict);
+
+                // Add UNIFAC property package
+                AddPropertyPackage(thermodynamicsAssembly, "DWSIM.Thermodynamics.PropertyPackages.UNIFACPropertyPackage",
+                    "UNIFAC", dict);
+
+                _logger.Information("Property package database populated with {Count} property packages", dict.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error initializing property package database");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Adds a property package to the flowsheet's AvailablePropertyPackages dictionary.
+        /// </summary>
+        private void AddPropertyPackage(Assembly assembly, string typeName, string componentName, System.Collections.IDictionary targetDictionary)
+        {
+            try
+            {
+                var ppType = assembly.GetType(typeName);
+                if (ppType == null)
+                {
+                    _logger.Debug("Property package type {TypeName} not found", typeName);
+                    return;
+                }
+
+                _logger.Debug("Adding property package: {ComponentName} ({TypeName})", componentName, typeName);
+
+                // Create instance of property package
+                var ppInstance = Activator.CreateInstance(ppType);
+
+                // Set ComponentName property
+                var componentNameProperty = ppType.GetProperty("ComponentName");
+                if (componentNameProperty != null && componentNameProperty.CanWrite)
+                {
+                    componentNameProperty.SetValue(ppInstance, componentName);
+                }
+                else
+                {
+                    _logger.Warning("ComponentName property not found or not writable on {TypeName}", typeName);
+                }
+
+                // Add to dictionary
+                if (!targetDictionary.Contains(componentName))
+                {
+                    targetDictionary.Add(componentName, ppInstance);
+                    _logger.Information("Added property package: {ComponentName}", componentName);
+                }
+                else
+                {
+                    _logger.Debug("Property package {ComponentName} already exists in dictionary", componentName);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning(ex, "Failed to add property package {ComponentName} ({TypeName})", componentName, typeName);
             }
         }
 

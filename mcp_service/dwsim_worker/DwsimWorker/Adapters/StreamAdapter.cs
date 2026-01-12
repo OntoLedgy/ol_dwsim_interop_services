@@ -781,6 +781,108 @@ namespace DwsimWorker.Adapters
             }
         }
 
+        /// <summary>
+        /// Performs flash calculation on a stream to compute phase equilibrium.
+        /// </summary>
+        /// <param name="streamId">The unique stream identifier.</param>
+        /// <returns>A PropertySetResult indicating success or failure.</returns>
+        /// <remarks>
+        /// This method calls DWSIM's flash calculation to compute:
+        /// - Phase fractions (vapor, liquid1, liquid2)
+        /// - Component distribution across phases
+        /// - Phase properties (density, enthalpy, entropy, etc.)
+        ///
+        /// The flash calculation must be performed before a stream can be used as input
+        /// to unit operations like separators, heat exchangers, etc.
+        /// </remarks>
+        public PropertySetResult FlashStream(string streamId)
+        {
+            if (string.IsNullOrWhiteSpace(streamId))
+            {
+                var message = "Stream ID cannot be null or empty";
+                _logger.Warning(message);
+                return PropertySetResult.FailureResult(message, new ArgumentNullException(nameof(streamId), message));
+            }
+
+            _logger.Debug("Flashing stream {StreamId}", streamId);
+
+            try
+            {
+                // Get the stream object
+                var stream = _context.GetStream(streamId);
+                if (stream == null)
+                {
+                    var message = $"Stream '{streamId}' not found";
+                    _logger.Warning(message);
+                    return PropertySetResult.FailureResult(message, new StreamNotFoundException(streamId));
+                }
+
+                var streamType = stream.GetType();
+
+                // Find the Calculate method - look for overloads that don't require parameters
+                // or have optional parameters
+                var calculateMethods = streamType.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+                    .Where(m => m.Name == "Calculate")
+                    .OrderBy(m => m.GetParameters().Length)
+                    .ToArray();
+
+                if (calculateMethods.Length == 0)
+                {
+                    var message = "Calculate method not found on stream";
+                    _logger.Warning(message);
+                    return PropertySetResult.FailureResult(message, new InvalidOperationException(message));
+                }
+
+                _logger.Debug("Found {Count} Calculate method overloads", calculateMethods.Length);
+
+                // Try parameterless Calculate() first
+                var parameterlessCalculate = calculateMethods.FirstOrDefault(m => m.GetParameters().Length == 0);
+                if (parameterlessCalculate != null)
+                {
+                    _logger.Debug("Calling parameterless Calculate()");
+                    parameterlessCalculate.Invoke(stream, null);
+                    _logger.Information("Stream {StreamId} flashed successfully", streamId);
+                    return PropertySetResult.SuccessResult(streamId);
+                }
+
+                // Try Calculate with optional parameters
+                var calculateWithOptionals = calculateMethods.FirstOrDefault(m =>
+                    m.GetParameters().All(p => p.IsOptional));
+
+                if (calculateWithOptionals != null)
+                {
+                    var parameters = calculateWithOptionals.GetParameters();
+                    var args = parameters.Select(p => p.DefaultValue).ToArray();
+                    _logger.Debug("Calling Calculate() with {Count} default parameters", parameters.Length);
+                    calculateWithOptionals.Invoke(stream, args);
+                    _logger.Information("Stream {StreamId} flashed successfully", streamId);
+                    return PropertySetResult.SuccessResult(streamId);
+                }
+
+                // If no suitable overload found, try the first one with null args
+                var firstCalculate = calculateMethods[0];
+                var paramCount = firstCalculate.GetParameters().Length;
+                var nullArgs = new object[paramCount];
+                _logger.Debug("Calling Calculate() with {Count} null parameters", paramCount);
+                firstCalculate.Invoke(stream, nullArgs);
+                _logger.Information("Stream {StreamId} flashed successfully", streamId);
+                return PropertySetResult.SuccessResult(streamId);
+            }
+            catch (System.Reflection.TargetInvocationException ex)
+            {
+                var innerEx = ex.InnerException ?? ex;
+                var message = $"Flash calculation failed for stream '{streamId}': {innerEx.Message}";
+                _logger.Error(innerEx, message);
+                return PropertySetResult.FailureResult(message, innerEx);
+            }
+            catch (Exception ex)
+            {
+                var message = $"Unexpected error flashing stream '{streamId}': {ex.Message}";
+                _logger.Error(ex, message);
+                return PropertySetResult.FailureResult(message, ex);
+            }
+        }
+
         private IReadOnlyDictionary<string, PhaseProperties> GetAllPhaseProperties(string streamId, object stream)
         {
             var phaseMap = TryGetPhaseMap(stream);
@@ -1163,8 +1265,14 @@ namespace DwsimWorker.Adapters
                 return;
             }
 
-            var property = stream.GetType().GetProperty("PropertyPackage");
-            if (property == null || !property.CanWrite)
+            // Use GetProperties to avoid AmbiguousMatchException, then find the writable PropertyPackage property
+            var properties = stream.GetType().GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+            var property = properties.FirstOrDefault(p =>
+                p.Name == "PropertyPackage" &&
+                p.CanWrite &&
+                p.GetIndexParameters().Length == 0);  // Ensure it's not an indexed property
+
+            if (property == null)
             {
                 return;
             }

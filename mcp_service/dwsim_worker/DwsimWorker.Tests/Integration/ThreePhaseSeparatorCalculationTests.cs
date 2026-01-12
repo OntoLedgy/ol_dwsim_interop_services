@@ -86,8 +86,15 @@ namespace DwsimWorker.Tests.Integration
             var feedStreamId = feedResult.ObjectId;
             _logger.Information($"Feed stream created: {feedStreamId}");
 
-            // Note: Stream flashing will be done by DWSIM during flowsheet calculation
-            // Manual flash not needed here as the flowsheet solver will handle it
+            // Flash the inlet stream to calculate phase equilibrium
+            // This is required before the separator can calculate properly
+            _logger.Information("Flashing inlet stream...");
+            var flashResult = streamAdapter.FlashStream(feedStreamId);
+            if (!flashResult.Success)
+            {
+                throw new InvalidOperationException($"Failed to flash inlet stream: {flashResult.Message}");
+            }
+            _logger.Information("Inlet stream flashed successfully");
 
             // Create three-phase separator with proper configuration
             var separatorConfig = new UnitOpConfig(new System.Collections.Generic.Dictionary<string, object>
