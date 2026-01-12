@@ -437,27 +437,33 @@ namespace DwsimWorker.Adapters
         {
             if (unit == null)
             {
+                _logger.Debug("TrySetUnitPropertyPackage: unit is null");
                 return;
             }
 
             var propertyPackage = _context.GetPropertyPackage();
             if (propertyPackage == null)
             {
+                _logger.Warning("TrySetUnitPropertyPackage: No property package available in context");
                 return;
             }
 
             var property = unit.GetType().GetProperty("PropertyPackage");
             if (property == null || !property.CanWrite)
             {
+                _logger.Debug("TrySetUnitPropertyPackage: PropertyPackage property not found or not writable on {UnitType}", unit.GetType().Name);
                 return;
             }
 
             if (!property.PropertyType.IsInstanceOfType(propertyPackage))
             {
+                _logger.Warning("TrySetUnitPropertyPackage: Property package type mismatch. Expected {ExpectedType}, got {ActualType}",
+                    property.PropertyType.Name, propertyPackage.GetType().Name);
                 return;
             }
 
             property.SetValue(unit, propertyPackage);
+            _logger.Information("Set PropertyPackage on unit {UnitType}", unit.GetType().Name);
         }
 
         private void ApplyUnitParameters(object unit, Dictionary<string, object> parameters)

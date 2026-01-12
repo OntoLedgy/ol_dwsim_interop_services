@@ -108,10 +108,13 @@ namespace DwsimWorker.Tests.Integration
             _logger.Information("Inlet stream flashed successfully");
 
             // Create three-phase separator with proper configuration
+            // Based on DWSIM sample 07fc8fdf-446f-4eed-af30-1c6b3dca501c.xml
             var separatorConfig = new UnitOpConfig(new System.Collections.Generic.Dictionary<string, object>
             {
                 { "PressureDrop", 10000.0 },
-                { "CalculationMode", "Legacy" }  // Required for Vessel unit operation
+                { "CalculationMode", "Legacy" },  // Required for Vessel unit operation
+                { "Volume", 1.0 },  // m³ - from DWSIM sample dynamic properties
+                { "Height", 2.0 }   // m - from DWSIM sample dynamic properties
             });
 
             var separatorResult = unitOpAdapter.AddThreePhaseSeparator("SEP-101", separatorConfig);
