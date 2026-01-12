@@ -18,6 +18,7 @@ namespace DwsimWorker.Engine
             "DWSIM.Interfaces",
             "DWSIM.Thermodynamics",
             "DWSIM.SharedClasses",
+            "DWSIM.GlobalSettings",  // Required for solver configuration (CalculatorActivated, SolverMode, etc.)
             "DWSIM.FlowsheetBase",
             "DWSIM.UnitOperations",
             "DWSIM.Drawing.SkiaSharp",

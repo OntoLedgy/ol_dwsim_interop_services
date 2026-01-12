@@ -98,8 +98,10 @@ namespace DwsimWorker.Adapters
                 sw.Stop();
                 var endTime = DateTime.UtcNow;
 
-                // Step 2a: If flowsheet solver didn't calculate units, do it manually
-                // This is a workaround for flowsheet solver not triggering unit calculations
+                // Step 2a: Fallback - If flowsheet solver didn't calculate units, do it manually
+                // This should NOT be needed now that GlobalSettings are properly set
+                // but we keep it as a safety net
+                bool anyUnitNotCalculated = false;
                 foreach (var unitId in _context.GetUnitIds())
                 {
                     try
@@ -112,12 +114,14 @@ namespace DwsimWorker.Adapters
 
                             if (isCalculated == false)
                             {
-                                _logger.Debug("Unit {UnitId} not calculated by flowsheet solver, calling Calculate() directly", unitId);
+                                anyUnitNotCalculated = true;
+                                _logger.Warning("Unit {UnitId} not calculated by flowsheet solver - this indicates a solver initialization problem", unitId);
+                                _logger.Debug("Calling Calculate() directly as fallback");
                                 var calculateMethod = unit.GetType().GetMethod("Calculate");
                                 if (calculateMethod != null)
                                 {
                                     calculateMethod.Invoke(unit, new object[] { null });
-                                    _logger.Information("Unit {UnitId} calculated successfully", unitId);
+                                    _logger.Information("Unit {UnitId} calculated successfully using fallback", unitId);
 
                                     // Set Calculated property manually (Calculate() doesn't set it)
                                     if (calculatedProp != null && calculatedProp.CanWrite)
@@ -133,6 +137,11 @@ namespace DwsimWorker.Adapters
                     {
                         _logger.Warning(unitEx, "Failed to calculate unit {UnitId}: {Message}", unitId, unitEx.InnerException?.Message ?? unitEx.Message);
                     }
+                }
+
+                if (anyUnitNotCalculated)
+                {
+                    _logger.Warning("FALLBACK USED: Some units were not calculated by the solver. This suggests GlobalSettings initialization may have failed.");
                 }
 
                 // Step 3: Create timing information
@@ -429,6 +438,65 @@ namespace DwsimWorker.Adapters
                     catch (Exception diagEx2)
                     {
                         _logger.Warning(diagEx2, "Failed to call GetSolvingList for diagnostics");
+                    }
+
+                    // CRITICAL: Set GlobalSettings before calling solver
+                    // These are required for the DWSIM solver to actually run
+                    // Without these, RequestCalculationAndWait returns an empty list immediately
+                    try
+                    {
+                        // Try to find the Settings type (it's in the DWSIM.GlobalSettings assembly but has no namespace)
+                        Type globalSettingsType = null;
+                        var loadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+                        foreach (var asm in loadedAssemblies)
+                        {
+                            if (asm.GetName().Name == "DWSIM.GlobalSettings")
+                            {
+                                // The type is DWSIM.GlobalSettings.Settings (with full namespace)
+                                globalSettingsType = asm.GetType("DWSIM.GlobalSettings.Settings");
+                                if (globalSettingsType != null)
+                                {
+                                    _logger.Debug("Found DWSIM.GlobalSettings.Settings type");
+                                    break;
+                                }
+                                else
+                                {
+                                    _logger.Warning("DWSIM.GlobalSettings.Settings type not found");
+                                }
+                            }
+                        }
+
+                        if (globalSettingsType != null)
+                        {
+                            var calculatorActivated = globalSettingsType.GetProperty("CalculatorActivated");
+                            var solverBreakOnException = globalSettingsType.GetProperty("SolverBreakOnException");
+                            var solverMode = globalSettingsType.GetProperty("SolverMode");
+
+                            if (calculatorActivated != null)
+                            {
+                                calculatorActivated.SetValue(null, true);
+                                _logger.Debug("Set GlobalSettings.CalculatorActivated = true");
+                            }
+                            if (solverBreakOnException != null)
+                            {
+                                solverBreakOnException.SetValue(null, true);
+                                _logger.Debug("Set GlobalSettings.SolverBreakOnException = true");
+                            }
+                            if (solverMode != null)
+                            {
+                                solverMode.SetValue(null, 1);
+                                _logger.Debug("Set GlobalSettings.SolverMode = 1");
+                            }
+                        }
+                        else
+                        {
+                            _logger.Warning("Could not find Settings type in DWSIM.GlobalSettings assembly");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Warning(ex, "Failed to set GlobalSettings properties");
                     }
 
                     _logger.Debug("Calling flowsheet.RequestCalculationAndWait()");
