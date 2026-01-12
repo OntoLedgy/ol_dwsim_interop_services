@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-simulation-tools/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-11T20:28:09.761Z",
+      "trigger": "initial",
+      "approvalId": "approval_1768163289723_0li5u4sii",
+      "approvalTitle": "Tasks for Simulation Execution MCP Tools (Spec 5.4)"
+    }
+  ]
+}

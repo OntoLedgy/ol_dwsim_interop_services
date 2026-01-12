@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-simulation-tools/design.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-11T20:14:46.368Z",
+      "trigger": "initial",
+      "approvalId": "approval_1768162486337_lcoueb1di",
+      "approvalTitle": "Design for Simulation Execution MCP Tools (Spec 5.4)"
+    }
+  ]
+}

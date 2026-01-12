@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-simulation-tools/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-11T19:27:23.807Z",
+      "trigger": "initial",
+      "approvalId": "approval_1768159643767_kjfsr6bh7",
+      "approvalTitle": "Requirements for Simulation Execution MCP Tools (Spec 5.4)"
+    }
+  ]
+}
