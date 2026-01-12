@@ -138,7 +138,7 @@ namespace DwsimWorker.Tests.Adapters
 
             // Assert
             Assert.True(result.Success, $"Expected success but got: {result.Message}");
-            Assert.Contains("S", result.Message); // Should contain generated stream ID (e.g., "S1")
+            Assert.StartsWith("S", result.ObjectId); // Should contain generated stream ID (e.g., "S1")
         }
 
         [Fact]
@@ -204,11 +204,11 @@ namespace DwsimWorker.Tests.Adapters
             var result2 = _adapter.CreateStream("FEED", properties);
 
             // Assert - Both should succeed with different IDs
-            Assert.True(result1.Success, $"First stream creation failed: {result1.Message}");
-            Assert.True(result2.Success, $"Second stream creation failed: {result2.Message}");
+            Assert.True(result1.Success, $"First stream creation failed: {result1.ObjectId}");
+            Assert.True(result2.Success, $"Second stream creation failed: {result2.ObjectId}");
 
             // The generated stream IDs should be different
-            Assert.NotEqual(result1.Message, result2.Message);
+            Assert.NotEqual(result1.ObjectId, result2.ObjectId);
         }
 
         #endregion
@@ -225,7 +225,7 @@ namespace DwsimWorker.Tests.Adapters
             var properties = CreateTestStreamProperties();
             var createResult = _adapter.CreateStream("FEED", properties);
             Assert.True(createResult.Success);
-            var streamId = createResult.Message;
+            var streamId = createResult.ObjectId;
 
             // Act
             var result = _adapter.SetProperty(streamId, "temperature", 323.15);
@@ -244,7 +244,7 @@ namespace DwsimWorker.Tests.Adapters
             var properties = CreateTestStreamProperties();
             var createResult = _adapter.CreateStream("FEED", properties);
             Assert.True(createResult.Success);
-            var streamId = createResult.Message;
+            var streamId = createResult.ObjectId;
 
             // Act
             var result = _adapter.SetProperty(streamId, "pressure", 200000);
@@ -277,7 +277,7 @@ namespace DwsimWorker.Tests.Adapters
             var properties = CreateTestStreamProperties();
             var createResult = _adapter.CreateStream("FEED", properties);
             Assert.True(createResult.Success);
-            var streamId = createResult.Message;
+            var streamId = createResult.ObjectId;
 
             // Act
             var result = _adapter.SetProperty(streamId, "invalid_property", 123);
@@ -301,7 +301,7 @@ namespace DwsimWorker.Tests.Adapters
             var properties = CreateTestStreamProperties();
             var createResult = _adapter.CreateStream("FEED", properties);
             Assert.True(createResult.Success);
-            var streamId = createResult.Message;
+            var streamId = createResult.ObjectId;
 
             // Act
             var result = _adapter.GetProperty(streamId, "temperature");
@@ -323,7 +323,7 @@ namespace DwsimWorker.Tests.Adapters
             var properties = CreateTestStreamProperties();
             var createResult = _adapter.CreateStream("FEED", properties);
             Assert.True(createResult.Success);
-            var streamId = createResult.Message;
+            var streamId = createResult.ObjectId;
 
             // Act
             var result = _adapter.GetProperty(streamId, "pressure");
@@ -363,7 +363,7 @@ namespace DwsimWorker.Tests.Adapters
             var initialProps = CreateTestStreamProperties();
             var createResult = _adapter.CreateStream("FEED", initialProps);
             Assert.True(createResult.Success);
-            var streamId = createResult.Message;
+            var streamId = createResult.ObjectId;
 
             // Create new properties with different values
             var kelvinUnit = new UnitsOfMeasure("K", typeof(Temperature),
@@ -424,7 +424,7 @@ namespace DwsimWorker.Tests.Adapters
             var properties = CreateTestStreamProperties();
             var createResult = _adapter.CreateStream("FEED", properties);
             Assert.True(createResult.Success);
-            var streamId = createResult.Message; // Stream ID is returned in message
+            var streamId = createResult.ObjectId;
 
             // Act
             var result = _adapter.GetProperties(streamId);

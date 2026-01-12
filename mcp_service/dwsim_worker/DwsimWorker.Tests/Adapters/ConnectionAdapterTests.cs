@@ -133,11 +133,11 @@ namespace DwsimWorker.Tests.Adapters
             var properties = CreateTestStreamProperties();
             var streamResult = _streamAdapter.CreateStream("FEED", properties);
             Assert.True(streamResult.Success);
-            var streamId = streamResult.Message;
+            var streamId = streamResult.ObjectId;
 
             var unitResult = _unitOpAdapter.AddThreePhaseSeparator("SEP-101", null);
             Assert.True(unitResult.Success);
-            var unitId = unitResult.Message;
+            var unitId = unitResult.ObjectId;
 
             // Act
             var result = _adapter.ConnectStream(streamId, unitId, "Inlet");
@@ -159,7 +159,7 @@ namespace DwsimWorker.Tests.Adapters
             // Arrange
             var unitResult = _unitOpAdapter.AddThreePhaseSeparator("SEP-101", null);
             Assert.True(unitResult.Success);
-            var unitId = unitResult.Message;
+            var unitId = unitResult.ObjectId;
 
             // Act
             var result = _adapter.ConnectStream(null, unitId, "Inlet");
@@ -178,7 +178,7 @@ namespace DwsimWorker.Tests.Adapters
             // Arrange
             var unitResult = _unitOpAdapter.AddThreePhaseSeparator("SEP-101", null);
             Assert.True(unitResult.Success);
-            var unitId = unitResult.Message;
+            var unitId = unitResult.ObjectId;
 
             // Act
             var result = _adapter.ConnectStream("", unitId, "Inlet");
@@ -198,7 +198,7 @@ namespace DwsimWorker.Tests.Adapters
             var properties = CreateTestStreamProperties();
             var streamResult = _streamAdapter.CreateStream("FEED", properties);
             Assert.True(streamResult.Success);
-            var streamId = streamResult.Message;
+            var streamId = streamResult.ObjectId;
 
             // Act
             var result = _adapter.ConnectStream(streamId, null, "Inlet");
@@ -218,11 +218,11 @@ namespace DwsimWorker.Tests.Adapters
             var properties = CreateTestStreamProperties();
             var streamResult = _streamAdapter.CreateStream("FEED", properties);
             Assert.True(streamResult.Success);
-            var streamId = streamResult.Message;
+            var streamId = streamResult.ObjectId;
 
             var unitResult = _unitOpAdapter.AddThreePhaseSeparator("SEP-101", null);
             Assert.True(unitResult.Success);
-            var unitId = unitResult.Message;
+            var unitId = unitResult.ObjectId;
 
             // Act
             var result = _adapter.ConnectStream(streamId, unitId, null);
@@ -241,7 +241,7 @@ namespace DwsimWorker.Tests.Adapters
             // Arrange
             var unitResult = _unitOpAdapter.AddThreePhaseSeparator("SEP-101", null);
             Assert.True(unitResult.Success);
-            var unitId = unitResult.Message;
+            var unitId = unitResult.ObjectId;
 
             // Act
             var result = _adapter.ConnectStream("NONEXISTENT", unitId, "Inlet");
@@ -261,7 +261,7 @@ namespace DwsimWorker.Tests.Adapters
             var properties = CreateTestStreamProperties();
             var streamResult = _streamAdapter.CreateStream("FEED", properties);
             Assert.True(streamResult.Success);
-            var streamId = streamResult.Message;
+            var streamId = streamResult.ObjectId;
 
             // Act
             var result = _adapter.ConnectStream(streamId, "NONEXISTENT", "Inlet");
@@ -281,15 +281,15 @@ namespace DwsimWorker.Tests.Adapters
             var properties = CreateTestStreamProperties();
             var streamResult = _streamAdapter.CreateStream("FEED", properties);
             Assert.True(streamResult.Success);
-            var streamId = streamResult.Message;
+            var streamId = streamResult.ObjectId;
 
             var unitResult1 = _unitOpAdapter.AddThreePhaseSeparator("SEP-101", null);
             Assert.True(unitResult1.Success);
-            var unitId1 = unitResult1.Message;
+            var unitId1 = unitResult1.ObjectId;
 
             var unitResult2 = _unitOpAdapter.AddThreePhaseSeparator("SEP-102", null);
             Assert.True(unitResult2.Success);
-            var unitId2 = unitResult2.Message;
+            var unitId2 = unitResult2.ObjectId;
 
             // Connect to first unit
             var connectResult1 = _adapter.ConnectStream(streamId, unitId1, "Inlet");
@@ -317,11 +317,11 @@ namespace DwsimWorker.Tests.Adapters
             var properties = CreateTestStreamProperties();
             var streamResult = _streamAdapter.CreateStream("FEED", properties);
             Assert.True(streamResult.Success);
-            var streamId = streamResult.Message;
+            var streamId = streamResult.ObjectId;
 
             var unitResult = _unitOpAdapter.AddThreePhaseSeparator("SEP-101", null);
             Assert.True(unitResult.Success);
-            var unitId = unitResult.Message;
+            var unitId = unitResult.ObjectId;
 
             var connectResult = _adapter.ConnectStream(streamId, unitId, "Inlet");
             Assert.True(connectResult.Success);
@@ -371,7 +371,7 @@ namespace DwsimWorker.Tests.Adapters
             var properties = CreateTestStreamProperties();
             var streamResult = _streamAdapter.CreateStream("FEED", properties);
             Assert.True(streamResult.Success);
-            var streamId = streamResult.Message;
+            var streamId = streamResult.ObjectId;
 
             // Act
             var result = _adapter.DisconnectStream(streamId);
@@ -395,11 +395,11 @@ namespace DwsimWorker.Tests.Adapters
             var properties = CreateTestStreamProperties();
             var streamResult = _streamAdapter.CreateStream("FEED", properties);
             Assert.True(streamResult.Success);
-            var streamId = streamResult.Message;
+            var streamId = streamResult.ObjectId;
 
             var unitResult = _unitOpAdapter.AddThreePhaseSeparator("SEP-101", null);
             Assert.True(unitResult.Success);
-            var unitId = unitResult.Message;
+            var unitId = unitResult.ObjectId;
 
             var connectResult = _adapter.ConnectStream(streamId, unitId, "Inlet");
             Assert.True(connectResult.Success);
@@ -461,15 +461,15 @@ namespace DwsimWorker.Tests.Adapters
 
             var stream1Result = _streamAdapter.CreateStream("FEED", properties);
             Assert.True(stream1Result.Success);
-            var stream1Id = stream1Result.Message;
+            var stream1Id = stream1Result.ObjectId;
 
             var stream2Result = _streamAdapter.CreateStream("VAPOR", properties);
             Assert.True(stream2Result.Success);
-            var stream2Id = stream2Result.Message;
+            var stream2Id = stream2Result.ObjectId;
 
             var unitResult = _unitOpAdapter.AddThreePhaseSeparator("SEP-101", null);
             Assert.True(unitResult.Success);
-            var unitId = unitResult.Message;
+            var unitId = unitResult.ObjectId;
 
             _adapter.ConnectStream(stream1Id, unitId, "Inlet");
             _adapter.ConnectStream(stream2Id, unitId, "VaporOutlet");
@@ -499,11 +499,11 @@ namespace DwsimWorker.Tests.Adapters
             var properties = CreateTestStreamProperties();
             var streamResult = _streamAdapter.CreateStream("FEED", properties);
             Assert.True(streamResult.Success);
-            var streamId = streamResult.Message;
+            var streamId = streamResult.ObjectId;
 
             var unitResult = _unitOpAdapter.AddThreePhaseSeparator("SEP-101", null);
             Assert.True(unitResult.Success);
-            var unitId = unitResult.Message;
+            var unitId = unitResult.ObjectId;
 
             var connectResult = _adapter.ConnectStream(streamId, unitId, "Inlet");
             Assert.True(connectResult.Success);

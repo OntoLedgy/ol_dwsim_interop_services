@@ -29,6 +29,10 @@ namespace DwsimWorker.Engine
         private readonly Dictionary<string, object> _streams; // MaterialStream objects
         private readonly Dictionary<string, object> _units; // UnitOperation objects
         private readonly List<ConnectionInfo> _connections;
+        private readonly object _calculationCacheLock = new object();
+        private CalculationResult _cachedCalculationResult;
+        private ConvergenceStatus _cachedConvergenceStatus;
+        private DateTime? _lastCalculationTimestamp;
 
         /// <summary>
         /// Gets a value indicating whether the flowsheet context has been initialized.
@@ -53,6 +57,7 @@ namespace DwsimWorker.Engine
             _streams = new Dictionary<string, object>();
             _units = new Dictionary<string, object>();
             _connections = new List<ConnectionInfo>();
+            _cachedConvergenceStatus = ConvergenceStatus.NotStarted();
 
             _logger.Information("FlowsheetContext created: {FlowsheetName}", _config.FlowsheetName);
         }
@@ -162,6 +167,7 @@ namespace DwsimWorker.Engine
             if (!_compounds.Contains(compoundName))
             {
                 _compounds.Add(compoundName);
+                InvalidateCalculationCache("compound added");
                 _logger.Debug("Compound added to flowsheet: {CompoundName}", compoundName);
             }
             else
@@ -216,6 +222,7 @@ namespace DwsimWorker.Engine
             _streams.Clear();
             _units.Clear();
             _connections.Clear();
+            InvalidateCalculationCache("flowsheet loaded");
         }
 
         /// <summary>
@@ -241,6 +248,7 @@ namespace DwsimWorker.Engine
             }
 
             _streams.Add(streamId, stream);
+            InvalidateCalculationCache("stream added");
             _logger.Debug("Stream added to flowsheet: {StreamId}", streamId);
         }
 
@@ -285,7 +293,13 @@ namespace DwsimWorker.Engine
                 throw new ArgumentNullException(nameof(streamId), "Stream ID cannot be null or empty.");
 
             removedConnections = RemoveConnectionsForObject(streamId);
-            return _streams.Remove(streamId);
+            var removed = _streams.Remove(streamId);
+            if (removed)
+            {
+                InvalidateCalculationCache("stream removed");
+            }
+
+            return removed;
         }
 
         /// <summary>
@@ -311,6 +325,7 @@ namespace DwsimWorker.Engine
             }
 
             _units.Add(unitId, unit);
+            InvalidateCalculationCache("unit added");
             _logger.Debug("Unit operation added to flowsheet: {UnitId}", unitId);
         }
 
@@ -355,7 +370,13 @@ namespace DwsimWorker.Engine
                 throw new ArgumentNullException(nameof(unitId), "Unit ID cannot be null or empty.");
 
             removedConnections = RemoveConnectionsForObject(unitId);
-            return _units.Remove(unitId);
+            var removed = _units.Remove(unitId);
+            if (removed)
+            {
+                InvalidateCalculationCache("unit removed");
+            }
+
+            return removed;
         }
 
         /// <summary>
@@ -379,6 +400,7 @@ namespace DwsimWorker.Engine
             }
 
             _connections.Add(connection);
+            InvalidateCalculationCache("connection added");
             _logger.Debug("Connection added: Stream '{StreamId}' -> Unit '{UnitId}' Port '{PortName}'",
                 connection.StreamId, connection.UnitId, connection.PortName);
         }
@@ -419,6 +441,7 @@ namespace DwsimWorker.Engine
                 string.Equals(c.StreamId, objectId, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(c.UnitId, objectId, StringComparison.OrdinalIgnoreCase));
 
+            InvalidateCalculationCache("connections removed");
             return removed.AsReadOnly();
         }
 
@@ -456,6 +479,7 @@ namespace DwsimWorker.Engine
             int removed = _connections.RemoveAll(c => c.StreamId == streamId);
             if (removed > 0)
             {
+                InvalidateCalculationCache("connection removed");
                 _logger.Debug("Connection removed for stream: {StreamId}", streamId);
                 return true;
             }
@@ -651,6 +675,89 @@ namespace DwsimWorker.Engine
             }
 
             throw new InvalidOperationException($"Flowsheet does not expose a supported {operationName} method.");
+        }
+
+        /// <summary>
+        /// Gets the cached calculation result, if any.
+        /// </summary>
+        /// <returns>The cached calculation result, or null if not available.</returns>
+        public CalculationResult GetCachedCalculationResult()
+        {
+            EnsureInitialized();
+            lock (_calculationCacheLock)
+            {
+                return _cachedCalculationResult;
+            }
+        }
+
+        /// <summary>
+        /// Gets the cached convergence status, or NotStarted if none is cached.
+        /// </summary>
+        /// <returns>The cached convergence status.</returns>
+        public ConvergenceStatus GetCachedConvergenceStatus()
+        {
+            EnsureInitialized();
+            lock (_calculationCacheLock)
+            {
+                return _cachedConvergenceStatus ?? ConvergenceStatus.NotStarted();
+            }
+        }
+
+        /// <summary>
+        /// Gets the timestamp of the most recent calculation, if available.
+        /// </summary>
+        /// <returns>The UTC timestamp of the last calculation, or null if not available.</returns>
+        public DateTime? GetLastCalculationTimestamp()
+        {
+            EnsureInitialized();
+            lock (_calculationCacheLock)
+            {
+                return _lastCalculationTimestamp;
+            }
+        }
+
+        /// <summary>
+        /// Caches the calculation result and associated status.
+        /// </summary>
+        /// <param name="result">The calculation result to cache.</param>
+        public void CacheCalculationResult(CalculationResult result)
+        {
+            EnsureInitialized();
+            lock (_calculationCacheLock)
+            {
+                _cachedCalculationResult = result;
+                _cachedConvergenceStatus = result?.ConvergenceStatus ?? ConvergenceStatus.NotStarted();
+                _lastCalculationTimestamp = result != null ? DateTime.UtcNow : (DateTime?)null;
+            }
+        }
+
+        /// <summary>
+        /// Updates the cached convergence status without overwriting the cached result.
+        /// </summary>
+        /// <param name="status">The status to cache.</param>
+        public void UpdateConvergenceStatus(ConvergenceStatus status)
+        {
+            EnsureInitialized();
+            lock (_calculationCacheLock)
+            {
+                _cachedConvergenceStatus = status ?? ConvergenceStatus.NotStarted();
+            }
+        }
+
+        /// <summary>
+        /// Invalidates the cached calculation result and status.
+        /// </summary>
+        /// <param name="reason">Optional reason for invalidation.</param>
+        public void InvalidateCalculationCache(string reason = null)
+        {
+            lock (_calculationCacheLock)
+            {
+                _cachedCalculationResult = null;
+                _cachedConvergenceStatus = ConvergenceStatus.NotStarted();
+                _lastCalculationTimestamp = null;
+            }
+
+            _logger.Debug("Calculation cache invalidated: {Reason}", reason ?? "flowsheet modified");
         }
 
         /// <summary>

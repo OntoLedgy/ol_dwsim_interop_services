@@ -52,6 +52,7 @@
     <Compile Include="Utilities\PathResolverTests.cs" />
     <Compile Include="Utilities\MassBalanceValidatorTests.cs" />
     <Compile Include="DtoSerializationTests.cs" />
+    <Compile Include="Contracts\SimulationResultDtoTests.cs" />
     <Compile Include="CapeOpenConverterTests.cs" />
     <Compile Include="Integration\AssemblyLoadingIntegrationTests.cs" />
     <Compile Include="Integration\ThreePhaseSeparatorIntegrationTests.cs" />

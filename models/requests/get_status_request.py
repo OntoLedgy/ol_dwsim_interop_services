@@ -1,20 +1,15 @@
-"""RunSimulationRequest DTO for MCP run tool."""
+"""GetStatusRequest DTO for MCP get_status tool."""
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-class RunSimulationRequest(BaseModel):
-    """Request to run a simulation for a session."""
+class GetStatusRequest(BaseModel):
+    """Request to retrieve simulation status."""
 
     session_id: str = Field(
         ...,
         description="Session identifier (letters, numbers, '.', '-', '_')",
         min_length=1,
-    )
-    timeout_seconds: int = Field(
-        120,
-        description="Maximum calculation time in seconds",
-        ge=1,
     )
 
     @field_validator("session_id")
@@ -33,7 +28,6 @@ class RunSimulationRequest(BaseModel):
         json_schema_extra={
             "example": {
                 "session_id": "session-1234",
-                "timeout_seconds": 120,
             }
         }
     )

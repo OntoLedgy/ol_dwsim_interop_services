@@ -83,7 +83,7 @@ namespace DwsimWorker.Tests.Integration
             );
 
             var feedResult = streamAdapter.CreateStream("FEED", feedProperties);
-            var feedStreamId = feedResult.Message;
+            var feedStreamId = feedResult.ObjectId;
             _logger.Information($"Feed stream created: {feedStreamId}");
 
             // Create three-phase separator
@@ -93,21 +93,21 @@ namespace DwsimWorker.Tests.Integration
             });
 
             var separatorResult = unitOpAdapter.AddThreePhaseSeparator("SEP-101", separatorConfig);
-            var separatorId = separatorResult.Message;
+            var separatorId = separatorResult.ObjectId;
             _logger.Information($"Separator created: {separatorId}");
 
             // Create outlet streams
             var vaporProperties = CreateStreamProperties(298.15, 490000, 30.0, new[] { 0.0, 0.0, 0.5, 0.5 });
             var vaporResult = streamAdapter.CreateStream("VAPOR", vaporProperties);
-            var vaporStreamId = vaporResult.Message;
+            var vaporStreamId = vaporResult.ObjectId;
 
             var lightLiquidProperties = CreateStreamProperties(298.15, 490000, 40.0, new[] { 0.0, 0.6, 0.2, 0.2 });
             var lightLiquidResult = streamAdapter.CreateStream("LIGHT_LIQUID", lightLiquidProperties);
-            var lightLiquidStreamId = lightLiquidResult.Message;
+            var lightLiquidStreamId = lightLiquidResult.ObjectId;
 
             var heavyLiquidProperties = CreateStreamProperties(298.15, 490000, 30.0, new[] { 0.8, 0.1, 0.05, 0.05 });
             var heavyLiquidResult = streamAdapter.CreateStream("HEAVY_LIQUID", heavyLiquidProperties);
-            var heavyLiquidStreamId = heavyLiquidResult.Message;
+            var heavyLiquidStreamId = heavyLiquidResult.ObjectId;
 
             _logger.Information($"Outlet streams created: {vaporStreamId}, {lightLiquidStreamId}, {heavyLiquidStreamId}");
 
@@ -317,12 +317,10 @@ namespace DwsimWorker.Tests.Integration
             _calculationAdapter = new CalculationAdapter(_logger, _context, streamAdapter);
 
             // Act
-            var result = _calculationAdapter.RunCalculation();
+            var ex = Assert.Throws<InvalidOperationException>(() => _calculationAdapter.RunCalculation());
 
             // Assert
-            Assert.NotNull(result);
-            Assert.False(result.Success);
-            Assert.Contains("not initialized", result.Message);
+            Assert.Contains("not initialized", ex.Message);
         }
 
         [Fact]

@@ -127,6 +127,7 @@
     <Compile Include="Contracts\CapeOpen\PropertyPackageDto.cs" />
     <Compile Include="Contracts\CapeOpen\UnitOperationDto.cs" />
     <Compile Include="Contracts\CapeOpen\FlashResultDto.cs" />
+    <Compile Include="Contracts\CapeOpen\SimulationResultDto.cs" />
     <Compile Include="Utilities\PathResolver.cs" />
     <Compile Include="Utilities\AssemblyResolver.cs" />
     <Compile Include="Utilities\MassBalanceValidator.cs" />

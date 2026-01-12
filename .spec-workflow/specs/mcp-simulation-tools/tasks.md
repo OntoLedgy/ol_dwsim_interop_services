@@ -2,7 +2,7 @@
 
 ## Implementation Tasks for Spec 5.4: Simulation Execution MCP Tools
 
-- [ ] 1. Create SimulationResultDto in C#
+- [x] 1. Create SimulationResultDto in C#
   - File: `mcp_service/dwsim_worker/DwsimWorker/Contracts/CapeOpen/SimulationResultDto.cs`
   - Define C# DTO for transferring simulation results from C# to Python
   - Include properties: Status, ConvergenceState, ElapsedMilliseconds, StreamResults, Messages, MassBalanceValid, MassBalanceErrorPercent
@@ -11,7 +11,7 @@
   - _Requirements: 1, 3, 5_
   - _Prompt: Implement the task for spec mcp-simulation-tools, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer specializing in data transfer objects and serialization | Task: Create SimulationResultDto in DwsimWorker/Contracts/CapeOpen/SimulationResultDto.cs following requirements 1, 3, and 5. The DTO should encapsulate all simulation results including convergence status, timing, stream properties, solver messages, and mass balance validation. Follow the pattern from MaterialStreamDto.cs and integrate with CalculationResult.cs. | Restrictions: Must be JSON-serializable via Newtonsoft.Json, follow CAPE-OPEN naming conventions, do not add business logic to DTO, maintain immutability with readonly properties | _Leverage: DwsimWorker/Contracts/CapeOpen/MaterialStreamDto.cs for DTO pattern, DwsimWorker/Models/CalculationResult.cs for result structure | _Requirements: Requirements 1 (Run Simulation), 3 (Retrieve Simulation Results), 5 (Result Caching) | Success: DTO compiles without errors, all properties are correctly typed, JSON serialization works, integrates cleanly with existing CalculationResult | Instructions: After implementation, use log-implementation tool to record implementation details with artifacts (classes created), then mark task as complete in tasks.md_
 
-- [ ] 2. Enhance CalculationAdapter with status and caching methods
+- [x] 2. Enhance CalculationAdapter with status and caching methods
   - File: `mcp_service/dwsim_worker/DwsimWorker/Adapters/CalculationAdapter.cs`
   - Add `GetCurrentStatus()` method to return current/cached convergence status
   - Add `GetCachedResult()` method to return most recent CalculationResult without re-running
@@ -21,7 +21,7 @@
   - _Requirements: 2, 3, 5_
   - _Prompt: Implement the task for spec mcp-simulation-tools, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer with expertise in DWSIM adapters and caching patterns | Task: Enhance CalculationAdapter in DwsimWorker/Adapters/CalculationAdapter.cs following requirements 2, 3, and 5. Add GetCurrentStatus() to retrieve cached convergence status, GetCachedResult() to return previous simulation results without re-execution, and update RunCalculation to cache results in FlowsheetContext. | Restrictions: Must maintain thread-safety for cached results, do not break existing RunCalculation behavior, ensure cache invalidation when flowsheet modified, follow existing adapter patterns | _Leverage: Existing CalculationAdapter.cs methods (RunCalculation, ExtractStreamResults), FlowsheetContext.cs for cache storage | _Requirements: Requirement 2 (Check Simulation Status), 3 (Retrieve Simulation Results), 5 (Result Caching) | Success: GetCurrentStatus and GetCachedResult methods implemented and tested, results cached properly, cache invalidation works, no breaking changes to existing methods | Instructions: After implementation, use log-implementation tool to record implementation details with artifacts (methods added to CalculationAdapter), then mark task as complete in tasks.md_
 
-- [ ] 3. Create Python request models for simulation tools
+- [x] 3. Create Python request models for simulation tools
   - Files: `models/requests/run_simulation_request.py`, `models/requests/get_status_request.py`, `models/requests/get_results_request.py`
   - Create Pydantic models for validating MCP tool inputs
   - RunSimulationRequest: session_id (required), timeout_seconds (optional, default 120)
@@ -32,7 +32,7 @@
   - _Requirements: 1, 2, 3_
   - _Prompt: Implement the task for spec mcp-simulation-tools, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer specializing in Pydantic models and API validation | Task: Create three request models following requirements 1, 2, and 3: RunSimulationRequest (models/requests/run_simulation_request.py), GetStatusRequest (models/requests/get_status_request.py), and GetResultsRequest (models/requests/get_results_request.py). Follow the pattern from CreateSessionRequest and AddStreamRequest with proper Field descriptions and validators. | Restrictions: Must use Pydantic BaseModel, follow one class per file rule, add comprehensive field descriptions for LLM agents, validate session_id format, ensure timeout_seconds is positive | _Leverage: models/requests/create_session_request.py for request pattern, models/requests/add_stream_request.py for field validation examples | _Requirements: Requirement 1 (Run Simulation), 2 (Check Simulation Status), 3 (Retrieve Simulation Results) | Success: All three models compile and validate correctly, field descriptions are clear, validation catches invalid inputs, models follow existing patterns | Instructions: After implementation, use log-implementation tool to record implementation details with artifacts (classes created in models/requests/), then mark task as complete in tasks.md_
 
-- [ ] 4. Create Python response models for simulation tools
+- [x] 4. Create Python response models for simulation tools
   - Files: `models/responses/simulation_result_response.py`, `models/responses/simulation_status_response.py`, `models/responses/stream_properties_response.py`
   - Create Pydantic models for formatting MCP tool outputs
   - SimulationResultResponse: status, convergence_state, elapsed_ms, stream_results, messages, mass_balance_valid, mass_balance_error_percent
@@ -43,7 +43,7 @@
   - _Requirements: 1, 2, 3, 5_
   - _Prompt: Implement the task for spec mcp-simulation-tools, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer with expertise in data modeling and API response design | Task: Create three response models following requirements 1, 2, 3, and 5: SimulationResultResponse (models/responses/simulation_result_response.py), SimulationStatusResponse (models/responses/simulation_status_response.py), and StreamPropertiesResponse (models/responses/stream_properties_response.py). Align with C# SimulationResultDto and MaterialStreamDto structure. Use CAPE-OPEN naming conventions with SI units. | Restrictions: Must use Pydantic BaseModel, follow one class per file rule, include detailed field descriptions, use proper types (str for status enums, float for numeric values), document units clearly | _Leverage: models/responses/create_session_response.py for response pattern, DwsimWorker/Contracts/CapeOpen/MaterialStreamDto.cs for CAPE-OPEN structure | _Requirements: Requirement 1 (Run Simulation output), 2 (Check Status output), 3 (Get Results output), 5 (Result structure) | Success: All response models compile and serialize correctly, field types match C# DTOs, CAPE-OPEN conventions followed, clear documentation | Instructions: After implementation, use log-implementation tool to record implementation details with artifacts (classes created in models/responses/), then mark task as complete in tasks.md_
 
-- [ ] 5. Create simulation error model
+- [x] 5. Create simulation error model
   - File: `models/errors/simulation_error.py`
   - Define SimulationError class with error codes and messages
   - Error types: ConvergenceFailure, SimulationTimeout, InvalidFlowsheetState, NoResultsAvailable
@@ -53,7 +53,7 @@
   - _Requirements: 1, 4_
   - _Prompt: Implement the task for spec mcp-simulation-tools, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer with expertise in error handling and exception design | Task: Create SimulationError class in models/errors/simulation_error.py following requirements 1 and 4. Define error codes for convergence failures, timeouts, invalid flowsheet states, and missing results. Include diagnostic fields like solver messages and failed unit IDs for actionable error reporting. | Restrictions: Follow existing error model patterns, inherit from BaseException or appropriate base, include error_code and message fields, make errors JSON-serializable, provide clear error descriptions | _Leverage: models/errors/session_error.py for error structure, models/errors/resource_limit_error.py for resource-related errors | _Requirements: Requirement 1 (Run Simulation errors), 4 (Error Handling) | Success: SimulationError class with all error types defined, diagnostic fields included, follows existing patterns, serializable to JSON | Instructions: After implementation, use log-implementation tool to record implementation details with artifacts (classes created), then mark task as complete in tasks.md_
 
-- [ ] 6. Implement simulation.py MCP tools
+- [x] 6. Implement simulation.py MCP tools
   - File: `mcp_service/server/dwsim_mcp_server/tools/simulation.py`
   - Implement `build_simulation_tools()` to register run, get_status, get_results tools
   - Implement `handle_simulation_tool()` to dispatch tool calls
@@ -65,7 +65,7 @@
   - _Requirements: 1, 2, 3, 4_
   - _Prompt: Implement the task for spec mcp-simulation-tools, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer with expertise in MCP SDK and async programming | Task: Create simulation.py in dwsim_mcp_server/tools/simulation.py following requirements 1, 2, 3, and 4. Implement build_simulation_tools() to register MCP tools with comprehensive descriptions for LLM agents. Implement async handle_simulation_tool() to validate requests, wrap C# calls with OperationTimeoutRunner, handle errors, and format responses. Follow the pattern from session.py and flowsheet.py. | Restrictions: Must use async/await patterns, validate all inputs via Pydantic models before calling C#, wrap timeout-sensitive operations with OperationTimeoutRunner, convert C# exceptions to structured MCP errors, log all operations with structured logging | _Leverage: tools/session.py for tool registration pattern, tools/flowsheet.py for error handling, ipc/session_client.py for pythonnet bridge, limits/operation_timeout_runner.py for timeout enforcement | _Requirements: Requirement 1 (Run Simulation), 2 (Check Status), 3 (Get Results), 4 (Error Handling) | Success: All three MCP tools registered and callable, input validation works, timeout enforcement active, errors converted to MCP format, follows existing tool patterns | Instructions: After implementation, use log-implementation tool to record implementation details with artifacts (functions created: build_simulation_tools, handle_simulation_tool, _handle_run, _handle_get_status, _handle_get_results), then mark task as complete in tasks.md_
 
-- [ ] 7. Extend session_client with simulation methods
+- [x] 7. Extend session_client with simulation methods
   - File: `mcp_service/server/dwsim_mcp_server/ipc/session_client.py`
   - Add `run_calculation(session_id, timeout_seconds)` method
   - Add `get_calculation_status(session_id)` method
@@ -76,7 +76,7 @@
   - _Requirements: 1, 2, 3, 5_
   - _Prompt: Implement the task for spec mcp-simulation-tools, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer with expertise in pythonnet interop and CLR bridge | Task: Extend session_client.py in dwsim_mcp_server/ipc/session_client.py following requirements 1, 2, 3, and 5. Add three async methods: run_calculation to invoke C# CalculationAdapter.RunCalculation, get_calculation_status to call GetCurrentStatus, and get_calculation_results to call GetCachedResult. Use pythonnet to call C# methods and convert DTOs to Python dicts. | Restrictions: Must handle C# exceptions and convert to Python exceptions, use pythonnet_dto_converter for DTO conversion, maintain async interface, follow existing method patterns in session_client, validate session exists before C# calls | _Leverage: Existing session_client.py methods (create_session, close_session) for pattern, converters/pythonnet_dto_converter.py for DTO conversion, ipc/clr_loader.py for CLR access | _Requirements: Requirement 1 (Run Simulation bridge), 2 (Status bridge), 3 (Results bridge), 5 (Caching) | Success: Three methods implemented and callable from Python, C# DTOs correctly converted, exceptions properly handled, follows existing patterns | Instructions: After implementation, use log-implementation tool to record implementation details with artifacts (methods added to SessionClient class), then mark task as complete in tasks.md_
 
-- [ ] 8. Register simulation tools in MCP server
+- [x] 8. Register simulation tools in MCP server
   - File: `mcp_service/server/dwsim_mcp_server/server.py`
   - Import and register simulation tools in MCP server initialization
   - Add simulation tool handler to tool dispatch logic
@@ -85,7 +85,7 @@
   - _Requirements: 1, 2, 3_
   - _Prompt: Implement the task for spec mcp-simulation-tools, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer with expertise in MCP SDK and server initialization | Task: Update server.py in dwsim_mcp_server/server.py following requirements 1, 2, and 3. Import build_simulation_tools and handle_simulation_tool from tools/simulation.py. Register simulation tools in MCP server initialization alongside existing session and flowsheet tools. Add tool dispatch case for simulation tools in the main handler. | Restrictions: Must not break existing tool registration, maintain tool dispatch order, ensure all dependencies injected, follow existing registration patterns | _Leverage: Existing tool registration in server.py for session and flowsheet tools, tools/registry.py if it exists for centralized registration | _Requirements: Requirement 1 (Run tool available), 2 (Status tool available), 3 (Results tool available) | Success: Simulation tools registered successfully, tools appear in MCP list_tools response, tool calls dispatched correctly, server starts without errors | Instructions: After implementation, use log-implementation tool to record implementation details with artifacts (integrations: simulation tools registered in server.py), then mark task as complete in tasks.md_
 
-- [ ] 9. Create C# unit tests for SimulationResultDto
+- [x] 9. Create C# unit tests for SimulationResultDto
   - File: `mcp_service/dwsim_worker/DwsimWorker.Tests/Contracts/SimulationResultDtoTests.cs`
   - Test JSON serialization/deserialization of SimulationResultDto
   - Test property assignment and immutability
@@ -95,7 +95,7 @@
   - _Requirements: 1, 3, 5_
   - _Prompt: Implement the task for spec mcp-simulation-tools, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# QA Engineer with expertise in xUnit and DTO testing | Task: Create SimulationResultDtoTests.cs in DwsimWorker.Tests/Contracts/ following requirements 1, 3, and 5. Write xUnit tests for JSON serialization/deserialization, property assignment, and CalculationResult conversion. Test both success and failure scenarios. | Restrictions: Must use xUnit framework, follow existing test patterns from MaterialStreamDtoTests.cs, test edge cases (null values, empty collections), ensure tests are isolated and repeatable | _Leverage: DwsimWorker.Tests/Contracts/MaterialStreamDtoTests.cs for test pattern and structure | _Requirements: Requirement 1 (DTO structure), 3 (Result format), 5 (Caching structure) | Success: All tests pass, serialization works correctly, edge cases covered, follows existing test patterns | Instructions: After implementation, use log-implementation tool to record implementation details with artifacts (test classes created), then mark task as complete in tasks.md_
 
-- [ ] 10. Create C# unit tests for CalculationAdapter enhancements
+- [x] 10. Create C# unit tests for CalculationAdapter enhancements
   - File: `mcp_service/dwsim_worker/DwsimWorker.Tests/Adapters/CalculationAdapterTests.cs`
   - Add tests for GetCurrentStatus method
   - Add tests for GetCachedResult method
@@ -105,7 +105,7 @@
   - _Requirements: 2, 3, 5_
   - _Prompt: Implement the task for spec mcp-simulation-tools, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# QA Engineer with expertise in adapter testing and mocking | Task: Extend CalculationAdapterTests.cs in DwsimWorker.Tests/Adapters/ following requirements 2, 3, and 5. Add xUnit tests for new GetCurrentStatus and GetCachedResult methods. Test cache behavior: results cached after RunCalculation, cache invalidation when flowsheet modified, cached results returned without re-execution. | Restrictions: Must mock DWSIM dependencies, test both cached and non-cached scenarios, ensure tests are isolated, follow existing test patterns in CalculationAdapterTests.cs | _Leverage: Existing CalculationAdapterTests.cs for test structure and mocking patterns | _Requirements: Requirement 2 (Status retrieval), 3 (Result retrieval), 5 (Result caching) | Success: All new methods tested, cache behavior validated, edge cases covered, tests pass consistently | Instructions: After implementation, use log-implementation tool to record implementation details with artifacts (test methods added to CalculationAdapterTests), then mark task as complete in tasks.md_
 
-- [ ] 11. Create Python unit tests for simulation tools
+- [x] 11. Create Python unit tests for simulation tools
   - File: `mcp_service/server/tests/unit/tools/test_simulation.py`
   - Test build_simulation_tools returns correct tool definitions
   - Test handle_simulation_tool input validation with Pydantic
@@ -117,7 +117,7 @@
   - _Requirements: 1, 2, 3, 4_
   - _Prompt: Implement the task for spec mcp-simulation-tools, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python QA Engineer with expertise in pytest and async testing | Task: Create test_simulation.py in tests/unit/tools/ following requirements 1, 2, 3, and 4. Write pytest tests for build_simulation_tools, handle_simulation_tool dispatch, input validation (valid/invalid), and error handling. Mock session_client to isolate Python layer. Use pytest-asyncio for async tests. | Restrictions: Must mock all C# dependencies via session_client, test both success and failure paths, use pytest fixtures from conftest.py, ensure tests run in isolation, follow existing test patterns from test_session.py | _Leverage: tests/unit/tools/test_session.py for test pattern and structure, tests/conftest.py for shared fixtures | _Requirements: Requirement 1 (Run tool logic), 2 (Status tool logic), 3 (Results tool logic), 4 (Error handling) | Success: All Python tool logic tested, input validation works, error paths covered, tests pass consistently with good coverage | Instructions: After implementation, use log-implementation tool to record implementation details with artifacts (test functions created in test_simulation.py), then mark task as complete in tasks.md_
 
-- [ ] 12. Create Python-C# integration tests
+- [x] 12. Create Python-C# integration tests
   - File: `mcp_service/server/tests/integration/test_simulation_integration.py`
   - Load DwsimWorker.dll via pythonnet
   - Create full simulation workflow: create session → add compounds → add streams → add separator → run → get_status → get_results
@@ -129,7 +129,7 @@
   - _Requirements: All (1, 2, 3, 4, 5)_
   - _Prompt: Implement the task for spec mcp-simulation-tools, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Integration Test Engineer with expertise in Python-C# interop testing | Task: Create test_simulation_integration.py in tests/integration/ covering all requirements (1-5). Load DwsimWorker.dll, execute full simulation workflow from session creation through result retrieval. Test success path, timeout scenario, convergence failure, and result caching. Verify Python-C# bridge works correctly. | Restrictions: Must load actual DwsimWorker.dll, use real DWSIM assemblies (not mocks), test end-to-end flow, handle cleanup properly, use pytest fixtures for session management, follow existing integration test patterns | _Leverage: tests/integration/test_session_integration.py for integration pattern, tests/integration/conftest.py for shared fixtures and DWSIM setup | _Requirements: All requirements (1: Run, 2: Status, 3: Results, 4: Errors, 5: Caching) | Success: All integration tests pass, full workflow executes successfully, timeout and error scenarios validated, caching works, Python-C# bridge robust | Instructions: After implementation, use log-implementation tool to record implementation details with artifacts (test scenarios created), then mark task as complete in tasks.md_
 
-- [ ] 13. Update MCP server documentation
+- [x] 13. Update MCP server documentation
   - File: `mcp_service/server/README.md`
   - Document new simulation tools: run, get_status, get_results
   - Add usage examples for each tool

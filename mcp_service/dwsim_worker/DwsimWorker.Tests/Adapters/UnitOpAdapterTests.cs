@@ -103,7 +103,7 @@ namespace DwsimWorker.Tests.Adapters
 
             // Assert
             Assert.True(result.Success, $"Expected success but got: {result.Message}");
-            Assert.Contains("U", result.Message); // Should contain generated unit ID (e.g., "U1")
+            Assert.StartsWith("U", result.ObjectId); // Should contain generated unit ID (e.g., "U1")
         }
 
         [Fact]
@@ -123,7 +123,7 @@ namespace DwsimWorker.Tests.Adapters
 
             // Assert
             Assert.True(result.Success, $"Expected success but got: {result.Message}");
-            Assert.Contains("U", result.Message);
+            Assert.StartsWith("U", result.ObjectId);
         }
 
         [Fact]
@@ -169,7 +169,7 @@ namespace DwsimWorker.Tests.Adapters
             Assert.True(result2.Success, $"Second separator creation failed: {result2.Message}");
 
             // The generated unit IDs should be different
-            Assert.NotEqual(result1.Message, result2.Message);
+            Assert.NotEqual(result1.ObjectId, result2.ObjectId);
         }
 
         #endregion
@@ -185,7 +185,7 @@ namespace DwsimWorker.Tests.Adapters
             // Arrange
             var createResult = _adapter.AddThreePhaseSeparator("SEP-101", null);
             Assert.True(createResult.Success);
-            var unitId = createResult.Message;
+            var unitId = createResult.ObjectId;
 
             // Act
             var result = _adapter.SetParameter(unitId, "PressureDrop", 10000.0);
@@ -231,7 +231,7 @@ namespace DwsimWorker.Tests.Adapters
             // Arrange
             var createResult = _adapter.AddThreePhaseSeparator("SEP-101", null);
             Assert.True(createResult.Success);
-            var unitId = createResult.Message;
+            var unitId = createResult.ObjectId;
 
             // Act
             var result = _adapter.SetParameter(unitId, null, 10000.0);
@@ -272,7 +272,7 @@ namespace DwsimWorker.Tests.Adapters
             });
             var createResult = _adapter.AddThreePhaseSeparator("SEP-101", config);
             Assert.True(createResult.Success);
-            var unitId = createResult.Message;
+            var unitId = createResult.ObjectId;
 
             // Act
             var result = _adapter.GetParameter(unitId, "PressureDrop");
@@ -311,7 +311,7 @@ namespace DwsimWorker.Tests.Adapters
             // Arrange
             var createResult = _adapter.AddThreePhaseSeparator("SEP-101", null);
             Assert.True(createResult.Success);
-            var unitId = createResult.Message;
+            var unitId = createResult.ObjectId;
 
             // Act
             var result = _adapter.GetPorts(unitId);

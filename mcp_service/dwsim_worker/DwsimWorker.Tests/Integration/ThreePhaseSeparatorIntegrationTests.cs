@@ -161,8 +161,8 @@ namespace DwsimWorker.Tests.Integration
             );
 
             var feedResult = _streamAdapter.CreateStream("FEED", feedProperties);
-            Assert.True(feedResult.Success, $"Feed stream creation failed: {feedResult.Message}");
-            var feedStreamId = feedResult.Message;
+            Assert.True(feedResult.Success, $"Feed stream creation failed: {feedResult.ObjectId}");
+            var feedStreamId = feedResult.ObjectId;
 
             _logger.Information($"✓ Feed stream created: {feedStreamId} (30% Water, 40% Propane, 30% Methane)");
 
@@ -174,8 +174,8 @@ namespace DwsimWorker.Tests.Integration
             });
 
             var separatorResult = _unitOpAdapter.AddThreePhaseSeparator("SEP-101", separatorConfig);
-            Assert.True(separatorResult.Success, $"Separator creation failed: {separatorResult.Message}");
-            var separatorId = separatorResult.Message;
+            Assert.True(separatorResult.Success, $"Separator creation failed: {separatorResult.ObjectId}");
+            var separatorId = separatorResult.ObjectId;
 
             _logger.Information($"✓ Three-phase separator created: {separatorId}");
 
@@ -196,7 +196,7 @@ namespace DwsimWorker.Tests.Integration
             );
             var vaporResult = _streamAdapter.CreateStream("VAPOR", vaporProperties);
             Assert.True(vaporResult.Success);
-            var vaporStreamId = vaporResult.Message;
+            var vaporStreamId = vaporResult.ObjectId;
 
             // Light liquid outlet (mostly propane)
             var lightLiquidProperties = CreateStreamProperties(
@@ -207,7 +207,7 @@ namespace DwsimWorker.Tests.Integration
             );
             var lightLiquidResult = _streamAdapter.CreateStream("LIGHT_LIQUID", lightLiquidProperties);
             Assert.True(lightLiquidResult.Success);
-            var lightLiquidStreamId = lightLiquidResult.Message;
+            var lightLiquidStreamId = lightLiquidResult.ObjectId;
 
             // Heavy liquid outlet (mostly water)
             var heavyLiquidProperties = CreateStreamProperties(
@@ -218,7 +218,7 @@ namespace DwsimWorker.Tests.Integration
             );
             var heavyLiquidResult = _streamAdapter.CreateStream("HEAVY_LIQUID", heavyLiquidProperties);
             Assert.True(heavyLiquidResult.Success);
-            var heavyLiquidStreamId = heavyLiquidResult.Message;
+            var heavyLiquidStreamId = heavyLiquidResult.ObjectId;
 
             _logger.Information($"✓ Outlet streams created: {vaporStreamId}, {lightLiquidStreamId}, {heavyLiquidStreamId}");
 
@@ -312,7 +312,7 @@ namespace DwsimWorker.Tests.Integration
             var properties = CreateStreamProperties(298.15, 101325, 1.0, new[] { 0.5, 0.5 });
             var streamResult = _streamAdapter.CreateStream("FEED", properties);
             Assert.True(streamResult.Success);
-            var streamId = streamResult.Message;
+            var streamId = streamResult.ObjectId;
 
             // Try to connect to non-existent unit
             var connectionResult = _connectionAdapter.ConnectStream(streamId, "NONEXISTENT", "Inlet");
@@ -337,10 +337,10 @@ namespace DwsimWorker.Tests.Integration
 
             var properties = CreateStreamProperties(298.15, 101325, 1.0, new[] { 0.5, 0.5 });
             var streamResult = _streamAdapter.CreateStream("FEED", properties);
-            var streamId = streamResult.Message;
+            var streamId = streamResult.ObjectId;
 
             var separatorResult = _unitOpAdapter.AddThreePhaseSeparator("SEP-101", null);
-            var separatorId = separatorResult.Message;
+            var separatorId = separatorResult.ObjectId;
 
             // First connection succeeds
             var connection1 = _connectionAdapter.ConnectStream(streamId, separatorId, "Inlet");

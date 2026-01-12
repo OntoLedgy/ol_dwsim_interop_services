@@ -89,6 +89,28 @@ class LimitedSessionClient:
 
         return await self.run_session_operation(session_id, _load)
 
+    async def run_calculation(self, session_id: str, *, timeout_seconds: Optional[int] = None):
+        def _run():
+            return self._session_client.run_calculation(session_id, timeout_seconds=timeout_seconds)
+
+        return await self.run_session_operation(
+            session_id,
+            _run,
+            timeout_override=float(timeout_seconds) if timeout_seconds is not None else None,
+        )
+
+    async def get_calculation_status(self, session_id: str):
+        def _status():
+            return self._session_client.get_calculation_status(session_id)
+
+        return await self.run_session_operation(session_id, _status)
+
+    async def get_calculation_results(self, session_id: str, *, object_id: Optional[str] = None):
+        def _results():
+            return self._session_client.get_calculation_results(session_id, object_id=object_id)
+
+        return await self.run_session_operation(session_id, _results)
+
     async def run_session_operation(self, session_id: str, func, *, timeout_override: Optional[float] = None):
         """Run an operation within a session with limit enforcement."""
         return await self._guard.run(

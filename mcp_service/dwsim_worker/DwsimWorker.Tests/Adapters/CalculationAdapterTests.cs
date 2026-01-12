@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Reflection;
 using Xunit;
 using Serilog;
 using DwsimWorker.Adapters;
+using DwsimWorker.Engine;
+using DwsimWorker.Models;
 
 namespace DwsimWorker.Tests.Adapters
 {
@@ -71,6 +75,12 @@ namespace DwsimWorker.Tests.Adapters
             // Check for GetUnitMetrics method
             var getUnitMetrics = type.GetMethod("GetUnitMetrics", new[] { typeof(string) });
             Assert.NotNull(getUnitMetrics);
+
+            // Check for cached status/result methods
+            var getCurrentStatus = type.GetMethod("GetCurrentStatus", Type.EmptyTypes);
+            var getCachedResult = type.GetMethod("GetCachedResult", Type.EmptyTypes);
+            Assert.NotNull(getCurrentStatus);
+            Assert.NotNull(getCachedResult);
         }
 
         [Fact]
@@ -90,6 +100,55 @@ namespace DwsimWorker.Tests.Adapters
             Assert.Equal("logger", parameters[0].Name);
             Assert.Equal("context", parameters[1].Name);
             Assert.Equal("streamAdapter", parameters[2].Name);
+        }
+
+        #endregion
+
+        #region Cache Behavior Tests
+
+        [Fact]
+        public void FlowsheetContext_InvalidateCalculationCache_ClearsCachedFields()
+        {
+            var config = new FlowsheetContextConfigBuilder()
+                .WithValidation(false)
+                .Build();
+            var context = new FlowsheetContext(_logger, config);
+
+            var convergence = ConvergenceStatus.Converged(1, 0.1);
+            var timing = CalculationTiming.FromTimestamps(DateTime.UtcNow.AddSeconds(-1), DateTime.UtcNow);
+            var result = CalculationResult.SuccessResult(
+                convergence,
+                timing,
+                new List<StreamResult>(),
+                MassBalanceResult.Valid(0, 0));
+
+            SetPrivateField(context, "_cachedCalculationResult", result);
+            SetPrivateField(context, "_cachedConvergenceStatus", convergence);
+            SetPrivateField(context, "_lastCalculationTimestamp", DateTime.UtcNow);
+
+            context.InvalidateCalculationCache("test");
+
+            Assert.Null(GetPrivateField<CalculationResult>(context, "_cachedCalculationResult"));
+            Assert.Equal(
+                ConvergenceState.NotStarted,
+                GetPrivateField<ConvergenceStatus>(context, "_cachedConvergenceStatus").State);
+            Assert.Null(GetPrivateField<DateTime?>(context, "_lastCalculationTimestamp"));
+        }
+
+        private static void SetPrivateField(object target, string fieldName, object value)
+        {
+            var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            if (field == null)
+                throw new InvalidOperationException($"Field '{fieldName}' not found.");
+            field.SetValue(target, value);
+        }
+
+        private static T GetPrivateField<T>(object target, string fieldName)
+        {
+            var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            if (field == null)
+                throw new InvalidOperationException($"Field '{fieldName}' not found.");
+            return (T)field.GetValue(target);
         }
 
         #endregion

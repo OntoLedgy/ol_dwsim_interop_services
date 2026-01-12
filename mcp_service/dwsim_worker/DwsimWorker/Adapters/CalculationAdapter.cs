@@ -68,6 +68,8 @@ namespace DwsimWorker.Adapters
 
             var startTime = DateTime.UtcNow;
             var sw = Stopwatch.StartNew();
+            _context.InvalidateCalculationCache("calculation started");
+            _context.UpdateConvergenceStatus(ConvergenceStatus.InProgress());
 
             try
             {
@@ -75,9 +77,11 @@ namespace DwsimWorker.Adapters
                 var flowsheet = _context.GetFlowsheet();
                 if (flowsheet == null)
                 {
-                    return CalculationResult.FailureResult(
+                    var result = CalculationResult.FailureResult(
                         "Flowsheet is not initialized",
                         new InvalidOperationException("Flowsheet is null"));
+                    _context.CacheCalculationResult(result);
+                    return result;
                 }
 
                 // Step 2: Run calculation with optional timeout
@@ -106,21 +110,25 @@ namespace DwsimWorker.Adapters
                 // If calculation failed or didn't converge, return appropriate result
                 if (!calculationSuccess || convergenceStatus.State == ConvergenceState.Error)
                 {
-                    return CalculationResult.FailureResult(
+                    var result = CalculationResult.FailureResult(
                         convergenceStatus.Message ?? "Calculation failed",
                         null,
                         convergenceStatus,
                         timing,
                         messages);
+                    _context.CacheCalculationResult(result);
+                    return result;
                 }
 
                 if (convergenceStatus.State != ConvergenceState.Converged)
                 {
-                    return CalculationResult.NotConvergedResult(
+                    var result = CalculationResult.NotConvergedResult(
                         convergenceStatus,
                         timing,
                         messages,
                         "Calculation did not converge");
+                    _context.CacheCalculationResult(result);
+                    return result;
                 }
 
                 // Step 6: Extract stream results
@@ -132,15 +140,19 @@ namespace DwsimWorker.Adapters
                 // Step 8: Return successful result
                 _logger.Information("Calculation completed successfully in {Duration}ms", timing.TotalMilliseconds);
 
-                return CalculationResult.SuccessResult(
+                var successResult = CalculationResult.SuccessResult(
                     convergenceStatus,
                     timing,
                     streamResults,
                     massBalance,
                     messages);
+                _context.CacheCalculationResult(successResult);
+                return successResult;
             }
             catch (CalculationTimeoutException)
             {
+                _context.UpdateConvergenceStatus(
+                    ConvergenceStatus.Error($"Calculation timed out after {timeout}."));
                 // Re-throw timeout exceptions
                 throw;
             }
@@ -151,11 +163,13 @@ namespace DwsimWorker.Adapters
 
                 _logger.Error(ex, "Calculation failed with exception");
 
-                return CalculationResult.FailureResult(
+                var result = CalculationResult.FailureResult(
                     $"Calculation failed: {ex.Message}",
                     ex,
                     ConvergenceStatus.Error(ex.Message),
                     timing);
+                _context.CacheCalculationResult(result);
+                return result;
             }
         }
 
@@ -365,6 +379,24 @@ namespace DwsimWorker.Adapters
                 _logger.Error(ex, "Failed to get metrics for unit {UnitId}", unitId);
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Gets the most recent convergence status from cache.
+        /// </summary>
+        /// <returns>The cached convergence status.</returns>
+        public ConvergenceStatus GetCurrentStatus()
+        {
+            return _context.GetCachedConvergenceStatus();
+        }
+
+        /// <summary>
+        /// Gets the cached calculation result without re-running the solver.
+        /// </summary>
+        /// <returns>The cached calculation result, or null if none is cached.</returns>
+        public CalculationResult GetCachedResult()
+        {
+            return _context.GetCachedCalculationResult();
         }
     }
 }

@@ -144,6 +144,118 @@ server/
 - `get_status` - Check simulation status
 - `get_results` - Retrieve simulation results
 
+### Simulation Tools Details
+
+#### run
+Execute a simulation for the session and return convergence details and stream properties.
+
+Input:
+```json
+{
+  "session_id": "session-1234",
+  "timeout_seconds": 120
+}
+```
+
+Output:
+```json
+{
+  "status": "converged",
+  "convergence_state": "Converged",
+  "elapsed_ms": 1250.0,
+  "stream_results": [
+    {
+      "id": "stream-001",
+      "name": "Vapor Outlet",
+      "temperature_k": 350.0,
+      "pressure_pa": 101325.0,
+      "total_molar_flow_mol_per_s": 10.5,
+      "phases": []
+    }
+  ],
+  "messages": ["Calculation converged successfully."],
+  "mass_balance_valid": true,
+  "mass_balance_error_percent": 0.4
+}
+```
+
+#### get_status
+Retrieve the latest simulation status for a session.
+
+Input:
+```json
+{
+  "session_id": "session-1234"
+}
+```
+
+Output:
+```json
+{
+  "status": "running",
+  "is_running": true,
+  "last_run_timestamp": "2024-12-19T20:30:00Z",
+  "elapsed_ms": 450.0
+}
+```
+
+#### get_results
+Retrieve cached results from the most recent run. Use `object_id` to request a single stream.
+
+Input:
+```json
+{
+  "session_id": "session-1234",
+  "object_id": "stream-001"
+}
+```
+
+Output:
+```json
+{
+  "status": "converged",
+  "convergence_state": "Converged",
+  "elapsed_ms": 1250.0,
+  "stream_results": [
+    {
+      "id": "stream-001",
+      "name": "Vapor Outlet",
+      "temperature_k": 350.0,
+      "pressure_pa": 101325.0,
+      "total_molar_flow_mol_per_s": 10.5,
+      "phases": []
+    }
+  ],
+  "messages": [],
+  "mass_balance_valid": true,
+  "mass_balance_error_percent": 0.4
+}
+```
+
+### Simulation Workflow Example
+
+```json
+{"tool": "create_session", "arguments": {"name": "Separator Run"}}
+{"tool": "add_compound", "arguments": {"session_id": "session-1234", "compound_name": "Water"}}
+{"tool": "set_property_package", "arguments": {"session_id": "session-1234", "package_name": "peng-robinson", "options": {}}}
+{"tool": "add_stream", "arguments": {"session_id": "session-1234", "name": "feed", "temperature": 298.15, "pressure": 101325.0, "molar_flow": 10.0, "composition": {"Water": 1.0}}}
+{"tool": "add_unit", "arguments": {"session_id": "session-1234", "unit_type": "separator", "name": "sep-01", "parameters": {}}}
+{"tool": "connect", "arguments": {"session_id": "session-1234", "source_id": "stream-001", "target_id": "unit-001", "port_name": "Inlet"}}
+{"tool": "run", "arguments": {"session_id": "session-1234", "timeout_seconds": 120}}
+{"tool": "get_status", "arguments": {"session_id": "session-1234"}}
+{"tool": "get_results", "arguments": {"session_id": "session-1234"}}
+```
+
+### Simulation Error Codes
+
+Simulation tools return structured error payloads when operations fail:
+- `CONVERGENCE_FAILURE` - Solver did not converge
+- `SIMULATION_TIMEOUT` - Calculation exceeded timeout
+- `INVALID_FLOWSHEET_STATE` - Missing or invalid flowsheet topology
+- `NO_RESULTS_AVAILABLE` - Results requested before a successful run
+- `RESOURCE_LIMIT_EXCEEDED` - Memory or resource cap exceeded
+- `SESSION_EXPIRED` - Session lifetime exceeded
+
 ### Thermodynamics
 - `flash_tp` - Flash calculation at temperature and pressure
 - `flash_ph` - Flash at pressure and enthalpy
@@ -178,6 +290,12 @@ export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 - Adjust `DWSIM_OPERATION_TIMEOUT` for complex simulations
 - Increase `DWSIM_MAX_SESSIONS` if running concurrent simulations
 - Enable worker process pooling in config
+
+### Simulation Troubleshooting
+
+- If `run` returns `INVALID_FLOWSHEET_STATE`, ensure at least one unit operation exists and streams are connected.
+- If `get_results` returns `NO_RESULTS_AVAILABLE`, run a simulation first and verify it converged.
+- If `SIMULATION_TIMEOUT` occurs, increase `timeout_seconds` for the `run` tool or adjust `DWSIM_OPERATION_TIMEOUT`.
 
 ## License
 

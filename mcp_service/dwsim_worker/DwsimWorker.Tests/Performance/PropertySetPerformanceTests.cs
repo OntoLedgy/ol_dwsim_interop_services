@@ -216,7 +216,7 @@ namespace DwsimWorker.Tests.Performance
             var properties = CreateTestStreamProperties();
             var streamResult = _streamAdapter.CreateStream("TEST_STREAM", properties);
             Assert.True(streamResult.Success);
-            var streamId = streamResult.Message;
+            var streamId = streamResult.ObjectId;
 
             const int iterations = 10;
             var stopwatch = new Stopwatch();
@@ -299,7 +299,7 @@ namespace DwsimWorker.Tests.Performance
             // Create separator
             var separatorResult = _unitOpAdapter.AddThreePhaseSeparator("SEP1", null);
             Assert.True(separatorResult.Success);
-            var separatorId = separatorResult.Message;
+            var separatorId = separatorResult.ObjectId;
 
             // Create multiple streams
             var stream1 = _streamAdapter.CreateStream("INLET", properties);
@@ -309,7 +309,7 @@ namespace DwsimWorker.Tests.Performance
 
             Assert.True(stream1.Success && stream2.Success && stream3.Success && stream4.Success);
 
-            var streamIds = new[] { stream1.Message, stream2.Message, stream3.Message, stream4.Message };
+            var streamIds = new[] { stream1.ObjectId, stream2.ObjectId, stream3.ObjectId, stream4.ObjectId };
             var ports = new[] { "Inlet", "VaporOutlet", "LiquidOutlet1", "LiquidOutlet2" };
 
             var stopwatch = new Stopwatch();
@@ -376,10 +376,10 @@ namespace DwsimWorker.Tests.Performance
             Assert.True(separator.Success);
 
             // Step 5: Connect all streams
-            _connectionAdapter.ConnectStream(inlet.Message, separator.Message, "Inlet");
-            _connectionAdapter.ConnectStream(vapor.Message, separator.Message, "VaporOutlet");
-            _connectionAdapter.ConnectStream(liquid1.Message, separator.Message, "LiquidOutlet1");
-            _connectionAdapter.ConnectStream(liquid2.Message, separator.Message, "LiquidOutlet2");
+            _connectionAdapter.ConnectStream(inlet.ObjectId, separator.ObjectId, "Inlet");
+            _connectionAdapter.ConnectStream(vapor.ObjectId, separator.ObjectId, "VaporOutlet");
+            _connectionAdapter.ConnectStream(liquid1.ObjectId, separator.ObjectId, "LiquidOutlet1");
+            _connectionAdapter.ConnectStream(liquid2.ObjectId, separator.ObjectId, "LiquidOutlet2");
 
             // Step 6: Validate topology
             var validation = _connectionAdapter.ValidateTopology();
@@ -438,10 +438,10 @@ namespace DwsimWorker.Tests.Performance
 
             var separator = _unitOpAdapter.AddThreePhaseSeparator("SEP1", null);
 
-            _connectionAdapter.ConnectStream(inlet.Message, separator.Message, "Inlet");
-            _connectionAdapter.ConnectStream(vapor.Message, separator.Message, "VaporOutlet");
-            _connectionAdapter.ConnectStream(liquid1.Message, separator.Message, "LiquidOutlet1");
-            _connectionAdapter.ConnectStream(liquid2.Message, separator.Message, "LiquidOutlet2");
+            _connectionAdapter.ConnectStream(inlet.ObjectId, separator.ObjectId, "Inlet");
+            _connectionAdapter.ConnectStream(vapor.ObjectId, separator.ObjectId, "VaporOutlet");
+            _connectionAdapter.ConnectStream(liquid1.ObjectId, separator.ObjectId, "LiquidOutlet1");
+            _connectionAdapter.ConnectStream(liquid2.ObjectId, separator.ObjectId, "LiquidOutlet2");
 
             // Force garbage collection after configuration
             GC.Collect();
@@ -511,10 +511,10 @@ namespace DwsimWorker.Tests.Performance
             sw5.Stop();
 
             var sw6 = Stopwatch.StartNew();
-            _connectionAdapter.ConnectStream(inlet.Message, separator.Message, "Inlet");
-            _connectionAdapter.ConnectStream(vapor.Message, separator.Message, "VaporOutlet");
-            _connectionAdapter.ConnectStream(liquid1.Message, separator.Message, "LiquidOutlet1");
-            _connectionAdapter.ConnectStream(liquid2.Message, separator.Message, "LiquidOutlet2");
+            _connectionAdapter.ConnectStream(inlet.ObjectId, separator.ObjectId, "Inlet");
+            _connectionAdapter.ConnectStream(vapor.ObjectId, separator.ObjectId, "VaporOutlet");
+            _connectionAdapter.ConnectStream(liquid1.ObjectId, separator.ObjectId, "LiquidOutlet1");
+            _connectionAdapter.ConnectStream(liquid2.ObjectId, separator.ObjectId, "LiquidOutlet2");
             _connectionAdapter.ValidateTopology();
             sw6.Stop();
 

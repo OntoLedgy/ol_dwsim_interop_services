@@ -71,7 +71,7 @@ namespace DwsimWorker.Tests.Integration
             // Create inlet stream with specified composition
             var feedProperties = CreateStreamProperties(298.15, 500000, 100.0, feedComposition);
             var feedResult = streamAdapter.CreateStream("FEED", feedProperties);
-            var feedStreamId = feedResult.Message;
+            var feedStreamId = feedResult.ObjectId;
 
             // Create separator
             var separatorConfig = new UnitOpConfig(new Dictionary<string, object>
@@ -79,20 +79,20 @@ namespace DwsimWorker.Tests.Integration
                 { "PressureDrop", 10000.0 }
             });
             var separatorResult = unitOpAdapter.AddThreePhaseSeparator("SEP-101", separatorConfig);
-            var separatorId = separatorResult.Message;
+            var separatorId = separatorResult.ObjectId;
 
             // Create outlet streams
             var vaporProperties = CreateStreamProperties(298.15, 490000, 30.0, new[] { 0.0, 0.0, 1.0 });
             var vaporResult = streamAdapter.CreateStream("VAPOR", vaporProperties);
-            var vaporStreamId = vaporResult.Message;
+            var vaporStreamId = vaporResult.ObjectId;
 
             var lightLiquidProperties = CreateStreamProperties(298.15, 490000, 40.0, new[] { 0.0, 1.0, 0.0 });
             var lightLiquidResult = streamAdapter.CreateStream("LIGHT_LIQUID", lightLiquidProperties);
-            var lightLiquidStreamId = lightLiquidResult.Message;
+            var lightLiquidStreamId = lightLiquidResult.ObjectId;
 
             var heavyLiquidProperties = CreateStreamProperties(298.15, 490000, 30.0, new[] { 1.0, 0.0, 0.0 });
             var heavyLiquidResult = streamAdapter.CreateStream("HEAVY_LIQUID", heavyLiquidProperties);
-            var heavyLiquidStreamId = heavyLiquidResult.Message;
+            var heavyLiquidStreamId = heavyLiquidResult.ObjectId;
 
             // Connect streams
             connectionAdapter.ConnectStream(feedStreamId, separatorId, "Inlet");
