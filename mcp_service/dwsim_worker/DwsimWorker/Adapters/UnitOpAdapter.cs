@@ -498,15 +498,29 @@ namespace DwsimWorker.Adapters
 
                 try
                 {
-                    var converted = Convert.ChangeType(value, property.PropertyType);
+                    object converted;
+
+                    // Handle enum properties specially (like CalculationMode)
+                    if (property.PropertyType.IsEnum && value is string stringValue)
+                    {
+                        converted = Enum.Parse(property.PropertyType, stringValue, true);
+                    }
+                    else
+                    {
+                        converted = Convert.ChangeType(value, property.PropertyType);
+                    }
+
                     property.SetValue(unit, converted);
+                    _logger.Debug("Set unit parameter {ParameterName} = {Value}", candidate, value);
                     return;
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Ignore conversion errors for now
+                    _logger.Warning(ex, "Failed to set parameter {ParameterName} to {Value}", candidate, value);
                 }
             }
+
+            _logger.Debug("Property {ParameterName} not found or not writable on unit operation", parameterName);
         }
 
         private object TryAddSeparatorViaFlowsheet(object flowsheet, string name, string unitId)

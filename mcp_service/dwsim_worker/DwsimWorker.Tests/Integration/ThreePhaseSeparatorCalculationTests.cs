@@ -86,26 +86,31 @@ namespace DwsimWorker.Tests.Integration
             var feedStreamId = feedResult.ObjectId;
             _logger.Information($"Feed stream created: {feedStreamId}");
 
-            // Create three-phase separator
+            // Note: Stream flashing will be done by DWSIM during flowsheet calculation
+            // Manual flash not needed here as the flowsheet solver will handle it
+
+            // Create three-phase separator with proper configuration
             var separatorConfig = new UnitOpConfig(new System.Collections.Generic.Dictionary<string, object>
             {
-                { "PressureDrop", 10000.0 }
+                { "PressureDrop", 10000.0 },
+                { "CalculationMode", "Legacy" }  // Required for Vessel unit operation
             });
 
             var separatorResult = unitOpAdapter.AddThreePhaseSeparator("SEP-101", separatorConfig);
             var separatorId = separatorResult.ObjectId;
             _logger.Information($"Separator created: {separatorId}");
 
-            // Create outlet streams
-            var vaporProperties = CreateStreamProperties(298.15, 490000, 30.0, new[] { 0.0, 0.0, 0.5, 0.5 });
+            // Create outlet streams WITHOUT compositions (DWSIM will calculate them)
+            // Only set temperature and pressure, let flow and composition be calculated
+            var vaporProperties = CreateEmptyStreamProperties(298.15, 490000);
             var vaporResult = streamAdapter.CreateStream("VAPOR", vaporProperties);
             var vaporStreamId = vaporResult.ObjectId;
 
-            var lightLiquidProperties = CreateStreamProperties(298.15, 490000, 40.0, new[] { 0.0, 0.6, 0.2, 0.2 });
+            var lightLiquidProperties = CreateEmptyStreamProperties(298.15, 490000);
             var lightLiquidResult = streamAdapter.CreateStream("LIGHT_LIQUID", lightLiquidProperties);
             var lightLiquidStreamId = lightLiquidResult.ObjectId;
 
-            var heavyLiquidProperties = CreateStreamProperties(298.15, 490000, 30.0, new[] { 0.8, 0.1, 0.05, 0.05 });
+            var heavyLiquidProperties = CreateEmptyStreamProperties(298.15, 490000);
             var heavyLiquidResult = streamAdapter.CreateStream("HEAVY_LIQUID", heavyLiquidProperties);
             var heavyLiquidStreamId = heavyLiquidResult.ObjectId;
 
@@ -173,6 +178,33 @@ namespace DwsimWorker.Tests.Integration
             var flowProperty = new PhysicalProperties("MolarFlow", flowMeasurement);
 
             var comp = new Composition(composition);
+
+            return new StreamProperties(tempProperty, pressProperty, flowProperty, comp);
+        }
+
+        private StreamProperties CreateEmptyStreamProperties(double temperature, double pressure)
+        {
+            // Create outlet streams with minimal properties
+            // Flow and composition will be calculated by DWSIM during separator calculation
+            var kelvinUnit = new UnitsOfMeasure("K", typeof(Temperature),
+                new Ranges(0, double.PositiveInfinity));
+            var pascalUnit = new UnitsOfMeasure("Pa", typeof(Pressure),
+                new Ranges(0, double.PositiveInfinity));
+            var molPerSecUnit = new UnitsOfMeasure("mol/s", typeof(MolarFlowRate),
+                new Ranges(0, double.PositiveInfinity));
+
+            var tempMeasurement = new Measurements(new Temperature(), temperature, kelvinUnit);
+            var pressMeasurement = new Measurements(new Pressure(), pressure, pascalUnit);
+            // Use a small default flow - DWSIM will update this during calculation
+            var flowMeasurement = new Measurements(new MolarFlowRate(), 0.001, molPerSecUnit);
+
+            var tempProperty = new PhysicalProperties("Temperature", tempMeasurement);
+            var pressProperty = new PhysicalProperties("Pressure", pressMeasurement);
+            var flowProperty = new PhysicalProperties("MolarFlow", flowMeasurement);
+
+            // Use equal mole fractions as placeholder - DWSIM will recalculate during separator calculation
+            // Composition must sum to 1.0 per validation rules
+            var comp = new Composition(new double[] { 0.25, 0.25, 0.25, 0.25 });
 
             return new StreamProperties(tempProperty, pressProperty, flowProperty, comp);
         }

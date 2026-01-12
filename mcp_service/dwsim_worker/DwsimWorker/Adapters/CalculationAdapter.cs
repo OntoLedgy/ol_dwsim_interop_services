@@ -260,14 +260,40 @@ namespace DwsimWorker.Adapters
                 if (solvedProperty != null)
                 {
                     var solvedValue = solvedProperty.GetValue(flowsheet);
-                    if (solvedValue is bool solved && solved)
-                    {
-                        return ConvergenceStatus.Converged(0, 0.0);
-                    }
+                    _logger.Debug("Flowsheet Solved property value: {SolvedValue}", solvedValue);
 
-                    return ConvergenceStatus.NotConverged("Flowsheet not solved", 0, 0.0);
+                    if (solvedValue is bool solved)
+                    {
+                        if (solved)
+                        {
+                            _logger.Information("Flowsheet converged successfully (Solved=true)");
+                            return ConvergenceStatus.Converged(0, 0.0);
+                        }
+                        else
+                        {
+                            // Try to get error messages from flowsheet
+                            var errorMessage = "Flowsheet not solved (Solved=false)";
+                            try
+                            {
+                                var errorProp = flowsheet.GetType().GetProperty("ErrorMessage");
+                                if (errorProp != null)
+                                {
+                                    var error = errorProp.GetValue(flowsheet)?.ToString();
+                                    if (!string.IsNullOrWhiteSpace(error))
+                                    {
+                                        errorMessage += $": {error}";
+                                    }
+                                }
+                            }
+                            catch { }
+
+                            _logger.Warning("Flowsheet did not converge: {Message}", errorMessage);
+                            return ConvergenceStatus.NotConverged(errorMessage, 0, 0.0);
+                        }
+                    }
                 }
 
+                _logger.Warning("Solved property not found on flowsheet, assuming converged");
                 return ConvergenceStatus.Converged(0, 0.0);
             }
             catch (Exception ex)
