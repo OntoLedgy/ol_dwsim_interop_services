@@ -10,7 +10,8 @@
       "Bash(./build.bat)",
       "Bash(msbuild:*)",
       "Bash(git add:*)",
-      "Bash(cmd /c build.bat)"
+      "Bash(cmd /c build.bat)",
+      "Bash(\"D:\\\\Apps\\\\Microsoft Visual Studio\\\\18\\\\Professional\\\\Common7\\\\IDE\\\\CommonExtensions\\\\Microsoft\\\\TestWindow\\\\vstest.console.exe\" \"DwsimWorker.Tests\\\\bin\\\\Debug\\\\DwsimWorker.Tests.dll\" /Tests:GoldenTest_ThreePhaseSeparatorCalculation_Succeeds)"
     ]
   }
 }

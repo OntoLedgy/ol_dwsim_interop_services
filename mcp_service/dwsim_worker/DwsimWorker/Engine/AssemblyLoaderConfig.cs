@@ -18,6 +18,10 @@ namespace DwsimWorker.Engine
             "DWSIM.Interfaces",
             "DWSIM.Thermodynamics",
             "DWSIM.SharedClasses",
+            "DWSIM.FlowsheetBase",
+            "DWSIM.UnitOperations",
+            "DWSIM.Drawing.SkiaSharp",
+            "DWSIM.UI.Desktop.Shared",
             "DWSIM",  // Main DWSIM executable assembly
             "CapeOpen"
         };

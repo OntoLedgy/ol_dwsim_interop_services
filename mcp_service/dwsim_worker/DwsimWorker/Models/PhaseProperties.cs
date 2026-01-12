@@ -49,6 +49,71 @@ namespace DwsimWorker.Models
         public double? MolecularWeightKgPerKmol { get; }
 
         /// <summary>
+        /// Gets the specific enthalpy of the phase in kJ/kg (optional).
+        /// </summary>
+        public double? EnthalpyKJPerKg { get; }
+
+        /// <summary>
+        /// Gets the molar enthalpy of the phase in kJ/kmol (optional).
+        /// </summary>
+        public double? MolarEnthalpyKJPerKmol { get; }
+
+        /// <summary>
+        /// Gets the specific entropy of the phase in kJ/(kg*K) (optional).
+        /// </summary>
+        public double? EntropyKJPerKgK { get; }
+
+        /// <summary>
+        /// Gets the molar entropy of the phase in kJ/(kmol*K) (optional).
+        /// </summary>
+        public double? MolarEntropyKJPerKmolK { get; }
+
+        /// <summary>
+        /// Gets the volumetric flow of the phase in m3/s (optional).
+        /// </summary>
+        public double? VolumetricFlowM3PerSec { get; }
+
+        /// <summary>
+        /// Gets the mass fraction of the phase (0 to 1, optional).
+        /// </summary>
+        public double? MassFraction { get; }
+
+        /// <summary>
+        /// Gets the volumetric fraction of the phase (0 to 1, optional).
+        /// </summary>
+        public double? VolumetricFraction { get; }
+
+        /// <summary>
+        /// Gets the Gibbs free energy of the phase (optional).
+        /// </summary>
+        public double? GibbsFreeEnergy { get; }
+
+        /// <summary>
+        /// Gets the Helmholtz energy of the phase (optional).
+        /// </summary>
+        public double? HelmholtzEnergy { get; }
+
+        /// <summary>
+        /// Gets the internal energy of the phase (optional).
+        /// </summary>
+        public double? InternalEnergy { get; }
+
+        /// <summary>
+        /// Gets the K-value of the phase (optional).
+        /// </summary>
+        public double? KValue { get; }
+
+        /// <summary>
+        /// Gets the fugacity of the phase (optional).
+        /// </summary>
+        public double? Fugacity { get; }
+
+        /// <summary>
+        /// Gets the activity coefficient of the phase (optional).
+        /// </summary>
+        public double? ActivityCoefficient { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="PhaseProperties"/> class with required properties.
         /// </summary>
         /// <param name="phaseName">The name of the phase.</param>
@@ -89,7 +154,20 @@ namespace DwsimWorker.Models
             Composition composition,
             double? densityKgPerM3,
             double? viscosityPaS,
-            double? molecularWeightKgPerKmol)
+            double? molecularWeightKgPerKmol,
+            double? enthalpyKJPerKg = null,
+            double? molarEnthalpyKJPerKmol = null,
+            double? entropyKJPerKgK = null,
+            double? molarEntropyKJPerKmolK = null,
+            double? volumetricFlowM3PerSec = null,
+            double? massFraction = null,
+            double? volumetricFraction = null,
+            double? gibbsFreeEnergy = null,
+            double? helmholtzEnergy = null,
+            double? internalEnergy = null,
+            double? kValue = null,
+            double? fugacity = null,
+            double? activityCoefficient = null)
         {
             if (string.IsNullOrWhiteSpace(phaseName))
                 throw new ArgumentNullException(nameof(phaseName), "Phase name cannot be null or empty.");
@@ -115,6 +193,15 @@ namespace DwsimWorker.Models
             if (molecularWeightKgPerKmol.HasValue && molecularWeightKgPerKmol.Value <= 0)
                 throw new ArgumentException("Molecular weight must be positive.", nameof(molecularWeightKgPerKmol));
 
+            if (volumetricFlowM3PerSec.HasValue && volumetricFlowM3PerSec.Value < 0)
+                throw new ArgumentException("Volumetric flow cannot be negative.", nameof(volumetricFlowM3PerSec));
+
+            if (massFraction.HasValue && (massFraction.Value < 0 || massFraction.Value > 1))
+                throw new ArgumentException("Mass fraction must be between 0 and 1.", nameof(massFraction));
+
+            if (volumetricFraction.HasValue && (volumetricFraction.Value < 0 || volumetricFraction.Value > 1))
+                throw new ArgumentException("Volumetric fraction must be between 0 and 1.", nameof(volumetricFraction));
+
             PhaseName = phaseName;
             MolarFlowMolPerSec = molarFlowMolPerSec;
             MassFlowKgPerSec = massFlowKgPerSec;
@@ -123,6 +210,19 @@ namespace DwsimWorker.Models
             DensityKgPerM3 = densityKgPerM3;
             ViscosityPaS = viscosityPaS;
             MolecularWeightKgPerKmol = molecularWeightKgPerKmol;
+            EnthalpyKJPerKg = enthalpyKJPerKg;
+            MolarEnthalpyKJPerKmol = molarEnthalpyKJPerKmol;
+            EntropyKJPerKgK = entropyKJPerKgK;
+            MolarEntropyKJPerKmolK = molarEntropyKJPerKmolK;
+            VolumetricFlowM3PerSec = volumetricFlowM3PerSec;
+            MassFraction = massFraction;
+            VolumetricFraction = volumetricFraction;
+            GibbsFreeEnergy = gibbsFreeEnergy;
+            HelmholtzEnergy = helmholtzEnergy;
+            InternalEnergy = internalEnergy;
+            KValue = kValue;
+            Fugacity = fugacity;
+            ActivityCoefficient = activityCoefficient;
         }
 
         /// <summary>
@@ -158,7 +258,20 @@ namespace DwsimWorker.Models
                        PhaseFraction == other.PhaseFraction &&
                        DensityKgPerM3 == other.DensityKgPerM3 &&
                        ViscosityPaS == other.ViscosityPaS &&
-                       MolecularWeightKgPerKmol == other.MolecularWeightKgPerKmol;
+                       MolecularWeightKgPerKmol == other.MolecularWeightKgPerKmol &&
+                       EnthalpyKJPerKg == other.EnthalpyKJPerKg &&
+                       MolarEnthalpyKJPerKmol == other.MolarEnthalpyKJPerKmol &&
+                       EntropyKJPerKgK == other.EntropyKJPerKgK &&
+                       MolarEntropyKJPerKmolK == other.MolarEntropyKJPerKmolK &&
+                       VolumetricFlowM3PerSec == other.VolumetricFlowM3PerSec &&
+                       MassFraction == other.MassFraction &&
+                       VolumetricFraction == other.VolumetricFraction &&
+                       GibbsFreeEnergy == other.GibbsFreeEnergy &&
+                       HelmholtzEnergy == other.HelmholtzEnergy &&
+                       InternalEnergy == other.InternalEnergy &&
+                       KValue == other.KValue &&
+                       Fugacity == other.Fugacity &&
+                       ActivityCoefficient == other.ActivityCoefficient;
                 // Note: Composition equality not checked here for simplicity
             }
 
@@ -181,6 +294,19 @@ namespace DwsimWorker.Models
                 hash = hash * 23 + (DensityKgPerM3?.GetHashCode() ?? 0);
                 hash = hash * 23 + (ViscosityPaS?.GetHashCode() ?? 0);
                 hash = hash * 23 + (MolecularWeightKgPerKmol?.GetHashCode() ?? 0);
+                hash = hash * 23 + (EnthalpyKJPerKg?.GetHashCode() ?? 0);
+                hash = hash * 23 + (MolarEnthalpyKJPerKmol?.GetHashCode() ?? 0);
+                hash = hash * 23 + (EntropyKJPerKgK?.GetHashCode() ?? 0);
+                hash = hash * 23 + (MolarEntropyKJPerKmolK?.GetHashCode() ?? 0);
+                hash = hash * 23 + (VolumetricFlowM3PerSec?.GetHashCode() ?? 0);
+                hash = hash * 23 + (MassFraction?.GetHashCode() ?? 0);
+                hash = hash * 23 + (VolumetricFraction?.GetHashCode() ?? 0);
+                hash = hash * 23 + (GibbsFreeEnergy?.GetHashCode() ?? 0);
+                hash = hash * 23 + (HelmholtzEnergy?.GetHashCode() ?? 0);
+                hash = hash * 23 + (InternalEnergy?.GetHashCode() ?? 0);
+                hash = hash * 23 + (KValue?.GetHashCode() ?? 0);
+                hash = hash * 23 + (Fugacity?.GetHashCode() ?? 0);
+                hash = hash * 23 + (ActivityCoefficient?.GetHashCode() ?? 0);
                 return hash;
             }
         }

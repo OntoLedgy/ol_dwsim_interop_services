@@ -112,10 +112,29 @@ namespace DwsimWorker.Tests.Integration
             _logger.Information($"Outlet streams created: {vaporStreamId}, {lightLiquidStreamId}, {heavyLiquidStreamId}");
 
             // Connect streams to separator
-            connectionAdapter.ConnectStream(feedStreamId, separatorId, "Inlet");
-            connectionAdapter.ConnectStream(vaporStreamId, separatorId, "VaporOutlet");
-            connectionAdapter.ConnectStream(lightLiquidStreamId, separatorId, "LiquidOutlet1");
-            connectionAdapter.ConnectStream(heavyLiquidStreamId, separatorId, "LiquidOutlet2");
+            var feedConnection = connectionAdapter.ConnectStream(feedStreamId, separatorId, "Inlet");
+            if (!feedConnection.Success)
+            {
+                throw new InvalidOperationException($"Failed to connect feed stream: {feedConnection.Message}");
+            }
+
+            var vaporConnection = connectionAdapter.ConnectStream(vaporStreamId, separatorId, "VaporOutlet");
+            if (!vaporConnection.Success)
+            {
+                throw new InvalidOperationException($"Failed to connect vapor stream: {vaporConnection.Message}");
+            }
+
+            var lightLiquidConnection = connectionAdapter.ConnectStream(lightLiquidStreamId, separatorId, "LiquidOutlet1");
+            if (!lightLiquidConnection.Success)
+            {
+                throw new InvalidOperationException($"Failed to connect light liquid stream: {lightLiquidConnection.Message}");
+            }
+
+            var heavyLiquidConnection = connectionAdapter.ConnectStream(heavyLiquidStreamId, separatorId, "LiquidOutlet2");
+            if (!heavyLiquidConnection.Success)
+            {
+                throw new InvalidOperationException($"Failed to connect heavy liquid stream: {heavyLiquidConnection.Message}");
+            }
 
             _logger.Information("All streams connected to separator");
 

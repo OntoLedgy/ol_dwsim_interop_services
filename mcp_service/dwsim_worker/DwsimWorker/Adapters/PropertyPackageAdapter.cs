@@ -129,10 +129,29 @@ namespace DwsimWorker.Adapters
                 // Step 2: Normalize to canonical name
                 var canonicalName = GetCanonicalName(packageName);
 
-                // Step 3: Set property package in flowsheet context
-                // TODO: In future, call DWSIM API to actually configure the property package
-                // For now, we just store the name in memory
+                // Step 3: Create and add property package in flowsheet
+                var flowsheet = _context.GetFlowsheet();
+                var flowsheetType = flowsheet.GetType();
+                var method = flowsheetType.GetMethod("CreateAndAddPropertyPackage", new[] { typeof(string) });
+                if (method == null)
+                {
+                    var message = "Flowsheet does not expose CreateAndAddPropertyPackage";
+                    _logger.Warning(message);
+                    return LoadResult.FailureResult(message, new MissingMethodException(message));
+                }
+
+                var propertyPackage = method.Invoke(flowsheet, new object[] { canonicalName });
+                if (propertyPackage == null)
+                {
+                    var message = $"Property package '{canonicalName}' could not be created.";
+                    _logger.Warning(message);
+                    return LoadResult.FailureResult(message, new InvalidOperationException(message));
+                }
+
+                _context.SetPropertyPackage(propertyPackage, canonicalName);
                 _currentPackageName = canonicalName;
+
+                ApplyPropertyPackageToObjects(propertyPackage);
 
                 // Step 4: Log success with structured logging
                 _logger.Information("Property package set: {PackageName}", canonicalName);
@@ -269,6 +288,47 @@ namespace DwsimWorker.Adapters
 
             // If not found in canonical names, return as-is (should not happen due to validation)
             return packageName;
+        }
+
+        private void ApplyPropertyPackageToObjects(object propertyPackage)
+        {
+            if (propertyPackage == null)
+            {
+                return;
+            }
+
+            foreach (var streamId in _context.GetStreamIds())
+            {
+                var stream = _context.GetStream(streamId);
+                TrySetPropertyPackage(stream, propertyPackage);
+            }
+
+            foreach (var unitId in _context.GetUnitIds())
+            {
+                var unit = _context.GetUnit(unitId);
+                TrySetPropertyPackage(unit, propertyPackage);
+            }
+        }
+
+        private void TrySetPropertyPackage(object target, object propertyPackage)
+        {
+            if (target == null || propertyPackage == null)
+            {
+                return;
+            }
+
+            var property = target.GetType().GetProperty("PropertyPackage");
+            if (property == null || !property.CanWrite)
+            {
+                return;
+            }
+
+            if (!property.PropertyType.IsInstanceOfType(propertyPackage))
+            {
+                return;
+            }
+
+            property.SetValue(target, propertyPackage);
         }
     }
 }

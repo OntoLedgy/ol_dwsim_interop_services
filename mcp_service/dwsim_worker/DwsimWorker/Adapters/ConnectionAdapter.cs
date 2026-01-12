@@ -26,6 +26,13 @@ namespace DwsimWorker.Adapters
     {
         private readonly ILogger _logger;
         private readonly FlowsheetContext _context;
+        private static readonly Dictionary<string, string> PortNameToConnectorName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Inlet", "Inlet" },
+            { "VaporOutlet", "Vapor" },
+            { "LiquidOutlet1", "Liquid1" },
+            { "LiquidOutlet2", "Liquid2" }
+        };
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConnectionAdapter"/> class.
@@ -136,11 +143,19 @@ namespace DwsimWorker.Adapters
                     // Allow connection to proceed with warning (user may know better)
                 }
 
-                // Step 5: Create connection
+                // Step 5: Connect objects in flowsheet
+                if (!TryConnectInFlowsheet(streamId, unitId, portName, out var connectError))
+                {
+                    var message = connectError ?? $"Failed to connect stream '{streamId}' to unit '{unitId}'.";
+                    _logger.Warning(message);
+                    return ConnectionResult.FailureResult(message, new InvalidOperationException(message));
+                }
+
+                // Step 6: Create connection
                 var connectionInfo = new ConnectionInfo(streamId, unitId, portName);
                 _context.AddConnection(connectionInfo);
 
-                // Step 6: Log success with structured logging
+                // Step 7: Log success with structured logging
                 _logger.Information("Stream connected successfully: {StreamId} -> {UnitId}.{PortName}",
                     streamId, unitId, portName);
 
@@ -152,6 +167,209 @@ namespace DwsimWorker.Adapters
                 _logger.Error(ex, message);
                 return ConnectionResult.FailureResult(message, ex);
             }
+        }
+
+        private bool TryConnectInFlowsheet(string streamId, string unitId, string portName, out string errorMessage)
+        {
+            errorMessage = null;
+
+            var flowsheet = _context.GetFlowsheet();
+            var stream = _context.GetStream(streamId);
+            var unit = _context.GetUnit(unitId);
+            if (flowsheet == null || stream == null || unit == null)
+            {
+                errorMessage = "Flowsheet objects not available for connection.";
+                return false;
+            }
+
+            var streamGraphic = GetGraphicObject(stream);
+            var unitGraphic = GetGraphicObject(unit);
+            if (streamGraphic == null || unitGraphic == null)
+            {
+                errorMessage = "Graphic objects not available for connection.";
+                return false;
+            }
+
+            var isInlet = portName.IndexOf("inlet", StringComparison.OrdinalIgnoreCase) >= 0;
+            var connectorName = PortNameToConnectorName.TryGetValue(portName, out var mapped) ? mapped : portName;
+
+            object fromGraphic;
+            object toGraphic;
+            int fromIndex;
+            int toIndex;
+
+            if (isInlet)
+            {
+                fromGraphic = streamGraphic;
+                toGraphic = unitGraphic;
+                fromIndex = FindConnectorIndex(streamGraphic, output: true, preferredName: null);
+                toIndex = FindConnectorIndex(unitGraphic, output: false, preferredName: connectorName);
+            }
+            else
+            {
+                fromGraphic = unitGraphic;
+                toGraphic = streamGraphic;
+                fromIndex = FindConnectorIndex(unitGraphic, output: true, preferredName: connectorName);
+                toIndex = FindConnectorIndex(streamGraphic, output: false, preferredName: null);
+            }
+
+            if (fromIndex < 0 || toIndex < 0)
+            {
+                errorMessage = "Unable to resolve connection indices for stream/unit.";
+                return false;
+            }
+
+            var connectMethod = flowsheet.GetType().GetMethods()
+                .FirstOrDefault(m => m.Name == "ConnectObjects" && m.GetParameters().Length == 4);
+
+            if (connectMethod == null)
+            {
+                errorMessage = "Flowsheet does not expose ConnectObjects.";
+                return false;
+            }
+
+            try
+            {
+                connectMethod.Invoke(flowsheet, new[] { fromGraphic, toGraphic, fromIndex, toIndex });
+                return true;
+            }
+            catch (System.Reflection.TargetInvocationException ex)
+            {
+                var innerEx = ex.InnerException ?? ex;
+                _logger.Warning(innerEx, "ConnectObjects failed for stream {StreamId} and unit {UnitId}: {Message}", streamId, unitId, innerEx.Message);
+                LogConnectorDetails("Stream", streamGraphic);
+                LogConnectorDetails("Unit", unitGraphic);
+
+                var fallback = flowsheet.GetType().GetMethods()
+                    .FirstOrDefault(m => m.Name == "ConnectObject" && m.GetParameters().Length == 4);
+                if (fallback != null)
+                {
+                    try
+                    {
+                        fallback.Invoke(flowsheet, new[] { fromGraphic, toGraphic, fromIndex, toIndex });
+                        return true;
+                    }
+                    catch (System.Reflection.TargetInvocationException fallbackEx)
+                    {
+                        var fallbackInnerEx = fallbackEx.InnerException ?? fallbackEx;
+                        _logger.Warning(fallbackInnerEx, "ConnectObject fallback failed for stream {StreamId} and unit {UnitId}: {Message}", streamId, unitId, fallbackInnerEx.Message);
+                    }
+                }
+
+                errorMessage = $"ConnectObjects failed: {innerEx.Message}";
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning(ex, "Unexpected error connecting stream {StreamId} and unit {UnitId}: {Message}", streamId, unitId, ex.Message);
+                errorMessage = $"Connection failed: {ex.Message}";
+                return false;
+            }
+        }
+
+        private static object GetGraphicObject(object simulationObject)
+        {
+            return simulationObject?.GetType().GetProperty("GraphicObject")?.GetValue(simulationObject);
+        }
+
+        private static int FindConnectorIndex(object graphicObject, bool output, string preferredName)
+        {
+            if (graphicObject == null)
+            {
+                return -1;
+            }
+
+            var connectorsProperty = graphicObject.GetType().GetProperty(output ? "OutputConnectors" : "InputConnectors");
+            if (connectorsProperty == null)
+            {
+                return 0;
+            }
+
+            if (!(connectorsProperty.GetValue(graphicObject) is System.Collections.IList connectors) || connectors.Count == 0)
+            {
+                return 0;
+            }
+
+            if (!string.IsNullOrWhiteSpace(preferredName))
+            {
+                for (int i = 0; i < connectors.Count; i++)
+                {
+                    var connector = connectors[i];
+                    var nameProperty = connector.GetType().GetProperty("ConnectorName");
+                    var name = nameProperty?.GetValue(connector)?.ToString();
+                    if (string.Equals(name, preferredName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return i;
+                    }
+                }
+            }
+
+            return 0;
+        }
+
+        private void LogConnectorDetails(string label, object graphicObject)
+        {
+            if (graphicObject == null)
+            {
+                _logger.Warning("{Label} graphic object is null", label);
+                return;
+            }
+
+            LogConnectorList(label, "InputConnectors", graphicObject);
+            LogConnectorList(label, "OutputConnectors", graphicObject);
+            LogConnectorList(label, "SpecialConnectors", graphicObject);
+        }
+
+        private void LogConnectorList(string label, string propertyName, object graphicObject)
+        {
+            var connectorsProperty = graphicObject.GetType().GetProperty(propertyName);
+            if (connectorsProperty == null)
+            {
+                return;
+            }
+
+            if (!(connectorsProperty.GetValue(graphicObject) is System.Collections.IList connectors))
+            {
+                return;
+            }
+
+            var names = new List<string>();
+            foreach (var connector in connectors)
+            {
+                var nameProperty = connector.GetType().GetProperty("ConnectorName");
+                var name = nameProperty?.GetValue(connector)?.ToString();
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    names.Add(name);
+                }
+            }
+
+            _logger.Debug("{Label} {ConnectorType}: {Names}", label, propertyName, names.Count > 0 ? string.Join(", ", names) : "<none>");
+        }
+
+        private static Type FindType(string typeName)
+        {
+            if (string.IsNullOrWhiteSpace(typeName))
+            {
+                return null;
+            }
+
+            var type = Type.GetType(typeName);
+            if (type != null)
+            {
+                return type;
+            }
+
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                type = assembly.GetType(typeName);
+                if (type != null)
+                {
+                    return type;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>

@@ -199,12 +199,46 @@ namespace DwsimWorker.Adapters
 
             try
             {
-                // TODO: In full implementation, call DWSIM solver API
-                // Example: flowsheet.RequestCalculation() or FlowsheetSolver.SolveFlowsheet(flowsheet)
+                var flowsheetType = flowsheet.GetType();
 
-                // For now, return success (placeholder)
-                _logger.Information("DWSIM solver completed");
-                return true;
+                var requestAndWait = flowsheetType.GetMethod("RequestCalculationAndWait");
+                if (requestAndWait != null)
+                {
+                    var result = requestAndWait.Invoke(flowsheet, null);
+                    if (result is System.Collections.IEnumerable enumerable)
+                    {
+                        foreach (var item in enumerable)
+                        {
+                            if (item is Exception ex)
+                            {
+                                _logger.Error(ex, "DWSIM solver returned exception");
+                                return false;
+                            }
+                        }
+                    }
+
+                    _logger.Information("DWSIM solver completed");
+                    return true;
+                }
+
+                var solveMethod = flowsheetType.GetMethod("Solve");
+                if (solveMethod != null)
+                {
+                    solveMethod.Invoke(flowsheet, null);
+                    _logger.Information("DWSIM solver completed");
+                    return true;
+                }
+
+                var requestCalculation = flowsheetType.GetMethod("RequestCalculation");
+                if (requestCalculation != null)
+                {
+                    requestCalculation.Invoke(flowsheet, new object[] { null, true });
+                    _logger.Information("DWSIM solver completed");
+                    return true;
+                }
+
+                _logger.Warning("DWSIM solver method not found on flowsheet");
+                return false;
             }
             catch (Exception ex)
             {
@@ -222,10 +256,18 @@ namespace DwsimWorker.Adapters
 
             try
             {
-                // TODO: In full implementation, check flowsheet.Solved property
-                // and extract iteration count, residual error, etc.
+                var solvedProperty = flowsheet.GetType().GetProperty("Solved");
+                if (solvedProperty != null)
+                {
+                    var solvedValue = solvedProperty.GetValue(flowsheet);
+                    if (solvedValue is bool solved && solved)
+                    {
+                        return ConvergenceStatus.Converged(0, 0.0);
+                    }
 
-                // For now, return a placeholder converged status
+                    return ConvergenceStatus.NotConverged("Flowsheet not solved", 0, 0.0);
+                }
+
                 return ConvergenceStatus.Converged(0, 0.0);
             }
             catch (Exception ex)

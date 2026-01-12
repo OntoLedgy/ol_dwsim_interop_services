@@ -29,6 +29,9 @@ namespace DwsimWorker.Engine
         private readonly Dictionary<string, object> _streams; // MaterialStream objects
         private readonly Dictionary<string, object> _units; // UnitOperation objects
         private readonly List<ConnectionInfo> _connections;
+        private readonly Dictionary<string, StreamProperties> _streamProperties;
+        private object _propertyPackage;
+        private string _propertyPackageName;
         private readonly object _calculationCacheLock = new object();
         private CalculationResult _cachedCalculationResult;
         private ConvergenceStatus _cachedConvergenceStatus;
@@ -57,7 +60,10 @@ namespace DwsimWorker.Engine
             _streams = new Dictionary<string, object>();
             _units = new Dictionary<string, object>();
             _connections = new List<ConnectionInfo>();
+            _streamProperties = new Dictionary<string, StreamProperties>();
             _cachedConvergenceStatus = ConvergenceStatus.NotStarted();
+            _propertyPackage = null;
+            _propertyPackageName = null;
 
             _logger.Information("FlowsheetContext created: {FlowsheetName}", _config.FlowsheetName);
         }
@@ -112,7 +118,20 @@ namespace DwsimWorker.Engine
 
                 _logger.Information("Flowsheet instance created successfully");
 
-                // Step 3: Optional validation
+                // Step 3: Initialize compound database
+                try
+                {
+                    _logger.Information("Initializing DWSIM compound database...");
+                    InitializeCompoundDatabase();
+                    _logger.Information("Compound database initialized successfully");
+                }
+                catch (Exception dbEx)
+                {
+                    _logger.Warning(dbEx, "Failed to initialize compound database - compounds may not be available");
+                    // Don't throw - allow flowsheet to work even if compound database fails
+                }
+
+                // Step 4: Optional validation
                 if (_config.ValidateAfterInit)
                 {
                     _logger.Information("Validating flowsheet...");
@@ -222,6 +241,9 @@ namespace DwsimWorker.Engine
             _streams.Clear();
             _units.Clear();
             _connections.Clear();
+            _streamProperties.Clear();
+            _propertyPackage = null;
+            _propertyPackageName = null;
             InvalidateCalculationCache("flowsheet loaded");
         }
 
@@ -281,6 +303,33 @@ namespace DwsimWorker.Engine
         }
 
         /// <summary>
+        /// Stores stream properties for later retrieval.
+        /// </summary>
+        public void CacheStreamProperties(string streamId, StreamProperties properties)
+        {
+            if (string.IsNullOrWhiteSpace(streamId))
+                throw new ArgumentNullException(nameof(streamId), "Stream ID cannot be null or empty.");
+
+            if (properties == null)
+                throw new ArgumentNullException(nameof(properties));
+
+            EnsureInitialized();
+            _streamProperties[streamId] = properties;
+        }
+
+        /// <summary>
+        /// Attempts to retrieve cached stream properties.
+        /// </summary>
+        public bool TryGetStreamProperties(string streamId, out StreamProperties properties)
+        {
+            if (string.IsNullOrWhiteSpace(streamId))
+                throw new ArgumentNullException(nameof(streamId), "Stream ID cannot be null or empty.");
+
+            EnsureInitialized();
+            return _streamProperties.TryGetValue(streamId, out properties);
+        }
+
+        /// <summary>
         /// Removes a stream and any associated connections.
         /// </summary>
         /// <param name="streamId">The stream identifier to remove.</param>
@@ -296,6 +345,7 @@ namespace DwsimWorker.Engine
             var removed = _streams.Remove(streamId);
             if (removed)
             {
+                _streamProperties.Remove(streamId);
                 InvalidateCalculationCache("stream removed");
             }
 
@@ -355,6 +405,42 @@ namespace DwsimWorker.Engine
         {
             EnsureInitialized();
             return _units.Keys.ToList().AsReadOnly();
+        }
+
+        /// <summary>
+        /// Stores the current property package for the flowsheet.
+        /// </summary>
+        public void SetPropertyPackage(object propertyPackage, string packageName)
+        {
+            if (propertyPackage == null)
+                throw new ArgumentNullException(nameof(propertyPackage));
+
+            if (string.IsNullOrWhiteSpace(packageName))
+                throw new ArgumentNullException(nameof(packageName), "Property package name cannot be null or empty.");
+
+            EnsureInitialized();
+
+            _propertyPackage = propertyPackage;
+            _propertyPackageName = packageName;
+            InvalidateCalculationCache("property package set");
+        }
+
+        /// <summary>
+        /// Gets the current property package instance, if any.
+        /// </summary>
+        public object GetPropertyPackage()
+        {
+            EnsureInitialized();
+            return _propertyPackage;
+        }
+
+        /// <summary>
+        /// Gets the name of the current property package, if any.
+        /// </summary>
+        public string GetPropertyPackageName()
+        {
+            EnsureInitialized();
+            return _propertyPackageName;
         }
 
         /// <summary>
@@ -497,7 +583,9 @@ namespace DwsimWorker.Engine
             // Primary type is FOSSEEFlowsheet - the backend model class
             var possibleTypeNames = new[]
             {
-                "DWSIM.SharedClasses.FOSSEEFlowsheet",  // Primary: backend Flowsheet class
+                "DWSIM.FlowsheetBase.FlowsheetBase",    // Headless flowsheet base class
+                "DWSIM.UI.Desktop.Shared.Flowsheet",    // Concrete flowsheet implementation
+                "DWSIM.SharedClasses.FOSSEEFlowsheet",  // Legacy metadata-only flowsheet
                 "DWSIM.SharedClasses.Flowsheet",         // Legacy fallback
                 "DWSIM.Flowsheet.Flowsheet",
                 "DWSIM.Simulator.Flowsheet",
@@ -518,13 +606,17 @@ namespace DwsimWorker.Engine
                 _logger.Debug("  - {AssemblyName}", asm.FullName);
             }
 
-            // Try each possible type name
+            // Try each possible type name and instantiate immediately
             foreach (var typeName in possibleTypeNames)
             {
                 _logger.Debug("Trying type name: {TypeName}", typeName);
 
                 // Step 1: Try Type.GetType() first (fast path)
                 flowsheetType = Type.GetType(typeName);
+                if (flowsheetType != null && flowsheetType.IsAbstract)
+                {
+                    flowsheetType = null;
+                }
 
                 // Step 2: If not found, search through all loaded assemblies
                 if (flowsheetType == null)
@@ -534,6 +626,11 @@ namespace DwsimWorker.Engine
                         try
                         {
                             flowsheetType = assembly.GetType(typeName);
+                            if (flowsheetType != null && flowsheetType.IsAbstract)
+                            {
+                                flowsheetType = null;
+                            }
+
                             if (flowsheetType != null)
                             {
                                 _logger.Debug("Found type '{TypeName}' in assembly: {AssemblyName}", typeName, assembly.FullName);
@@ -556,7 +653,27 @@ namespace DwsimWorker.Engine
                 if (flowsheetType != null)
                 {
                     _logger.Information("Successfully located Flowsheet type: {TypeName}", flowsheetTypeName);
-                    break;
+
+                    try
+                    {
+                        var instance = Activator.CreateInstance(flowsheetType);
+                        if (!HasRequiredFlowsheetApi(instance))
+                        {
+                            _logger.Warning("Flowsheet type {TypeName} does not expose required methods; trying next type", flowsheetTypeName);
+                            flowsheetType = null;
+                            flowsheetTypeName = null;
+                            continue;
+                        }
+
+                        _logger.Debug("Flowsheet instance created successfully");
+                        return instance;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Warning(ex, "Failed to create flowsheet instance for {TypeName}, trying next type", flowsheetTypeName);
+                        flowsheetType = null;
+                        flowsheetTypeName = null;
+                    }
                 }
             }
 
@@ -623,23 +740,259 @@ namespace DwsimWorker.Engine
                     "N/A",
                     ErrorCode.TypeLoadFailure);
             }
+            return null;
+        }
 
-            // Create an instance
+        private bool HasRequiredFlowsheetApi(object flowsheet)
+        {
+            if (flowsheet == null)
+            {
+                return false;
+            }
+
+            var type = flowsheet.GetType();
+            var addObject = type.GetMethods().Any(m => m.Name == "AddObject");
+            var connectObjects = type.GetMethods().Any(m => m.Name == "ConnectObjects");
+            return addObject && connectObjects;
+        }
+
+        /// <summary>
+        /// Initializes the DWSIM compound database to enable compound lookups.
+        /// </summary>
+        private void InitializeCompoundDatabase()
+        {
+            if (_flowsheet == null)
+            {
+                _logger.Warning("Cannot initialize compound database - flowsheet is null");
+                return;
+            }
+
             try
             {
-                var flowsheet = Activator.CreateInstance(flowsheetType);
-                _logger.Debug("Flowsheet instance created successfully");
-                return flowsheet;
+                // Try to find and call the compound database initialization
+                // In DWSIM, this is typically done via Databases.Load() or similar
+                var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+                // Look for the ChEDL database loader
+                foreach (var assembly in assemblies)
+                {
+                    if (!assembly.FullName.Contains("DWSIM", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    // Try to find Databases class
+                    var databasesType = assembly.GetType("DWSIM.Thermodynamics.Databases.ChEDL.Databases");
+                    if (databasesType != null)
+                    {
+                        var loadMethod = databasesType.GetMethod("Load", BindingFlags.Static | BindingFlags.Public);
+                        if (loadMethod != null)
+                        {
+                            _logger.Debug("Calling DWSIM.Thermodynamics.Databases.ChEDL.Databases.Load()");
+                            loadMethod.Invoke(null, null);
+                            _logger.Information("Compound database loaded via ChEDL.Databases.Load()");
+                            return;
+                        }
+                    }
+
+                    // Try alternative database initialization
+                    var altDatabasesType = assembly.GetType("DWSIM.Thermodynamics.Databases.Databases");
+                    if (altDatabasesType != null)
+                    {
+                        var loadMethod = altDatabasesType.GetMethod("Load", BindingFlags.Static | BindingFlags.Public);
+                        if (loadMethod != null)
+                        {
+                            _logger.Debug("Calling DWSIM.Thermodynamics.Databases.Databases.Load()");
+                            loadMethod.Invoke(null, null);
+                            _logger.Information("Compound database loaded via Databases.Load()");
+                            return;
+                        }
+                    }
+                }
+
+                // Try to initialize via flowsheet properties
+                var flowsheetType = _flowsheet.GetType();
+
+                // Look for LoadCompounds or similar methods
+                var allMethods = flowsheetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                var compoundMethods = allMethods.Where(m =>
+                    m.Name.Contains("Compound", StringComparison.OrdinalIgnoreCase) ||
+                    m.Name.Contains("Database", StringComparison.OrdinalIgnoreCase)).ToList();
+
+                _logger.Debug("Found {Count} compound-related methods on flowsheet", compoundMethods.Count);
+                foreach (var method in compoundMethods)
+                {
+                    _logger.Debug("  - {MethodName}({Parameters})",
+                        method.Name,
+                        string.Join(", ", method.GetParameters().Select(p => $"{p.ParameterType.Name} {p.Name}")));
+                }
+
+                // Try to call LoadCompounds method
+                var loadCompoundsMethod = flowsheetType.GetMethod("LoadCompounds",
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (loadCompoundsMethod != null && loadCompoundsMethod.GetParameters().Length == 0)
+                {
+                    _logger.Debug("Calling LoadCompounds method");
+                    loadCompoundsMethod.Invoke(_flowsheet, null);
+                    _logger.Information("Compound database initialized via LoadCompounds()");
+                    return;
+                }
+
+                // Check if there's an AvailableCompounds property
+                var availableCompoundsProperty = flowsheetType.GetProperty("AvailableCompounds");
+                if (availableCompoundsProperty != null)
+                {
+                    var availableCompounds = availableCompoundsProperty.GetValue(_flowsheet);
+                    _logger.Debug("AvailableCompounds type: {Type}", availableCompounds?.GetType().FullName ?? "null");
+
+                    if (availableCompounds != null)
+                    {
+                        // Check if it's a dictionary and check its count
+                        if (availableCompounds is System.Collections.IDictionary dict)
+                        {
+                            _logger.Debug("AvailableCompounds count: {Count}", dict.Count);
+
+                            if (dict.Count == 0)
+                            {
+                                _logger.Warning("AvailableCompounds dictionary is empty - need to populate it");
+
+                                // Try to add compounds to the dictionary directly
+                                // In DWSIM, compounds are typically loaded from embedded resources
+                                TryPopulateCompoundDatabase(dict);
+                            }
+                            else
+                            {
+                                _logger.Information("AvailableCompounds already contains {Count} compounds", dict.Count);
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                _logger.Warning("Could not find compound database initialization method - compounds may need to be loaded manually");
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Failed to create Flowsheet instance");
-                throw new DwsimLoadException(
-                    $"Failed to create instance of '{flowsheetTypeName}': {ex.Message}",
-                    flowsheetTypeName,
-                    "N/A",
-                    ErrorCode.ValidationFailure,
-                    ex);
+                _logger.Error(ex, "Error initializing compound database");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Tries to populate the compound database from DWSIM's compound databases.
+        /// This follows the exact initialization pattern from DWSIM.Automation.Automation3 class.
+        /// </summary>
+        private void TryPopulateCompoundDatabase(System.Collections.IDictionary targetDictionary)
+        {
+            try
+            {
+                _logger.Information("Loading compounds from DWSIM databases (following DWSIM.Automation pattern)");
+
+                var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+                var thermodynamicsAssembly = assemblies.FirstOrDefault(a => a.FullName.Contains("DWSIM.Thermodynamics"));
+
+                if (thermodynamicsAssembly == null)
+                {
+                    _logger.Warning("DWSIM.Thermodynamics assembly not found");
+                    return;
+                }
+
+                // Load compounds from ChemSep database
+                LoadFromDatabase(thermodynamicsAssembly, "DWSIM.Thermodynamics.Databases.ChemSep", targetDictionary, "ChemSep");
+
+                // Load compounds from CoolProp database
+                LoadFromDatabase(thermodynamicsAssembly, "DWSIM.Thermodynamics.Databases.CoolProp", targetDictionary, "CoolProp");
+
+                // Load compounds from Biodiesel database
+                LoadFromDatabase(thermodynamicsAssembly, "DWSIM.Thermodynamics.Databases.Biodiesel", targetDictionary, "Biodiesel");
+
+                // Load compounds from ChEDL_Thermo database
+                LoadFromDatabase(thermodynamicsAssembly, "DWSIM.Thermodynamics.Databases.ChEDL_Thermo", targetDictionary, "ChEDL_Thermo");
+
+                // Load compounds from Electrolyte database
+                LoadFromDatabase(thermodynamicsAssembly, "DWSIM.Thermodynamics.Databases.Electrolyte", targetDictionary, "Electrolyte");
+
+                _logger.Information("Compound database populated with {Count} compounds from DWSIM databases", targetDictionary.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error populating compound database");
+            }
+        }
+
+        /// <summary>
+        /// Loads compounds from a specific DWSIM database type.
+        /// Follows the pattern: new Database() -> Load() -> Transfer() -> Add to dictionary
+        /// </summary>
+        private void LoadFromDatabase(Assembly assembly, string typeName, System.Collections.IDictionary targetDictionary, string databaseName)
+        {
+            try
+            {
+                var dbType = assembly.GetType(typeName);
+                if (dbType == null)
+                {
+                    _logger.Debug("Database type {TypeName} not found", typeName);
+                    return;
+                }
+
+                _logger.Debug("Loading compounds from {DatabaseName}", databaseName);
+
+                // Create instance of database
+                var dbInstance = Activator.CreateInstance(dbType);
+
+                // Call Load() method
+                var loadMethod = dbType.GetMethod("Load", BindingFlags.Instance | BindingFlags.Public);
+                if (loadMethod == null)
+                {
+                    _logger.Warning("Load() method not found on {DatabaseName}", databaseName);
+                    return;
+                }
+
+                loadMethod.Invoke(dbInstance, null);
+
+                // Call Transfer() method to get compounds
+                var transferMethod = dbType.GetMethod("Transfer", BindingFlags.Instance | BindingFlags.Public);
+                if (transferMethod == null)
+                {
+                    _logger.Warning("Transfer() method not found on {DatabaseName}", databaseName);
+                    return;
+                }
+
+                var compounds = transferMethod.Invoke(dbInstance, null);
+
+                // Add compounds to dictionary
+                int addedCount = 0;
+                if (compounds is System.Collections.IEnumerable enumerable)
+                {
+                    foreach (var compound in enumerable)
+                    {
+                        if (compound == null) continue;
+
+                        // Get the Name property
+                        var nameProperty = compound.GetType().GetProperty("Name");
+                        if (nameProperty == null) continue;
+
+                        var name = nameProperty.GetValue(compound) as string;
+                        if (string.IsNullOrWhiteSpace(name)) continue;
+
+                        // Add to dictionary if not already present
+                        if (!targetDictionary.Contains(name))
+                        {
+                            targetDictionary.Add(name, compound);
+                            addedCount++;
+                        }
+                    }
+                }
+
+                _logger.Information("Loaded {Count} compounds from {DatabaseName}", addedCount, databaseName);
+
+                // Dispose if needed
+                if (dbInstance is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning(ex, "Failed to load compounds from {DatabaseName}", databaseName);
             }
         }
 
@@ -777,6 +1130,9 @@ namespace DwsimWorker.Engine
                 _streams.Clear();
                 _units.Clear();
                 _connections.Clear();
+                _streamProperties.Clear();
+                _propertyPackage = null;
+                _propertyPackageName = null;
 
                 // Dispose flowsheet if it implements IDisposable
                 if (_flowsheet is IDisposable disposableFlowsheet)

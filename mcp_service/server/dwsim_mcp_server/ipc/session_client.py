@@ -88,7 +88,14 @@ class SessionClient:
         except Exception as exc:
             raise map_dotnet_exception(exc, kind="interop") from exc
 
-        return _calculation_result_to_payload(result)
+        stream_results = getattr(result, "StreamResults", None)
+        if stream_results is None:
+            raise SessionError("No streams available for simulation results.")
+        count = getattr(stream_results, "Count", None)
+        if count is not None and count == 0:
+            raise SessionError("No streams available for simulation results.")
+
+        return _calculation_result_to_payload(result, context=context)
 
     def get_calculation_status(self, session_id: str) -> Dict[str, Any]:
         context = self._get_session_context(session_id)
@@ -118,7 +125,7 @@ class SessionClient:
         if result is None:
             raise SessionError("No cached simulation results available.")
 
-        return _calculation_result_to_payload(result, object_id=object_id)
+        return _calculation_result_to_payload(result, object_id=object_id, context=context)
 
     def dispose(self) -> None:
         try:
@@ -251,13 +258,19 @@ def _phase_dto_to_dict(phase) -> Dict[str, Any]:
     }
 
 
-def _build_stream_results_from_calculation(result, *, object_id: Optional[str] = None) -> List[Dict[str, Any]]:
+def _build_stream_results_from_calculation(
+    result,
+    *,
+    object_id: Optional[str] = None,
+    compound_names: Optional[List[str]] = None,
+) -> List[Dict[str, Any]]:
     stream_results = getattr(result, "StreamResults", None) or []
     outputs: List[Dict[str, Any]] = []
     for stream in stream_results:
         stream_id = _dotnet_to_string(getattr(stream, "StreamId", ""))
         if object_id and stream_id != object_id:
             continue
+        phases = _build_phase_results(stream, compound_names=compound_names)
         outputs.append(
             {
                 "id": stream_id,
@@ -265,7 +278,7 @@ def _build_stream_results_from_calculation(result, *, object_id: Optional[str] =
                 "temperature_k": float(getattr(stream, "TemperatureK", 0.0)),
                 "pressure_pa": float(getattr(stream, "PressurePa", 0.0)),
                 "total_molar_flow_mol_per_s": float(getattr(stream, "MolarFlowMolPerSec", 0.0)),
-                "phases": [],
+                "phases": phases,
             }
         )
     if object_id and not outputs:
@@ -273,10 +286,122 @@ def _build_stream_results_from_calculation(result, *, object_id: Optional[str] =
     return outputs
 
 
+def _build_phase_results(stream, *, compound_names: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    phase_map = getattr(stream, "Phases", None)
+    if not phase_map:
+        return []
+
+    phases: List[Dict[str, Any]] = []
+    for key, phase in _iter_dotnet_dict(phase_map):
+        phases.append(_phase_properties_to_dict(key, phase, compound_names or []))
+    return phases
+
+
+def _phase_properties_to_dict(phase_key, phase, compound_names: List[str]) -> Dict[str, Any]:
+    phase_name = _dotnet_to_string(getattr(phase, "PhaseName", phase_key))
+    phase_fraction = float(getattr(phase, "PhaseFraction", 0.0))
+
+    composition = []
+    phase_composition = getattr(phase, "Composition", None)
+    mole_fractions = getattr(phase_composition, "MoleFractions", None) or []
+    for idx, fraction in enumerate(mole_fractions):
+        compound = compound_names[idx] if idx < len(compound_names) else f"component_{idx + 1}"
+        composition.append({"compound": str(compound), "mole_fraction": float(fraction)})
+
+    properties = {}
+    molar_flow = getattr(phase, "MolarFlowMolPerSec", None)
+    if molar_flow is not None:
+        properties["molar_flow_mol_per_s"] = float(molar_flow)
+    mass_flow = getattr(phase, "MassFlowKgPerSec", None)
+    if mass_flow is not None:
+        properties["mass_flow_kg_per_s"] = float(mass_flow)
+    volumetric_flow = getattr(phase, "VolumetricFlowM3PerSec", None)
+    if volumetric_flow is not None:
+        properties["volumetric_flow_m3_per_s"] = float(volumetric_flow)
+    mass_fraction = getattr(phase, "MassFraction", None)
+    if mass_fraction is not None:
+        properties["mass_fraction"] = float(mass_fraction)
+    volumetric_fraction = getattr(phase, "VolumetricFraction", None)
+    if volumetric_fraction is not None:
+        properties["volumetric_fraction"] = float(volumetric_fraction)
+    density = getattr(phase, "DensityKgPerM3", None)
+    if density is not None:
+        properties["density_kg_per_m3"] = float(density)
+    viscosity = getattr(phase, "ViscosityPaS", None)
+    if viscosity is not None:
+        properties["viscosity_pa_s"] = float(viscosity)
+    molecular_weight = getattr(phase, "MolecularWeightKgPerKmol", None)
+    if molecular_weight is not None:
+        properties["molecular_weight_kg_per_kmol"] = float(molecular_weight)
+    enthalpy = getattr(phase, "EnthalpyKJPerKg", None)
+    if enthalpy is not None:
+        properties["enthalpy_kj_per_kg"] = float(enthalpy)
+    molar_enthalpy = getattr(phase, "MolarEnthalpyKJPerKmol", None)
+    if molar_enthalpy is not None:
+        properties["molar_enthalpy_kj_per_kmol"] = float(molar_enthalpy)
+    entropy = getattr(phase, "EntropyKJPerKgK", None)
+    if entropy is not None:
+        properties["entropy_kj_per_kg_k"] = float(entropy)
+    molar_entropy = getattr(phase, "MolarEntropyKJPerKmolK", None)
+    if molar_entropy is not None:
+        properties["molar_entropy_kj_per_kmol_k"] = float(molar_entropy)
+    gibbs_free_energy = getattr(phase, "GibbsFreeEnergy", None)
+    if gibbs_free_energy is not None:
+        properties["gibbs_free_energy"] = float(gibbs_free_energy)
+    helmholtz_energy = getattr(phase, "HelmholtzEnergy", None)
+    if helmholtz_energy is not None:
+        properties["helmholtz_energy"] = float(helmholtz_energy)
+    internal_energy = getattr(phase, "InternalEnergy", None)
+    if internal_energy is not None:
+        properties["internal_energy"] = float(internal_energy)
+    k_value = getattr(phase, "KValue", None)
+    if k_value is not None:
+        properties["k_value"] = float(k_value)
+    fugacity = getattr(phase, "Fugacity", None)
+    if fugacity is not None:
+        properties["fugacity"] = float(fugacity)
+    activity_coefficient = getattr(phase, "ActivityCoefficient", None)
+    if activity_coefficient is not None:
+        properties["activity_coefficient"] = float(activity_coefficient)
+
+    return {
+        "phase_label": phase_name,
+        "phase_fraction": phase_fraction,
+        "composition": composition,
+        "properties": properties,
+    }
+
+
+def _iter_dotnet_dict(mapping):
+    try:
+        for key in mapping.Keys:
+            yield key, mapping[key]
+        return
+    except Exception:
+        pass
+
+    try:
+        for key, value in mapping.items():
+            yield key, value
+        return
+    except Exception:
+        pass
+
+    for entry in mapping:
+        key = getattr(entry, "Key", None)
+        value = getattr(entry, "Value", None)
+        if key is not None:
+            yield key, value
+            continue
+        if isinstance(entry, (list, tuple)) and len(entry) == 2:
+            yield entry[0], entry[1]
+
+
 def _calculation_result_to_payload(
     result,
     *,
     object_id: Optional[str] = None,
+    context: Optional[Any] = None,
 ) -> Dict[str, Any]:
     convergence_status = getattr(result, "ConvergenceStatus", None)
     convergence_state = _dotnet_to_string(getattr(convergence_status, "State", "Unknown"))
@@ -304,15 +429,29 @@ def _calculation_result_to_payload(
         mass_balance_valid = bool(getattr(mass_balance, "IsValid", False))
         mass_balance_error_percent = float(getattr(mass_balance, "RelativeErrorPercent", 0.0))
 
+    compound_names = _get_compound_names(context) if context is not None else []
+
     return {
         "status": status,
         "convergence_state": convergence_state,
         "elapsed_ms": elapsed_ms,
-        "stream_results": _build_stream_results_from_calculation(result, object_id=object_id),
+        "stream_results": _build_stream_results_from_calculation(
+            result,
+            object_id=object_id,
+            compound_names=compound_names,
+        ),
         "messages": messages,
         "mass_balance_valid": mass_balance_valid,
         "mass_balance_error_percent": mass_balance_error_percent,
     }
+
+
+def _get_compound_names(context) -> List[str]:
+    try:
+        compounds = list(context.GetCompounds())
+        return [str(compound) for compound in compounds]
+    except Exception:
+        return []
 
 
 def _status_to_payload(status, context) -> Dict[str, Any]:

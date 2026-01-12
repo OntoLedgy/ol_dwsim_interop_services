@@ -43,6 +43,12 @@ namespace DwsimWorker.Engine
         public FlowsheetContextConfigBuilder WithValidation(bool enabled)
         {
             _validateAfterInit = enabled;
+            _assemblyConfig = new AssemblyLoaderConfigBuilder()
+                .WithAssemblyPath(_assemblyConfig.AssemblyPath)
+                .WithValidationEnabled(enabled)
+                .WithTimeout(_assemblyConfig.LoadTimeout)
+                .WithRequiredAssemblies(_assemblyConfig.RequiredAssemblies)
+                .Build();
             return this;
         }
 

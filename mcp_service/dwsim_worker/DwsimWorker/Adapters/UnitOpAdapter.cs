@@ -107,7 +107,8 @@ namespace DwsimWorker.Adapters
                 var unitId = $"U{_unitCounter}";
 
                 // Step 2: Create DWSIM unit operation object
-                var unitOperation = CreateThreePhaseSeparator(name, unitId);
+                var flowsheet = _context.GetFlowsheet();
+                var unitOperation = CreateThreePhaseSeparator(flowsheet, name, unitId);
                 _context.AddUnit(unitOperation, unitId);
 
                 // Step 3: Initialize parameters from config
@@ -127,6 +128,8 @@ namespace DwsimWorker.Adapters
                 }
 
                 _unitParametersCache[unitId] = parameters;
+                TrySetUnitPropertyPackage(unitOperation);
+                ApplyUnitParameters(unitOperation, parameters);
 
                 // Step 4: Log success with structured logging
                 _logger.Information("Three-phase separator added successfully: {UnitId} (Name: {UnitName})",
@@ -216,6 +219,7 @@ namespace DwsimWorker.Adapters
                 }
 
                 _unitParametersCache[unitId][parameterName] = value;
+                ApplyUnitParameter(_context.GetUnit(unitId), parameterName, value);
 
                 // Step 4: Log success
                 _logger.Information("Parameter set successfully: {UnitId}.{ParameterName}={Value}",
@@ -429,6 +433,202 @@ namespace DwsimWorker.Adapters
             }
         }
 
+        private void TrySetUnitPropertyPackage(object unit)
+        {
+            if (unit == null)
+            {
+                return;
+            }
+
+            var propertyPackage = _context.GetPropertyPackage();
+            if (propertyPackage == null)
+            {
+                return;
+            }
+
+            var property = unit.GetType().GetProperty("PropertyPackage");
+            if (property == null || !property.CanWrite)
+            {
+                return;
+            }
+
+            if (!property.PropertyType.IsInstanceOfType(propertyPackage))
+            {
+                return;
+            }
+
+            property.SetValue(unit, propertyPackage);
+        }
+
+        private void ApplyUnitParameters(object unit, Dictionary<string, object> parameters)
+        {
+            if (unit == null || parameters == null || parameters.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var entry in parameters)
+            {
+                ApplyUnitParameter(unit, entry.Key, entry.Value);
+            }
+        }
+
+        private void ApplyUnitParameter(object unit, string parameterName, object value)
+        {
+            if (unit == null || string.IsNullOrWhiteSpace(parameterName))
+            {
+                return;
+            }
+
+            var candidateNames = new List<string> { parameterName };
+            if (string.Equals(parameterName, "PressureDrop", StringComparison.OrdinalIgnoreCase))
+            {
+                candidateNames.Add("DeltaP");
+            }
+
+            foreach (var candidate in candidateNames)
+            {
+                var property = unit.GetType().GetProperty(
+                    candidate,
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.IgnoreCase);
+                if (property == null || !property.CanWrite)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var converted = Convert.ChangeType(value, property.PropertyType);
+                    property.SetValue(unit, converted);
+                    return;
+                }
+                catch
+                {
+                    // Ignore conversion errors for now
+                }
+            }
+        }
+
+        private object TryAddSeparatorViaFlowsheet(object flowsheet, string name, string unitId)
+        {
+            if (flowsheet == null)
+            {
+                return null;
+            }
+
+            var flowsheetType = flowsheet.GetType();
+            var objectType = FindEnumType("DWSIM.Interfaces.Enums.GraphicObjects.ObjectType");
+            if (objectType != null)
+            {
+                foreach (var candidate in new[] { "TPVessel", "Vessel" })
+                {
+                    if (!Enum.IsDefined(objectType, candidate))
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        var enumValue = Enum.Parse(objectType, candidate);
+                        var addObject = flowsheetType.GetMethod(
+                            "AddObject",
+                            new[] { objectType, typeof(int), typeof(int), typeof(string), typeof(string) });
+                        if (addObject != null)
+                        {
+                            _logger.Debug("Attempting to add separator using enum {Candidate} with AddObject(enum, int, int, string, string)", candidate);
+                            return addObject.Invoke(flowsheet, new object[] { enumValue, 0, 0, unitId, name });
+                        }
+
+                        addObject = flowsheetType.GetMethod(
+                            "AddObject",
+                            new[] { objectType, typeof(int), typeof(int), typeof(string) });
+                        if (addObject != null)
+                        {
+                            _logger.Debug("Attempting to add separator using enum {Candidate} with AddObject(enum, int, int, string)", candidate);
+                            return addObject.Invoke(flowsheet, new object[] { enumValue, 0, 0, name });
+                        }
+                    }
+                    catch (System.Reflection.TargetInvocationException ex)
+                    {
+                        _logger.Warning(ex.InnerException ?? ex, "Failed to add separator using {Candidate}: {Message}",
+                            candidate, (ex.InnerException ?? ex).Message);
+                        // Continue to next candidate
+                    }
+                }
+            }
+
+            try
+            {
+                var addByName = flowsheetType.GetMethod(
+                    "AddObject",
+                    new[] { typeof(string), typeof(int), typeof(int), typeof(string), typeof(string), typeof(bool) });
+                if (addByName != null)
+                {
+                    _logger.Debug("Attempting to add separator using AddObject(string, int, int, string, string, bool)");
+                    return addByName.Invoke(flowsheet, new object[]
+                    {
+                        "DWSIM.UnitOperations.UnitOperations.Vessel", 0, 0, name, unitId, false
+                    });
+                }
+            }
+            catch (System.Reflection.TargetInvocationException ex)
+            {
+                _logger.Warning(ex.InnerException ?? ex, "Failed to add separator by name: {Message}",
+                    (ex.InnerException ?? ex).Message);
+            }
+
+            return null;
+        }
+
+        private static Type FindEnumType(string enumTypeName)
+        {
+            if (string.IsNullOrWhiteSpace(enumTypeName))
+            {
+                return null;
+            }
+
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var type = assembly.GetType(enumTypeName);
+                if (type != null && type.IsEnum)
+                {
+                    return type;
+                }
+            }
+
+            return null;
+        }
+
+        private void TrySetNameAndTag(object target, string name, string unitId)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            var nameProperty = target.GetType().GetProperty("Name");
+            if (nameProperty != null && nameProperty.CanWrite)
+            {
+                nameProperty.SetValue(target, name);
+            }
+
+            var graphicObject = target.GetType().GetProperty("GraphicObject")?.GetValue(target);
+            if (graphicObject != null)
+            {
+                var tagProperty = graphicObject.GetType().GetProperty("Tag");
+                if (tagProperty != null && tagProperty.CanWrite)
+                {
+                    tagProperty.SetValue(graphicObject, unitId);
+                }
+
+                var nameTagProperty = graphicObject.GetType().GetProperty("Name");
+                if (nameTagProperty != null && nameTagProperty.CanWrite)
+                {
+                    nameTagProperty.SetValue(graphicObject, name);
+                }
+            }
+        }
+
         /// <summary>
         /// Creates a DWSIM three-phase separator instance using reflection.
         /// </summary>
@@ -436,30 +636,16 @@ namespace DwsimWorker.Adapters
         /// <param name="unitId">The unique unit ID.</param>
         /// <returns>A DWSIM Separator3Phase object or placeholder.</returns>
         /// <exception cref="InvalidOperationException">Thrown when unit operation creation fails.</exception>
-        private object CreateThreePhaseSeparator(string name, string unitId)
+        private object CreateThreePhaseSeparator(object flowsheet, string name, string unitId)
         {
-            const string typeName = "DWSIM.UnitOperations.Separators.Separator3Phase";
-
             try
             {
-                // Try to find the Separator3Phase type in loaded assemblies
-                Type separatorType = null;
-                foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                var created = TryAddSeparatorViaFlowsheet(flowsheet, name, unitId);
+                if (created != null)
                 {
-                    separatorType = assembly.GetType(typeName);
-                    if (separatorType != null)
-                        break;
-                }
-
-                if (separatorType != null)
-                {
-                    // Create actual DWSIM instance if type is found
-                    var instance = Activator.CreateInstance(separatorType);
-                    if (instance != null)
-                    {
-                        _logger.Debug("Created DWSIM three-phase separator: {UnitId} (Name: {Name})", unitId, name);
-                        return instance;
-                    }
+                    TrySetNameAndTag(created, name, unitId);
+                    _logger.Debug("Created DWSIM three-phase separator: {UnitId} (Name: {Name})", unitId, name);
+                    return created;
                 }
 
                 // If DWSIM type not found, create a placeholder object

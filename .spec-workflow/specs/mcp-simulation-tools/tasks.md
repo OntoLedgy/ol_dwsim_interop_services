@@ -138,3 +138,13 @@
   - _Leverage: Existing tool documentation in `README.md`_
   - _Requirements: All_
   - _Prompt: Implement the task for spec mcp-simulation-tools, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Technical Writer with expertise in API documentation | Task: Update README.md in mcp_service/server/ covering all requirements. Document the three simulation tools with descriptions, input/output schemas, usage examples, and error scenarios. Include complete workflow example from session creation through result analysis. Add troubleshooting section for common issues. | Restrictions: Follow existing documentation structure, use clear markdown formatting, include executable code examples, document all error codes, maintain consistency with existing tool docs | _Leverage: Existing tool documentation in README.md for structure and style | _Requirements: All requirements for comprehensive tool documentation | Success: Documentation is clear and comprehensive, examples are correct and runnable, error scenarios well-documented, follows existing format | Instructions: After implementation, use log-implementation tool to record implementation details with artifacts (documentation sections added to README.md), then mark task as complete in tasks.md_
+
+- [x] 14. Implement phase detail extraction for simulation results
+  - Files: `mcp_service/dwsim_worker/DwsimWorker/Adapters/StreamAdapter.cs`, `mcp_service/server/dwsim_mcp_server/ipc/session_client.py`
+  - Extract per-phase properties and compositions from DWSIM MaterialStream phases
+  - Populate StreamResult.Phases with PhaseProperties derived from DWSIM data
+  - Map phases into MCP stream_results payloads with compound names from context
+  - Purpose: Provide phase-resolved properties to MCP clients without pythonnet DWSIM access
+  - _Leverage: `docs/DWSIM_PROPERTY_MODEL_MAPPING.md`, `docs/COMPOUND_COMPOSITION_DESIGN.md`_
+  - _Requirements: 1, 3, 5_
+  - _Prompt: Implement the task for spec mcp-simulation-tools, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# and Python interop developer | Task: Implement phase detail extraction in StreamAdapter using DWSIM phases and surface it through session_client phase mapping, keeping thread safety and avoiding direct DWSIM object access in Python. | Restrictions: Use SI units, preserve existing APIs, handle missing phases gracefully | Success: StreamResult.Phases populated from DWSIM data and MCP results include phases with composition entries._

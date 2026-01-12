@@ -19,7 +19,7 @@ namespace DwsimWorker.Engine
         /// </summary>
         private static readonly string[] TypesToValidate = new[]
         {
-            "DWSIM.SharedClasses.FOSSEEFlowsheet",  // Actual Flowsheet class name
+            "DWSIM.FlowsheetBase.FlowsheetBase",  // Headless flowsheet base class
             "DWSIM.Thermodynamics.Streams.MaterialStream"
         };
 
@@ -98,7 +98,8 @@ namespace DwsimWorker.Engine
         /// <returns>A ValidationResult for Flowsheet instantiation.</returns>
         public ValidationResult ValidateFlowsheetCreation()
         {
-            const string typeName = "DWSIM.SharedClasses.FOSSEEFlowsheet";
+            const string typeName = "DWSIM.FlowsheetBase.FlowsheetBase";
+            const string fallbackTypeName = "DWSIM.SharedClasses.FOSSEEFlowsheet";
 
             try
             {
@@ -106,6 +107,19 @@ namespace DwsimWorker.Engine
 
                 // Find the type in loaded assemblies
                 var flowsheetType = FindType(typeName);
+                if (flowsheetType != null && flowsheetType.IsAbstract)
+                {
+                    flowsheetType = null;
+                }
+
+                if (flowsheetType == null)
+                {
+                    flowsheetType = FindType(fallbackTypeName);
+                    if (flowsheetType != null && flowsheetType.IsAbstract)
+                    {
+                        flowsheetType = null;
+                    }
+                }
                 if (flowsheetType == null)
                 {
                     var message = $"Type '{typeName}' not found in loaded assemblies";

@@ -131,10 +131,37 @@ namespace DwsimWorker.Adapters
 
             try
             {
-                // Step 2: Add compound to flowsheet context
+                // Step 2: Add compound to flowsheet
+                var flowsheet = _context.GetFlowsheet();
+                var flowsheetType = flowsheet.GetType();
+                var addCompound = flowsheetType.GetMethod("AddCompound", new[] { typeof(string) });
+                if (addCompound == null)
+                {
+                    var message = "Flowsheet does not expose AddCompound";
+                    _logger.Warning(message);
+                    return LoadResult.FailureResult(message, new MissingMethodException(message));
+                }
+
+                addCompound.Invoke(flowsheet, new object[] { compoundName });
+
+                // Step 3: Track compound in flowsheet context
                 _context.AddCompound(compoundName);
 
-                // Step 3: Log success with structured logging
+                // Step 4: Ensure existing streams have updated compound list
+                var addToStream = flowsheetType.GetMethod("AddCompoundsToMaterialStream");
+                if (addToStream != null)
+                {
+                    foreach (var streamId in _context.GetStreamIds())
+                    {
+                        var stream = _context.GetStream(streamId);
+                        if (stream != null)
+                        {
+                            addToStream.Invoke(flowsheet, new[] { stream });
+                        }
+                    }
+                }
+
+                // Step 5: Log success with structured logging
                 _logger.Information("Compound added successfully: {CompoundName}", compoundName);
 
                 return LoadResult.SuccessResult(new List<AssemblyInfo>());

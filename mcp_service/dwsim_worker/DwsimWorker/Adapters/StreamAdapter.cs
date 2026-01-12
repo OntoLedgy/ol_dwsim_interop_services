@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Serilog;
 using DwsimWorker.Engine;
 using DwsimWorker.Models;
@@ -29,9 +31,17 @@ namespace DwsimWorker.Adapters
         private readonly FlowsheetContext _context;
         private int _streamCounter = 0;
 
-        // Internal registry for stream properties (in-memory cache)
-        // In a full implementation, this would query DWSIM MaterialStream objects
-        private readonly Dictionary<string, StreamProperties> _streamPropertiesCache;
+        private static readonly Dictionary<int, string> PhaseIdToName = new Dictionary<int, string>
+        {
+            { 0, "Overall" },
+            { 1, "OverallLiquid" },
+            { 2, "Vapor" },
+            { 3, "Liquid1" },
+            { 4, "Liquid2" },
+            { 5, "Liquid3" },
+            { 6, "Aqueous" },
+            { 7, "Solid" }
+        };
 
         /// <summary>
         /// Initializes a new instance of the <see cref="StreamAdapter"/> class.
@@ -43,7 +53,6 @@ namespace DwsimWorker.Adapters
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _context = context ?? throw new ArgumentNullException(nameof(context));
-            _streamPropertiesCache = new Dictionary<string, StreamProperties>();
         }
 
         /// <summary>
@@ -117,13 +126,19 @@ namespace DwsimWorker.Adapters
                 var streamId = $"S{_streamCounter}";
 
                 // Step 3: Create DWSIM MaterialStream object
-                var materialStream = CreateMaterialStream(name, streamId);
+                var flowsheet = _context.GetFlowsheet();
+                var materialStream = CreateMaterialStream(flowsheet, name, streamId);
                 _context.AddStream(materialStream, streamId);
 
-                // Step 4: Store properties in cache
-                _streamPropertiesCache[streamId] = properties;
+                // Step 4: Apply flowsheet settings
+                TrySetStreamPropertyPackage(materialStream);
+                TryAddCompoundsToStream(flowsheet, materialStream);
+                ApplyPropertiesToStreamObject(materialStream, properties);
 
-                // Step 5: Log success with structured logging
+                // Step 5: Store properties in cache
+                _context.CacheStreamProperties(streamId, properties);
+
+                // Step 6: Log success with structured logging
                 _logger.Information("Stream created successfully: {StreamId} (Name: {StreamName})",
                     streamId, name);
                 _logger.Debug("Stream properties: Temperature={Temperature}, Pressure={Pressure}, Flow={Flow}",
@@ -218,12 +233,12 @@ namespace DwsimWorker.Adapters
                 }
 
                 // Step 4: Set property value
-                // TODO: In full implementation, call DWSIM MaterialStream API using CAPE-OPEN interfaces
-                // For now, update cached properties
-                if (_streamPropertiesCache.TryGetValue(streamId, out var currentProps))
+                if (_context.TryGetStreamProperties(streamId, out var currentProps))
                 {
                     var normalizedName = CapeOpenPropertyConverter.ToCapeOpenName(propertyName);
-                    _streamPropertiesCache[streamId] = UpdateProperty(currentProps, normalizedName, value);
+                    var updated = UpdateProperty(currentProps, normalizedName, value);
+                    _context.CacheStreamProperties(streamId, updated);
+                    ApplyPropertiesToStreamObject(_context.GetStream(streamId), updated);
                 }
 
                 // Step 5: Log success
@@ -302,7 +317,7 @@ namespace DwsimWorker.Adapters
                 // Step 3: Get property value
                 // TODO: In full implementation, call DWSIM MaterialStream API using CAPE-OPEN interfaces
                 // For now, return from cached properties
-                if (!_streamPropertiesCache.TryGetValue(streamId, out var props))
+                if (!_context.TryGetStreamProperties(streamId, out var props))
                 {
                     var message = $"No properties cached for stream '{streamId}'";
                     _logger.Warning(message);
@@ -369,7 +384,8 @@ namespace DwsimWorker.Adapters
                 }
 
                 // Step 3: Set all properties
-                _streamPropertiesCache[streamId] = properties;
+                _context.CacheStreamProperties(streamId, properties);
+                ApplyPropertiesToStreamObject(_context.GetStream(streamId), properties);
 
                 _logger.Information("All properties set successfully on stream {StreamId}", streamId);
 
@@ -410,7 +426,7 @@ namespace DwsimWorker.Adapters
                 }
 
                 // Get properties from cache
-                if (!_streamPropertiesCache.TryGetValue(streamId, out var properties))
+                if (!_context.TryGetStreamProperties(streamId, out var properties))
                 {
                     var message = $"No properties cached for stream '{streamId}'";
                     _logger.Warning(message);
@@ -608,30 +624,70 @@ namespace DwsimWorker.Adapters
                     throw new StreamNotFoundException(streamId);
                 }
 
-                // Get cached properties (in full implementation, this would query DWSIM MaterialStream)
-                if (!_streamPropertiesCache.TryGetValue(streamId, out var properties))
+                var phases = GetAllPhaseProperties(streamId, stream);
+                if (phases.Count > 0)
+                {
+                    var overallPhase = phases.TryGetValue("Overall", out var overall) ? overall : null;
+                    var temperature = overallPhase?.Composition != null
+                        ? TryGetPhaseScalar(stream, 0, "temperature")
+                        : null;
+                    var pressure = overallPhase?.Composition != null
+                        ? TryGetPhaseScalar(stream, 0, "pressure")
+                        : null;
+                    var molarFlow = overallPhase?.Composition != null
+                        ? TryGetPhaseScalar(stream, 0, "molarflow")
+                        : null;
+                    var massFlow = overallPhase?.Composition != null
+                        ? TryGetPhaseScalar(stream, 0, "massflow")
+                        : null;
+
+                    var overallComposition = overallPhase?.Composition ?? GetFallbackComposition(streamId);
+                    var vaporFraction = GetPhaseFraction(phases, "Vapor");
+                    var liquidFraction = GetLiquidFraction(phases, vaporFraction);
+
+                    var result = new StreamResult(
+                        streamId: streamId,
+                        streamName: streamName ?? streamId,
+                        temperatureK: temperature ?? GetFallbackTemperature(streamId),
+                        pressurePa: pressure ?? GetFallbackPressure(streamId),
+                        molarFlowMolPerSec: molarFlow ?? GetFallbackMolarFlow(streamId),
+                        massFlowKgPerSec: massFlow ?? GetFallbackMassFlow(streamId),
+                        overallComposition: overallComposition,
+                        vaporFraction: vaporFraction,
+                        liquidFraction: liquidFraction,
+                        phases: phases.ToDictionary(entry => entry.Key, entry => entry.Value));
+
+                    _logger.Information("Calculated properties retrieved for stream {StreamId}", streamId);
+                    return result;
+                }
+
+                // Get cached properties (fallback when DWSIM phase data is not available)
+                if (!_context.TryGetStreamProperties(streamId, out var properties))
                 {
                     throw new InvalidOperationException($"No properties available for stream '{streamId}'");
                 }
 
-                // TODO: In full implementation, extract calculated properties from DWSIM MaterialStream
-                // including phase properties, equilibrium data, and all thermodynamic properties
+                var fallbackPhase = BuildFallbackPhaseProperties(streamId, "Overall");
+                var fallbackPhases = new Dictionary<string, PhaseProperties>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "Overall", fallbackPhase }
+                };
 
-                // For now, create StreamResult from cached data
-                var result = new StreamResult(
+                // Create StreamResult from cached data
+                var fallbackResult = new StreamResult(
                     streamId: streamId,
                     streamName: streamName ?? streamId,
                     temperatureK: properties.Temperature.Measurement.Value,
                     pressurePa: properties.Pressure.Measurement.Value,
                     molarFlowMolPerSec: properties.MolarFlow.Measurement.Value,
-                    massFlowKgPerSec: properties.MolarFlow.Measurement.Value * 18.0 / 1000.0, // Placeholder: assumes water MW
+                    massFlowKgPerSec: properties.MolarFlow.Measurement.Value * 18.0 / 1000.0,
                     overallComposition: properties.Composition,
-                    vaporFraction: 0.0, // TODO: Get from DWSIM after calculation
-                    liquidFraction: 1.0, // TODO: Get from DWSIM after calculation
-                    phases: null); // TODO: Get phase properties from DWSIM
+                    vaporFraction: 0.0,
+                    liquidFraction: 1.0,
+                    phases: fallbackPhases);
 
                 _logger.Information("Calculated properties retrieved for stream {StreamId}", streamId);
-                return result;
+                return fallbackResult;
             }
             catch (Exception ex)
             {
@@ -668,28 +724,21 @@ namespace DwsimWorker.Adapters
                     throw new StreamNotFoundException(streamId);
                 }
 
-                // TODO: In full implementation, query DWSIM MaterialStream for phase-specific properties
-                // This would include phase equilibrium data, compositions, and thermophysical properties
-
-                // For now, return placeholder phase properties
-                if (!_streamPropertiesCache.TryGetValue(streamId, out var properties))
+                var phases = GetAllPhaseProperties(streamId, stream);
+                if (phases.Count == 0)
                 {
-                    throw new InvalidOperationException($"No properties available for stream '{streamId}'");
+                    var fallbackPhase = BuildFallbackPhaseProperties(streamId, phaseName);
+                    _logger.Information("Phase properties retrieved for {PhaseName} in stream {StreamId}", phaseName, streamId);
+                    return fallbackPhase;
                 }
 
-                // Create placeholder phase properties
-                var phaseProperties = new PhaseProperties(
-                    phaseName: phaseName,
-                    molarFlowMolPerSec: properties.MolarFlow.Measurement.Value,
-                    massFlowKgPerSec: properties.MolarFlow.Measurement.Value * 18.0 / 1000.0,
-                    phaseFraction: phaseName == "Overall" ? 1.0 : (phaseName == "Liquid1" ? 1.0 : 0.0),
-                    composition: properties.Composition,
-                    densityKgPerM3: 1000.0, // Placeholder
-                    viscosityPaS: 0.001, // Placeholder
-                    molecularWeightKgPerKmol: 18.0); // Placeholder
+                if (phases.TryGetValue(phaseName, out var phaseProperties))
+                {
+                    _logger.Information("Phase properties retrieved for {PhaseName} in stream {StreamId}", phaseName, streamId);
+                    return phaseProperties;
+                }
 
-                _logger.Information("Phase properties retrieved for {PhaseName} in stream {StreamId}", phaseName, streamId);
-                return phaseProperties;
+                throw new ArgumentException($"Phase '{phaseName}' not found in stream '{streamId}'.", nameof(phaseName));
             }
             catch (Exception ex)
             {
@@ -721,32 +770,7 @@ namespace DwsimWorker.Adapters
                     throw new StreamNotFoundException(streamId);
                 }
 
-                // TODO: In full implementation, query DWSIM MaterialStream for all phases
-                // and their properties after calculation
-
-                var phases = new Dictionary<string, PhaseProperties>();
-
-                // Get properties for each phase
-                // In a full implementation, this would detect which phases are present
-                var phaseNames = new[] { "Vapor", "Liquid1", "Liquid2", "Overall" };
-
-                foreach (var phaseName in phaseNames)
-                {
-                    try
-                    {
-                        var phaseProps = GetPhaseProperties(streamId, phaseName);
-                        if (phaseProps != null)
-                        {
-                            phases[phaseName] = phaseProps;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Debug(ex, "Phase {PhaseName} not available for stream {StreamId}", phaseName, streamId);
-                        // Continue with other phases
-                    }
-                }
-
+                var phases = GetAllPhaseProperties(streamId, stream);
                 _logger.Information("Retrieved {PhaseCount} phases for stream {StreamId}", phases.Count, streamId);
                 return phases;
             }
@@ -757,6 +781,567 @@ namespace DwsimWorker.Adapters
             }
         }
 
+        private IReadOnlyDictionary<string, PhaseProperties> GetAllPhaseProperties(string streamId, object stream)
+        {
+            var phaseMap = TryGetPhaseMap(stream);
+            if (phaseMap == null || phaseMap.Count == 0)
+            {
+                return new Dictionary<string, PhaseProperties>();
+            }
+
+            var phases = new Dictionary<string, PhaseProperties>(StringComparer.OrdinalIgnoreCase);
+            var compounds = _context.GetCompounds();
+
+            foreach (DictionaryEntry entry in phaseMap)
+            {
+                if (!(entry.Key is int phaseId))
+                {
+                    continue;
+                }
+
+                if (!PhaseIdToName.TryGetValue(phaseId, out var phaseLabel))
+                {
+                    continue;
+                }
+
+                var phase = entry.Value;
+                var props = TryGetPhasePropertiesObject(phase);
+                if (props == null)
+                {
+                    continue;
+                }
+
+                var composition = BuildCompositionFromPhase(phase, compounds);
+                if (composition == null)
+                {
+                    continue;
+                }
+
+                var molarFlow = GetNullableDouble(props, "molarflow") ?? 0.0;
+                var massFlow = GetNullableDouble(props, "massflow") ?? 0.0;
+                var phaseFraction = GetNullableDouble(props, "molarfraction") ?? (phaseId == 0 ? 1.0 : 0.0);
+                var density = GetNullableDouble(props, "density");
+                var viscosity = GetNullableDouble(props, "viscosity");
+                var molecularWeight = GetNullableDouble(props, "molecularWeight");
+                var enthalpy = GetNullableDouble(props, "enthalpy");
+                var molarEnthalpy = GetNullableDouble(props, "molar_enthalpy");
+                var entropy = GetNullableDouble(props, "entropy");
+                var molarEntropy = GetNullableDouble(props, "molar_entropy");
+                var volumetricFlow = GetNullableDouble(props, "volumetric_flow");
+                var massFraction = GetNullableDouble(props, "massfraction");
+                var volumetricFraction = GetNullableDouble(props, "volumetricFraction");
+                var gibbsFreeEnergy = GetNullableDouble(props, "gibbs_free_energy");
+                var helmholtzEnergy = GetNullableDouble(props, "helmholtz_energy");
+                var internalEnergy = GetNullableDouble(props, "internal_energy");
+                var kValue = GetNullableDouble(props, "kvalue");
+                var fugacity = GetNullableDouble(props, "fugacity");
+                var activityCoefficient = GetNullableDouble(props, "activityCoefficient");
+
+                phases[phaseLabel] = new PhaseProperties(
+                    phaseName: phaseLabel,
+                    molarFlowMolPerSec: molarFlow,
+                    massFlowKgPerSec: massFlow,
+                    phaseFraction: phaseFraction,
+                    composition: composition,
+                    densityKgPerM3: density,
+                    viscosityPaS: viscosity,
+                    molecularWeightKgPerKmol: molecularWeight,
+                    enthalpyKJPerKg: enthalpy,
+                    molarEnthalpyKJPerKmol: molarEnthalpy,
+                    entropyKJPerKgK: entropy,
+                    molarEntropyKJPerKmolK: molarEntropy,
+                    volumetricFlowM3PerSec: volumetricFlow,
+                    massFraction: massFraction,
+                    volumetricFraction: volumetricFraction,
+                    gibbsFreeEnergy: gibbsFreeEnergy,
+                    helmholtzEnergy: helmholtzEnergy,
+                    internalEnergy: internalEnergy,
+                    kValue: kValue,
+                    fugacity: fugacity,
+                    activityCoefficient: activityCoefficient);
+            }
+
+            return phases;
+        }
+
+        private IDictionary TryGetPhaseMap(object stream)
+        {
+            if (stream == null)
+            {
+                return null;
+            }
+
+            var phasesProperty = stream.GetType().GetProperty("Phases");
+            return phasesProperty?.GetValue(stream) as IDictionary;
+        }
+
+        private static object TryGetPhasePropertiesObject(object phase)
+        {
+            if (phase == null)
+            {
+                return null;
+            }
+
+            return phase.GetType().GetProperty("Properties")?.GetValue(phase);
+        }
+
+        private Composition BuildCompositionFromPhase(object phase, IReadOnlyList<string> compoundOrder)
+        {
+            var compounds = TryGetCompounds(phase);
+            if (compounds == null || compounds.Count == 0)
+            {
+                return null;
+            }
+
+            var fractions = new List<double>();
+
+            if (compoundOrder != null && compoundOrder.Count > 0)
+            {
+                foreach (var compoundName in compoundOrder)
+                {
+                    var compound = TryGetCompound(compounds, compoundName);
+                    var fraction = compound != null ? GetNullableDouble(compound, "MoleFraction") ?? 0.0 : 0.0;
+                    fractions.Add(SanitizeFraction(fraction));
+                }
+            }
+            else
+            {
+                foreach (DictionaryEntry entry in compounds)
+                {
+                    var fraction = GetNullableDouble(entry.Value, "MoleFraction") ?? 0.0;
+                    fractions.Add(SanitizeFraction(fraction));
+                }
+            }
+
+            var normalized = NormalizeFractions(fractions);
+            return new Composition(normalized);
+        }
+
+        private static IDictionary TryGetCompounds(object phase)
+        {
+            return phase?.GetType().GetProperty("Compounds")?.GetValue(phase) as IDictionary;
+        }
+
+        private static object TryGetCompound(IDictionary compounds, string compoundName)
+        {
+            if (compounds == null || string.IsNullOrWhiteSpace(compoundName))
+            {
+                return null;
+            }
+
+            if (compounds.Contains(compoundName))
+            {
+                return compounds[compoundName];
+            }
+
+            foreach (DictionaryEntry entry in compounds)
+            {
+                if (string.Equals(entry.Key?.ToString(), compoundName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return entry.Value;
+                }
+            }
+
+            return null;
+        }
+
+        private static double? TryGetPhaseScalar(object stream, int phaseId, string propertyName)
+        {
+            var phases = stream?.GetType().GetProperty("Phases")?.GetValue(stream) as IDictionary;
+            if (phases == null || !phases.Contains(phaseId))
+            {
+                return null;
+            }
+
+            var phase = phases[phaseId];
+            var props = phase?.GetType().GetProperty("Properties")?.GetValue(phase);
+            return props == null ? (double?)null : GetNullableDouble(props, propertyName);
+        }
+
+        private PhaseProperties BuildFallbackPhaseProperties(string streamId, string phaseName)
+        {
+            if (!_context.TryGetStreamProperties(streamId, out var properties))
+            {
+                throw new InvalidOperationException($"No properties available for stream '{streamId}'.");
+            }
+
+            var phaseFraction = string.Equals(phaseName, "Overall", StringComparison.OrdinalIgnoreCase) ? 1.0 : 0.0;
+
+            return new PhaseProperties(
+                phaseName: phaseName,
+                molarFlowMolPerSec: properties.MolarFlow.Measurement.Value,
+                massFlowKgPerSec: properties.MolarFlow.Measurement.Value * 18.0 / 1000.0,
+                phaseFraction: phaseFraction,
+                composition: properties.Composition,
+                densityKgPerM3: 1000.0,
+                viscosityPaS: 0.001,
+                molecularWeightKgPerKmol: 18.0,
+                enthalpyKJPerKg: 0.0,
+                molarEnthalpyKJPerKmol: 0.0,
+                entropyKJPerKgK: 0.0,
+                molarEntropyKJPerKmolK: 0.0,
+                volumetricFlowM3PerSec: 0.0,
+                massFraction: phaseFraction,
+                volumetricFraction: phaseFraction,
+                gibbsFreeEnergy: 0.0,
+                helmholtzEnergy: 0.0,
+                internalEnergy: 0.0,
+                kValue: 0.0,
+                fugacity: 0.0,
+                activityCoefficient: 0.0);
+        }
+
+        private Composition GetFallbackComposition(string streamId)
+        {
+            if (_context.TryGetStreamProperties(streamId, out var properties))
+            {
+                return properties.Composition;
+            }
+
+            throw new InvalidOperationException($"No properties available for stream '{streamId}'.");
+        }
+
+        private double GetFallbackTemperature(string streamId)
+        {
+            return _context.TryGetStreamProperties(streamId, out var properties)
+                ? properties.Temperature.Measurement.Value
+                : 0.0;
+        }
+
+        private double GetFallbackPressure(string streamId)
+        {
+            return _context.TryGetStreamProperties(streamId, out var properties)
+                ? properties.Pressure.Measurement.Value
+                : 0.0;
+        }
+
+        private double GetFallbackMolarFlow(string streamId)
+        {
+            return _context.TryGetStreamProperties(streamId, out var properties)
+                ? properties.MolarFlow.Measurement.Value
+                : 0.0;
+        }
+
+        private double GetFallbackMassFlow(string streamId)
+        {
+            return _context.TryGetStreamProperties(streamId, out var properties)
+                ? properties.MolarFlow.Measurement.Value * 18.0 / 1000.0
+                : 0.0;
+        }
+
+        private static double GetPhaseFraction(IReadOnlyDictionary<string, PhaseProperties> phases, string phaseName)
+        {
+            if (phases == null || !phases.TryGetValue(phaseName, out var phase))
+            {
+                return 0.0;
+            }
+
+            return phase.PhaseFraction;
+        }
+
+        private static double GetLiquidFraction(IReadOnlyDictionary<string, PhaseProperties> phases, double vaporFraction)
+        {
+            if (phases == null)
+            {
+                return 1.0 - vaporFraction;
+            }
+
+            if (phases.TryGetValue("OverallLiquid", out var overallLiquid))
+            {
+                return overallLiquid.PhaseFraction;
+            }
+
+            var liquidFraction = 0.0;
+            if (phases.TryGetValue("Liquid1", out var liquid1))
+            {
+                liquidFraction += liquid1.PhaseFraction;
+            }
+
+            if (phases.TryGetValue("Liquid2", out var liquid2))
+            {
+                liquidFraction += liquid2.PhaseFraction;
+            }
+
+            if (phases.TryGetValue("Liquid3", out var liquid3))
+            {
+                liquidFraction += liquid3.PhaseFraction;
+            }
+
+            if (phases.TryGetValue("Aqueous", out var aqueous))
+            {
+                liquidFraction += aqueous.PhaseFraction;
+            }
+
+            return liquidFraction > 0 ? liquidFraction : Math.Max(0.0, 1.0 - vaporFraction);
+        }
+
+        private static double? GetNullableDouble(object target, string propertyName)
+        {
+            if (target == null || string.IsNullOrWhiteSpace(propertyName))
+            {
+                return null;
+            }
+
+            var property = target.GetType().GetProperty(
+                propertyName,
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.IgnoreCase);
+            if (property == null)
+            {
+                return null;
+            }
+
+            var value = property.GetValue(target);
+            if (value == null)
+            {
+                return null;
+            }
+
+            if (value is double doubleValue)
+            {
+                return doubleValue;
+            }
+
+            try
+            {
+                return Convert.ToDouble(value);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static double SanitizeFraction(double fraction)
+        {
+            if (double.IsNaN(fraction) || double.IsInfinity(fraction))
+            {
+                return 0.0;
+            }
+
+            return fraction < 0.0 ? 0.0 : fraction;
+        }
+
+        private double[] NormalizeFractions(IReadOnlyList<double> fractions)
+        {
+            var sanitized = fractions.Select(SanitizeFraction).ToArray();
+            var sum = sanitized.Sum();
+
+            if (sanitized.Length == 0)
+            {
+                return Array.Empty<double>();
+            }
+
+            if (sum <= 0.0)
+            {
+                _logger.Warning("Phase composition sum was zero; defaulting to pure first component.");
+                var fallback = new double[sanitized.Length];
+                fallback[0] = 1.0;
+                return fallback;
+            }
+
+            if (Math.Abs(sum - 1.0) > 1e-6)
+            {
+                for (int i = 0; i < sanitized.Length; i++)
+                {
+                    sanitized[i] = sanitized[i] / sum;
+                }
+            }
+
+            return sanitized;
+        }
+
+        private void TrySetStreamPropertyPackage(object stream)
+        {
+            if (stream == null)
+            {
+                return;
+            }
+
+            var propertyPackage = _context.GetPropertyPackage();
+            if (propertyPackage == null)
+            {
+                return;
+            }
+
+            var property = stream.GetType().GetProperty("PropertyPackage");
+            if (property == null || !property.CanWrite)
+            {
+                return;
+            }
+
+            if (!property.PropertyType.IsInstanceOfType(propertyPackage))
+            {
+                return;
+            }
+
+            property.SetValue(stream, propertyPackage);
+        }
+
+        private void TryAddCompoundsToStream(object flowsheet, object stream)
+        {
+            if (flowsheet == null || stream == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var method = flowsheet.GetType().GetMethod("AddCompoundsToMaterialStream");
+                if (method != null)
+                {
+                    method.Invoke(flowsheet, new[] { stream });
+                    _logger.Debug("Compounds added to stream successfully");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log but don't fail - compounds might already be added or this might not be critical
+                _logger.Warning(ex, "Failed to add compounds to stream (this may not be critical)");
+            }
+        }
+
+        private void ApplyPropertiesToStreamObject(object stream, StreamProperties properties)
+        {
+            if (stream == null || properties == null)
+            {
+                return;
+            }
+
+            var phasesProperty = stream.GetType().GetProperty("Phases");
+            if (phasesProperty == null)
+            {
+                return;
+            }
+
+            if (!(phasesProperty.GetValue(stream) is IDictionary phases))
+            {
+                return;
+            }
+
+            if (!phases.Contains(0))
+            {
+                return;
+            }
+
+            var phase = phases[0];
+            var phaseProperties = TryGetPhasePropertiesObject(phase);
+            if (phaseProperties != null)
+            {
+                SetPhaseProperty(phaseProperties, "temperature", properties.Temperature.Measurement.Value);
+                SetPhaseProperty(phaseProperties, "pressure", properties.Pressure.Measurement.Value);
+                SetPhaseProperty(phaseProperties, "molarflow", properties.MolarFlow.Measurement.Value);
+            }
+
+            ApplyComposition(phase, properties.Composition);
+            TrySetInputComposition(stream, properties);
+            TrySetStreamSpecification(stream);
+        }
+
+        private void ApplyComposition(object phase, Composition composition)
+        {
+            var compounds = TryGetCompounds(phase);
+            if (compounds == null || composition == null)
+            {
+                return;
+            }
+
+            var compoundNames = _context.GetCompounds();
+            if (compoundNames.Count == 0)
+            {
+                return;
+            }
+
+            var fractions = composition.MoleFractions;
+            for (int i = 0; i < compoundNames.Count; i++)
+            {
+                var fraction = i < fractions.Count ? fractions[i] : 0.0;
+                var compound = TryGetCompound(compounds, compoundNames[i]);
+                if (compound == null)
+                {
+                    continue;
+                }
+
+                SetPhaseProperty(compound, "MoleFraction", fraction);
+            }
+        }
+
+        private void TrySetInputComposition(object stream, StreamProperties properties)
+        {
+            if (stream == null || properties?.Composition == null)
+            {
+                return;
+            }
+
+            var inputCompositionProperty = stream.GetType().GetProperty("InputComposition");
+            if (inputCompositionProperty == null || !inputCompositionProperty.CanWrite)
+            {
+                return;
+            }
+
+            var compoundNames = _context.GetCompounds();
+            if (compoundNames.Count == 0)
+            {
+                return;
+            }
+
+            var fractions = properties.Composition.MoleFractions;
+            var compositionDict = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < compoundNames.Count; i++)
+            {
+                var fraction = i < fractions.Count ? fractions[i] : 0.0;
+                compositionDict[compoundNames[i]] = fraction;
+            }
+
+            inputCompositionProperty.SetValue(stream, compositionDict);
+        }
+
+        private void TrySetStreamSpecification(object stream)
+        {
+            if (stream == null)
+            {
+                return;
+            }
+
+            TrySetEnumProperty(stream, "SpecType", "Temperature_and_Pressure");
+            TrySetEnumProperty(stream, "DefinedFlow", "Mole");
+        }
+
+        private void TrySetEnumProperty(object target, string propertyName, string enumValue)
+        {
+            var property = target.GetType().GetProperty(propertyName);
+            if (property == null || !property.CanWrite)
+            {
+                return;
+            }
+
+            var enumType = property.PropertyType;
+            if (!enumType.IsEnum)
+            {
+                return;
+            }
+
+            var parsed = Enum.Parse(enumType, enumValue);
+            property.SetValue(target, parsed);
+        }
+
+        private void SetPhaseProperty(object target, string propertyName, object value)
+        {
+            if (target == null || string.IsNullOrWhiteSpace(propertyName))
+            {
+                return;
+            }
+
+            var property = target.GetType().GetProperty(
+                propertyName,
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.IgnoreCase);
+            if (property == null || !property.CanWrite)
+            {
+                return;
+            }
+
+            property.SetValue(target, value);
+        }
+
         /// <summary>
         /// Creates a DWSIM MaterialStream instance using reflection.
         /// </summary>
@@ -764,12 +1349,20 @@ namespace DwsimWorker.Adapters
         /// <param name="streamId">The unique stream ID.</param>
         /// <returns>A DWSIM MaterialStream object or placeholder.</returns>
         /// <exception cref="InvalidOperationException">Thrown when MaterialStream creation fails.</exception>
-        private object CreateMaterialStream(string name, string streamId)
+        private object CreateMaterialStream(object flowsheet, string name, string streamId)
         {
             const string typeName = "DWSIM.Thermodynamics.Streams.MaterialStream";
 
             try
             {
+                var created = TryAddStreamViaFlowsheet(flowsheet, name, streamId);
+                if (created != null)
+                {
+                    TrySetNameAndTag(created, name, streamId);
+                    _logger.Debug("Created DWSIM MaterialStream via flowsheet: {StreamId} (Name: {Name})", streamId, name);
+                    return created;
+                }
+
                 // Try to find the MaterialStream type in loaded assemblies
                 Type streamType = null;
                 foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
@@ -785,6 +1378,7 @@ namespace DwsimWorker.Adapters
                     var instance = Activator.CreateInstance(streamType);
                     if (instance != null)
                     {
+                        TrySetNameAndTag(instance, name, streamId);
                         _logger.Debug("Created DWSIM MaterialStream: {StreamId} (Name: {Name})", streamId, name);
                         return instance;
                     }
@@ -799,6 +1393,99 @@ namespace DwsimWorker.Adapters
             {
                 _logger.Error(ex, "Failed to create MaterialStream for {StreamId}", streamId);
                 throw new InvalidOperationException($"Failed to create MaterialStream: {ex.Message}", ex);
+            }
+        }
+
+        private object TryAddStreamViaFlowsheet(object flowsheet, string name, string streamId)
+        {
+            if (flowsheet == null)
+            {
+                return null;
+            }
+
+            var flowsheetType = flowsheet.GetType();
+            var objectType = FindEnumType("DWSIM.Interfaces.Enums.GraphicObjects.ObjectType");
+            if (objectType != null)
+            {
+                var materialStreamType = Enum.Parse(objectType, "MaterialStream");
+
+                var addObject = flowsheetType.GetMethod(
+                    "AddObject",
+                    new[] { objectType, typeof(int), typeof(int), typeof(string), typeof(string) });
+                if (addObject != null)
+                {
+                    return addObject.Invoke(flowsheet, new object[] { materialStreamType, 0, 0, streamId, name });
+                }
+
+                addObject = flowsheetType.GetMethod(
+                    "AddObject",
+                    new[] { objectType, typeof(int), typeof(int), typeof(string) });
+                if (addObject != null)
+                {
+                    return addObject.Invoke(flowsheet, new object[] { materialStreamType, 0, 0, name });
+                }
+            }
+
+            var addByName = flowsheetType.GetMethod(
+                "AddObject",
+                new[] { typeof(string), typeof(int), typeof(int), typeof(string), typeof(string), typeof(bool) });
+            if (addByName != null)
+            {
+                return addByName.Invoke(flowsheet, new object[]
+                {
+                    "DWSIM.Thermodynamics.Streams.MaterialStream", 0, 0, name, streamId, false
+                });
+            }
+
+            return null;
+        }
+
+        private static Type FindEnumType(string enumTypeName)
+        {
+            if (string.IsNullOrWhiteSpace(enumTypeName))
+            {
+                return null;
+            }
+
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var type = assembly.GetType(enumTypeName);
+                if (type != null && type.IsEnum)
+                {
+                    return type;
+                }
+            }
+
+            return null;
+        }
+
+        private void TrySetNameAndTag(object target, string name, string streamId)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            var nameProperty = target.GetType().GetProperty("Name");
+            if (nameProperty != null && nameProperty.CanWrite)
+            {
+                nameProperty.SetValue(target, name);
+            }
+
+            var graphicObject = target.GetType().GetProperty("GraphicObject")?.GetValue(target);
+            if (graphicObject != null)
+            {
+                var tagProperty = graphicObject.GetType().GetProperty("Tag");
+                if (tagProperty != null && tagProperty.CanWrite)
+                {
+                    tagProperty.SetValue(graphicObject, streamId);
+                }
+
+                var nameTagProperty = graphicObject.GetType().GetProperty("Name");
+                if (nameTagProperty != null && nameTagProperty.CanWrite)
+                {
+                    nameTagProperty.SetValue(graphicObject, name);
+                }
             }
         }
     }

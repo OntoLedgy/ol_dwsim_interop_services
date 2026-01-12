@@ -104,6 +104,41 @@ def test_simulation_workflow_integration():
             assert run_result["status"] in {"converged", "failed"}
             assert status_result["status"] in {"idle", "running", "converged", "failed", "timeout"}
             assert results["stream_results"] == cached_results["stream_results"]
+            assert results["stream_results"], "Expected at least one stream result."
+
+            phases = []
+            for stream in results["stream_results"]:
+                stream_phases = stream.get("phases") or []
+                phases.extend(stream_phases)
+
+            assert phases, "Expected at least one phase result."
+
+            expected_property_keys = {
+                "enthalpy_kj_per_kg",
+                "molar_enthalpy_kj_per_kmol",
+                "entropy_kj_per_kg_k",
+                "molar_entropy_kj_per_kmol_k",
+                "molar_flow_mol_per_s",
+                "mass_flow_kg_per_s",
+                "volumetric_flow_m3_per_s",
+                "mass_fraction",
+                "volumetric_fraction",
+                "gibbs_free_energy",
+                "helmholtz_energy",
+                "internal_energy",
+                "k_value",
+                "fugacity",
+                "activity_coefficient",
+            }
+
+            properties_found = set()
+            for phase in phases:
+                properties = phase.get("properties") or {}
+                properties_found.update(properties.keys())
+
+            assert (
+                expected_property_keys & properties_found
+            ), "Expected at least one configured phase property in results."
         finally:
             try:
                 await session_client.close_session(session_id)
