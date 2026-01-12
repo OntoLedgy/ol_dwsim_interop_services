@@ -337,5 +337,111 @@ namespace DwsimWorker.Adapters
 
             property.SetValue(target, propertyPackage);
         }
+
+        /// <summary>
+        /// Sets a binary interaction parameter (kij) for a pair of compounds in the current property package.
+        /// </summary>
+        /// <param name="compound1">Name of the first compound</param>
+        /// <param name="compound2">Name of the second compound</param>
+        /// <param name="value">The interaction parameter value (typically between 0 and 1)</param>
+        /// <remarks>
+        /// Binary Interaction Parameters (BIPs) are used in cubic equations of state (like Peng-Robinson)
+        /// to improve the accuracy of mixture property predictions. They correct for non-ideal mixing behavior.
+        /// The interaction parameter is symmetric: kij = kji.
+        /// </remarks>
+        public void SetBinaryInteractionParameter(string compound1, string compound2, double value)
+        {
+            try
+            {
+                var propertyPackage = _context.GetPropertyPackage();
+                if (propertyPackage == null)
+                {
+                    _logger.Warning("Cannot set BIP: Property package not initialized");
+                    return;
+                }
+
+                // Access the m_pr field (PengRobinson EOS model) from the property package
+                // For Peng-Robinson: propertyPackage.m_pr.InteractionParameters
+                var m_prField = propertyPackage.GetType().GetField("m_pr");
+                if (m_prField == null)
+                {
+                    _logger.Warning("Property package does not have m_pr field (not a Peng-Robinson package?)");
+                    return;
+                }
+
+                var m_pr = m_prField.GetValue(propertyPackage);
+                if (m_pr == null)
+                {
+                    _logger.Warning("m_pr field is null");
+                    return;
+                }
+
+                // Get the InteractionParameters from m_pr
+                // Structure: Dictionary<string, Dictionary<string, PR_IPData>>
+                // InteractionParameters is a ReadOnly Property backed by _ip private field
+                var interactionParamsProperty = m_pr.GetType().GetProperty("InteractionParameters");
+                if (interactionParamsProperty == null)
+                {
+                    _logger.Warning("m_pr does not have InteractionParameters property");
+                    return;
+                }
+
+                var interactionParams = interactionParamsProperty.GetValue(m_pr);
+                if (interactionParams == null)
+                {
+                    _logger.Warning("InteractionParameters is null");
+                    return;
+                }
+
+                // InteractionParameters is a nested dictionary: Dictionary<string, Dictionary<string, InteractionParameter>>
+                // We need to create the nested structure: interactionParams[compound1][compound2] = new InteractionParameter { kij = value }
+
+                // Get or create the first-level dictionary for compound1
+                var dictType = interactionParams.GetType();
+                var containsKeyMethod = dictType.GetMethod("ContainsKey");
+                var getItemMethod = dictType.GetMethod("get_Item");
+                var setItemMethod = dictType.GetMethod("set_Item");
+
+                bool hasCompound1 = (bool)containsKeyMethod.Invoke(interactionParams, new object[] { compound1 });
+                object innerDict;
+
+                if (!hasCompound1)
+                {
+                    // Create new inner dictionary for compound1
+                    var innerDictType = dictType.GetGenericArguments()[1]; // Dictionary<string, InteractionParameter>
+                    innerDict = Activator.CreateInstance(innerDictType);
+                    setItemMethod.Invoke(interactionParams, new[] { compound1, innerDict });
+                }
+                else
+                {
+                    innerDict = getItemMethod.Invoke(interactionParams, new object[] { compound1 });
+                }
+
+                // Now set the interaction parameter in the inner dictionary
+                var innerSetItemMethod = innerDict.GetType().GetMethod("set_Item");
+
+                // Create InteractionParameter object
+                var interactionParamType = innerDict.GetType().GetGenericArguments()[1];
+                var interactionParam = Activator.CreateInstance(interactionParamType);
+
+                // Set the kij property
+                var kijField = interactionParamType.GetField("kij");
+                if (kijField != null)
+                {
+                    kijField.SetValue(interactionParam, value);
+                    innerSetItemMethod.Invoke(innerDict, new[] { compound2, interactionParam });
+                    _logger.Information("Set BIP {Compound1}-{Compound2} = {Value}", compound1, compound2, value);
+                }
+                else
+                {
+                    _logger.Warning("InteractionParameter does not have kij field");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning(ex, "Failed to set Binary Interaction Parameter for {Compound1}-{Compound2}",
+                    compound1, compound2);
+            }
+        }
     }
 }

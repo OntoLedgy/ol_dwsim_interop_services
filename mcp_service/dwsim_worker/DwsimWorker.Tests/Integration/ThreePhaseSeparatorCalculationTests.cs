@@ -62,27 +62,37 @@ namespace DwsimWorker.Tests.Integration
             var unitOpAdapter = new UnitOpAdapter(_logger, _context);
             var connectionAdapter = new ConnectionAdapter(_logger, _context);
 
-            // Add compounds: Water, Propane, Methane, Ethane
-            compoundAdapter.AddCompound("Water");
-            compoundAdapter.AddCompound("Propane");
+            // Add compounds: Methane, Water, n-Decane (from DWSIM sample 07fc8fdf-446f-4eed-af30-1c6b3dca501c.xml)
             compoundAdapter.AddCompound("Methane");
-            compoundAdapter.AddCompound("Ethane");
+            compoundAdapter.AddCompound("Water");
+            compoundAdapter.AddCompound("n-Decane");
 
-            _logger.Information("Compounds added: Water, Propane, Methane, Ethane");
+            _logger.Information("Compounds added: Methane, Water, n-Decane");
 
-            // Set property package
+            // Set property package (Peng-Robinson as per DWSIM sample)
             propertyPackageAdapter.SetPropertyPackage("Peng-Robinson");
             _logger.Information("Property package: Peng-Robinson");
 
+            // Set Binary Interaction Parameters from DWSIM sample
+            // These are critical for accurate phase equilibrium in water-hydrocarbon systems
+            propertyPackageAdapter.SetBinaryInteractionParameter("Methane", "n-Decane", 0.0489);
+            propertyPackageAdapter.SetBinaryInteractionParameter("Water", "Methane", 0.5);
+            propertyPackageAdapter.SetBinaryInteractionParameter("Water", "n-Decane", 0.5);
+            _logger.Information("Binary Interaction Parameters set");
+
             // Create inlet stream (mixed feed)
+            // Conditions from DWSIM sample 07fc8fdf-446f-4eed-af30-1c6b3dca501c.xml:
+            // T=300K, P=101325Pa, MolarFlow=544mol/s, MassFlow=32kg/s, 33.3% mole fraction each
             var feedProperties = CreateStreamProperties(
-                temperature: 298.15,  // 25°C
-                pressure: 500000,     // 5 bar
-                molarFlow: 100.0,     // 100 mol/s
-                composition: new[] { 0.25, 0.25, 0.25, 0.25 }  // Equal composition
+                temperature: 300.0,   // 300 K (26.85°C)
+                pressure: 101325,     // 1 atm (101.325 kPa)
+                molarFlow: 544.0,     // 544 mol/s (from DWSIM sample)
+                composition: new[] { 0.333, 0.333, 0.334 }  // Methane, Water, n-Decane (33.3% each)
             );
 
-            var feedResult = streamAdapter.CreateStream("FEED", feedProperties);
+            // CRITICAL: Feed stream must have isSource=true so DWSIM knows it has known conditions
+            // Outlet streams should use default isSource=false so DWSIM will calculate them
+            var feedResult = streamAdapter.CreateStream("FEED", feedProperties, isSource: true);
             var feedStreamId = feedResult.ObjectId;
             _logger.Information($"Feed stream created: {feedStreamId}");
 
@@ -109,15 +119,16 @@ namespace DwsimWorker.Tests.Integration
 
             // Create outlet streams WITHOUT compositions (DWSIM will calculate them)
             // Only set temperature and pressure, let flow and composition be calculated
-            var vaporProperties = CreateEmptyStreamProperties(298.15, 490000);
+            // Pressure = inlet pressure (101325 Pa) - pressure drop (10000 Pa) = 91325 Pa
+            var vaporProperties = CreateEmptyStreamProperties(300.0, 91325);
             var vaporResult = streamAdapter.CreateStream("VAPOR", vaporProperties);
             var vaporStreamId = vaporResult.ObjectId;
 
-            var lightLiquidProperties = CreateEmptyStreamProperties(298.15, 490000);
+            var lightLiquidProperties = CreateEmptyStreamProperties(300.0, 91325);
             var lightLiquidResult = streamAdapter.CreateStream("LIGHT_LIQUID", lightLiquidProperties);
             var lightLiquidStreamId = lightLiquidResult.ObjectId;
 
-            var heavyLiquidProperties = CreateEmptyStreamProperties(298.15, 490000);
+            var heavyLiquidProperties = CreateEmptyStreamProperties(300.0, 91325);
             var heavyLiquidResult = streamAdapter.CreateStream("HEAVY_LIQUID", heavyLiquidProperties);
             var heavyLiquidStreamId = heavyLiquidResult.ObjectId;
 
@@ -211,7 +222,8 @@ namespace DwsimWorker.Tests.Integration
 
             // Use equal mole fractions as placeholder - DWSIM will recalculate during separator calculation
             // Composition must sum to 1.0 per validation rules
-            var comp = new Composition(new double[] { 0.25, 0.25, 0.25, 0.25 });
+            // FIX: Use 3 compounds (Methane, Water, n-Decane) not 4
+            var comp = new Composition(new double[] { 0.333, 0.333, 0.334 });
 
             return new StreamProperties(tempProperty, pressProperty, flowProperty, comp);
         }

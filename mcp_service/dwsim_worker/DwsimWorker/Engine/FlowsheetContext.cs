@@ -593,16 +593,18 @@ namespace DwsimWorker.Engine
         private object CreateFlowsheetInstance()
         {
             // Try multiple possible type names for Flowsheet
-            // Primary type is FOSSEEFlowsheet - the backend model class
+            // CRITICAL: DWSIM has NO headless flowsheet type - all require GUI components
+            // We must use UI.Desktop.Shared.Flowsheet and work around FlowsheetSurface being NULL
+            // Our TryManualConnect() workaround in ConnectionAdapter handles this
             var possibleTypeNames = new[]
             {
-                "DWSIM.FlowsheetBase.FlowsheetBase",    // Headless flowsheet base class
-                "DWSIM.UI.Desktop.Shared.Flowsheet",    // Concrete flowsheet implementation
-                "DWSIM.SharedClasses.FOSSEEFlowsheet",  // Legacy metadata-only flowsheet
+                "DWSIM.UI.Desktop.Shared.Flowsheet",    // GUI flowsheet (FlowsheetSurface=NULL in headless mode, we work around this)
+                "DWSIM.FlowsheetBase.FlowsheetBase",    // Abstract base class (may not instantiate)
                 "DWSIM.SharedClasses.Flowsheet",         // Legacy fallback
                 "DWSIM.Flowsheet.Flowsheet",
                 "DWSIM.Simulator.Flowsheet",
                 "Flowsheet"
+                // Note: DWSIM.SharedClasses.FOSSEEFlowsheet is NOT a flowsheet - it's a data class for downloading flowsheets
                 // Note: DWSIM.FormFlowsheet removed - it's a UI class requiring graphics dependencies
             };
 

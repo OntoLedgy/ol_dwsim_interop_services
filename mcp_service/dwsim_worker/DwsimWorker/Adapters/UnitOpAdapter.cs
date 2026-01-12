@@ -620,10 +620,13 @@ namespace DwsimWorker.Adapters
                 return;
             }
 
+            // CRITICAL: ISimulationObject.Name must match the dictionary key used by DWSIM
+            // GetSolvingList() reads baseobj.Name, and SolveFlowsheet() looks up SimulationObjects(name)
+            // The unit is registered with key=unitId, so Name must be unitId
             var nameProperty = target.GetType().GetProperty("Name");
             if (nameProperty != null && nameProperty.CanWrite)
             {
-                nameProperty.SetValue(target, name);
+                nameProperty.SetValue(target, unitId);  // Name must match dictionary key
             }
 
             var graphicObject = target.GetType().GetProperty("GraphicObject")?.GetValue(target);
@@ -632,13 +635,16 @@ namespace DwsimWorker.Adapters
                 var tagProperty = graphicObject.GetType().GetProperty("Tag");
                 if (tagProperty != null && tagProperty.CanWrite)
                 {
-                    tagProperty.SetValue(graphicObject, unitId);
+                    tagProperty.SetValue(graphicObject, name);  // Tag is the friendly display name
                 }
 
+                // CRITICAL: GraphicObject.Name must match the key in FlowSheet.SimulationObjects
+                // DWSIM looks up units via FlowSheet.SimulationObjects(GraphicObject.Name)
+                // The unit is registered with key=unitId, so GraphicObject.Name must be unitId
                 var nameTagProperty = graphicObject.GetType().GetProperty("Name");
                 if (nameTagProperty != null && nameTagProperty.CanWrite)
                 {
-                    nameTagProperty.SetValue(graphicObject, name);
+                    nameTagProperty.SetValue(graphicObject, unitId);  // Name is the SimulationObjects key
                 }
             }
         }

@@ -1,0 +1,12 @@
+Test run for D:\S\C#\dwsim_interop_services\mcp_service\dwsim_worker\DwsimWorker.Tests\bin\Debug\DwsimWorker.Tests.dll (.NETFramework,Version=v4.8)
+VSTest version 18.0.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Failed DwsimWorker.Tests.Integration.ThreePhaseSeparatorCalculationTests.GoldenTest_ThreePhaseSeparatorCalculation_Succeeds [2 s]
+  Error Message:
+   Mass balance failed: 100.00% error
+  Stack Trace:
+     at DwsimWorker.Tests.Integration.ThreePhaseSeparatorCalculationTests.GoldenTest_ThreePhaseSeparatorCalculation_Succeeds() in D:\S\C#\dwsim_interop_services\mcp_service\dwsim_worker\DwsimWorker.Tests\Integration\ThreePhaseSeparatorCalculationTests.cs:line 286
+
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 2 s - DwsimWorker.Tests.dll (net48)

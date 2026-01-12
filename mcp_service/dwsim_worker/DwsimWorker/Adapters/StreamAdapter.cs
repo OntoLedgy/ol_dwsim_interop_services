@@ -60,6 +60,10 @@ namespace DwsimWorker.Adapters
         /// </summary>
         /// <param name="name">The name of the stream (e.g., "Inlet", "Feed1").</param>
         /// <param name="properties">The thermodynamic properties for the stream.</param>
+        /// <param name="isSource">
+        /// Optional. True if this is a feed stream (calculation starting point), false if this is an outlet stream
+        /// from a unit operation. Defaults to false. Only set to true for feed streams with known conditions.
+        /// </param>
         /// <returns>
         /// A PropertySetResult containing the generated streamId on success.
         /// Returns a failure result if validation fails or stream creation fails.
@@ -69,10 +73,14 @@ namespace DwsimWorker.Adapters
         /// This ID must be used for all subsequent property get/set operations on the stream.
         ///
         /// The properties are validated before stream creation:
-        /// - Temperature must be > 0 K and < 10000 K
-        /// - Pressure must be > 0 Pa and < 1e9 Pa
-        /// - Molar flow must be >= 0 mol/s
+        /// - Temperature must be &gt; 0 K and &lt; 10000 K
+        /// - Pressure must be &gt; 0 Pa and &lt; 1e9 Pa
+        /// - Molar flow must be &gt;= 0 mol/s
         /// - Composition mole fractions must sum to 1.0 ± 1e-6
+        ///
+        /// IMPORTANT: The isSource parameter controls whether DWSIM will calculate this stream:
+        /// - isSource=true: Feed stream with known conditions, DWSIM will NOT calculate it
+        /// - isSource=false: Outlet stream from unit operation, DWSIM will calculate it
         /// </remarks>
         /// <example>
         /// <code>
@@ -85,14 +93,14 @@ namespace DwsimWorker.Adapters
         ///     molarFlowMolPerSec: 100.0,
         ///     composition: composition);
         ///
-        /// var result = adapter.CreateStream("Feed", properties);
-        /// if (result.Success)
-        /// {
-        ///     Console.WriteLine($"Stream created with ID: {result.Data}");
-        /// }
+        /// // Create feed stream (isSource=true)
+        /// var feedResult = adapter.CreateStream("Feed", properties, isSource: true);
+        ///
+        /// // Create outlet stream (isSource=false, default)
+        /// var outletResult = adapter.CreateStream("Outlet", properties);
         /// </code>
         /// </example>
-        public PropertySetResult CreateStream(string name, StreamProperties properties)
+        public PropertySetResult CreateStream(string name, StreamProperties properties, bool isSource = false)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -130,10 +138,17 @@ namespace DwsimWorker.Adapters
                 var materialStream = CreateMaterialStream(flowsheet, name, streamId);
                 _context.AddStream(materialStream, streamId);
 
+                // Step 3a: Set IsSource property based on caller specification
+                // CRITICAL: Only feed streams should have IsSource=True. Outlet streams from unit operations
+                // must have IsSource=False so DWSIM knows they need to be calculated.
+                // - IsSource=true: Feed stream with known conditions (DWSIM will NOT calculate)
+                // - IsSource=false: Outlet stream that needs calculation (DWSIM will calculate)
+                TrySetIsSourceProperty(materialStream, isSource);
+
                 // Step 4: Apply flowsheet settings
                 TrySetStreamPropertyPackage(materialStream);
                 TryAddCompoundsToStream(flowsheet, materialStream);
-                ApplyPropertiesToStreamObject(materialStream, properties);
+                ApplyPropertiesToStreamObject(materialStream, properties, isSource);
 
                 // Step 5: Store properties in cache
                 _context.CacheStreamProperties(streamId, properties);
@@ -1357,6 +1372,25 @@ namespace DwsimWorker.Adapters
 
             try
             {
+                // Check if stream already has compounds (happens when created via flowsheet)
+                var phasesProperty = stream.GetType().GetProperty("Phases");
+                if (phasesProperty != null && phasesProperty.GetValue(stream) is IDictionary phases && phases.Count > 0)
+                {
+                    if (phases.Contains(0))
+                    {
+                        var phase = phases[0];
+                        var compoundsProperty = phase.GetType().GetProperty("Compounds");
+                        if (compoundsProperty != null && compoundsProperty.GetValue(phase) is IDictionary compounds)
+                        {
+                            if (compounds.Count > 0)
+                            {
+                                _logger.Debug("Stream already has {Count} compounds, skipping AddCompoundsToMaterialStream", compounds.Count);
+                                return;
+                            }
+                        }
+                    }
+                }
+
                 var method = flowsheet.GetType().GetMethod("AddCompoundsToMaterialStream");
                 if (method != null)
                 {
@@ -1371,7 +1405,50 @@ namespace DwsimWorker.Adapters
             }
         }
 
-        private void ApplyPropertiesToStreamObject(object stream, StreamProperties properties)
+        /// <summary>
+        /// Sets the IsSource property on a stream object.
+        /// Feed streams need IsSource=True to be recognized as calculation starting points
+        /// by DWSIM's GetSolvingList() Phase 1 endpoint detection algorithm.
+        /// </summary>
+        /// <param name="stream">The stream object (MaterialStream).</param>
+        /// <param name="isSource">True to mark as source (feed stream), false otherwise.</param>
+        private void TrySetIsSourceProperty(object stream, bool isSource)
+        {
+            if (stream == null)
+            {
+                _logger.Warning("Cannot set IsSource property: stream is null");
+                return;
+            }
+
+            try
+            {
+                // Find the IsSource property on the stream object
+                var property = stream.GetType().GetProperty("IsSource",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+
+                if (property == null)
+                {
+                    _logger.Warning("Stream object does not have IsSource property - calculation may not work");
+                    return;
+                }
+
+                if (!property.CanWrite)
+                {
+                    _logger.Warning("IsSource property is read-only - cannot set to {Value}", isSource);
+                    return;
+                }
+
+                // Set the IsSource property
+                property.SetValue(stream, isSource);
+                _logger.Debug("Set IsSource={Value} on stream successfully", isSource);
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning(ex, "Failed to set IsSource property to {Value} (calculation may not work)", isSource);
+            }
+        }
+
+        private void ApplyPropertiesToStreamObject(object stream, StreamProperties properties, bool isSource = true)
         {
             if (stream == null || properties == null)
             {
@@ -1405,7 +1482,7 @@ namespace DwsimWorker.Adapters
 
             ApplyComposition(phase, properties.Composition);
             TrySetInputComposition(stream, properties);
-            TrySetStreamSpecification(stream);
+            TrySetStreamSpecification(stream, isSource);
         }
 
         private void ApplyComposition(object phase, Composition composition)
@@ -1413,26 +1490,47 @@ namespace DwsimWorker.Adapters
             var compounds = TryGetCompounds(phase);
             if (compounds == null || composition == null)
             {
+                _logger.Debug("ApplyComposition: compounds or composition is null");
                 return;
             }
+
+            _logger.Debug("ApplyComposition: Phase has {Count} compounds in dictionary", compounds.Count);
 
             var compoundNames = _context.GetCompounds();
             if (compoundNames.Count == 0)
             {
+                _logger.Debug("ApplyComposition: No compound names from context");
                 return;
             }
 
+            _logger.Debug("ApplyComposition: Context has {Count} compound names", compoundNames.Count);
+
             var fractions = composition.MoleFractions;
+            _logger.Debug("ApplyComposition: Composition has {Count} mole fractions", fractions.Count);
+
             for (int i = 0; i < compoundNames.Count; i++)
             {
                 var fraction = i < fractions.Count ? fractions[i] : 0.0;
-                var compound = TryGetCompound(compounds, compoundNames[i]);
+                var compoundName = compoundNames[i];
+                _logger.Debug("ApplyComposition: Setting {CompoundName} mole fraction to {Fraction}", compoundName, fraction);
+
+                var compound = TryGetCompound(compounds, compoundName);
                 if (compound == null)
                 {
+                    _logger.Warning("ApplyComposition: Compound {CompoundName} not found in phase compounds dictionary", compoundName);
                     continue;
                 }
 
                 SetPhaseProperty(compound, "MoleFraction", fraction);
+
+                // Verify the property was set
+                var moleFracProp = compound.GetType().GetProperty("MoleFraction",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.IgnoreCase);
+                if (moleFracProp != null && moleFracProp.CanRead)
+                {
+                    var actualValue = moleFracProp.GetValue(compound);
+                    _logger.Debug("ApplyComposition: {CompoundName} MoleFraction after setting: {ActualValue}", compoundName, actualValue);
+                }
             }
         }
 
@@ -1440,41 +1538,76 @@ namespace DwsimWorker.Adapters
         {
             if (stream == null || properties?.Composition == null)
             {
+                _logger.Debug("TrySetInputComposition: stream or composition is null");
                 return;
             }
 
             var inputCompositionProperty = stream.GetType().GetProperty("InputComposition");
-            if (inputCompositionProperty == null || !inputCompositionProperty.CanWrite)
+            if (inputCompositionProperty == null)
             {
+                _logger.Warning("TrySetInputComposition: InputComposition property not found on stream");
+                return;
+            }
+
+            if (!inputCompositionProperty.CanWrite)
+            {
+                _logger.Warning("TrySetInputComposition: InputComposition property is read-only");
                 return;
             }
 
             var compoundNames = _context.GetCompounds();
             if (compoundNames.Count == 0)
             {
+                _logger.Debug("TrySetInputComposition: No compound names from context");
                 return;
             }
 
             var fractions = properties.Composition.MoleFractions;
             var compositionDict = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            _logger.Debug("TrySetInputComposition: Building composition dictionary");
+
             for (int i = 0; i < compoundNames.Count; i++)
             {
                 var fraction = i < fractions.Count ? fractions[i] : 0.0;
                 compositionDict[compoundNames[i]] = fraction;
+                _logger.Debug("TrySetInputComposition: {CompoundName} = {Fraction}", compoundNames[i], fraction);
             }
 
-            inputCompositionProperty.SetValue(stream, compositionDict);
+            try
+            {
+                inputCompositionProperty.SetValue(stream, compositionDict);
+                _logger.Debug("TrySetInputComposition: Successfully set InputComposition dictionary with {Count} compounds", compositionDict.Count);
+
+                // Verify it was set
+                var actualValue = inputCompositionProperty.GetValue(stream);
+                if (actualValue is IDictionary actualDict)
+                {
+                    _logger.Debug("TrySetInputComposition: InputComposition dictionary has {Count} entries after setting", actualDict.Count);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning(ex, "TrySetInputComposition: Failed to set InputComposition");
+            }
         }
 
-        private void TrySetStreamSpecification(object stream)
+        private void TrySetStreamSpecification(object stream, bool isSource = true)
         {
             if (stream == null)
             {
                 return;
             }
 
-            TrySetEnumProperty(stream, "SpecType", "Temperature_and_Pressure");
+            // Set DefinedFlow based on what we're specifying (we specify molar flow, so use "Mole")
             TrySetEnumProperty(stream, "DefinedFlow", "Mole");
+
+            // Set SpecType based on isSource parameter
+            // - Feed streams (isSource=true): Use "Temperature_and_Pressure"
+            // - Outlet streams (isSource=false): Use "Pressure_and_Enthalpy"
+            // This matches the DWSIM sample file configuration
+            var specType = isSource ? "Temperature_and_Pressure" : "Pressure_and_Enthalpy";
+            TrySetEnumProperty(stream, "SpecType", specType);
+            _logger.Debug("Set SpecType={SpecType} based on isSource={IsSource}", specType, isSource);
         }
 
         private void TrySetEnumProperty(object target, string propertyName, string enumValue)
@@ -1499,18 +1632,34 @@ namespace DwsimWorker.Adapters
         {
             if (target == null || string.IsNullOrWhiteSpace(propertyName))
             {
+                _logger.Debug("SetPhaseProperty: target is null or propertyName is empty");
                 return;
             }
 
             var property = target.GetType().GetProperty(
                 propertyName,
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.IgnoreCase);
-            if (property == null || !property.CanWrite)
+            if (property == null)
             {
+                _logger.Debug("SetPhaseProperty: Property {PropertyName} not found on {TargetType}", propertyName, target.GetType().Name);
                 return;
             }
 
-            property.SetValue(target, value);
+            if (!property.CanWrite)
+            {
+                _logger.Debug("SetPhaseProperty: Property {PropertyName} on {TargetType} is read-only", propertyName, target.GetType().Name);
+                return;
+            }
+
+            try
+            {
+                property.SetValue(target, value);
+                _logger.Debug("SetPhaseProperty: Successfully set {PropertyName} = {Value} on {TargetType}", propertyName, value, target.GetType().Name);
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning(ex, "SetPhaseProperty: Failed to set {PropertyName} = {Value} on {TargetType}", propertyName, value, target.GetType().Name);
+            }
         }
 
         /// <summary>
@@ -1637,10 +1786,13 @@ namespace DwsimWorker.Adapters
                 return;
             }
 
+            // CRITICAL: ISimulationObject.Name must match the dictionary key used by DWSIM
+            // GetSolvingList() reads baseobj.Name, and SolveFlowsheet() looks up SimulationObjects(name)
+            // The stream is registered with key=streamId, so Name must be streamId
             var nameProperty = target.GetType().GetProperty("Name");
             if (nameProperty != null && nameProperty.CanWrite)
             {
-                nameProperty.SetValue(target, name);
+                nameProperty.SetValue(target, streamId);  // Name must match dictionary key
             }
 
             var graphicObject = target.GetType().GetProperty("GraphicObject")?.GetValue(target);

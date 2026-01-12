@@ -98,8 +98,76 @@ namespace DwsimWorker.Adapters
                 sw.Stop();
                 var endTime = DateTime.UtcNow;
 
+                // Step 2a: If flowsheet solver didn't calculate units, do it manually
+                // This is a workaround for flowsheet solver not triggering unit calculations
+                foreach (var unitId in _context.GetUnitIds())
+                {
+                    try
+                    {
+                        var unit = _context.GetUnit(unitId);
+                        if (unit != null)
+                        {
+                            var calculatedProp = unit.GetType().GetProperty("Calculated");
+                            var isCalculated = calculatedProp?.GetValue(unit) as bool?;
+
+                            if (isCalculated == false)
+                            {
+                                _logger.Debug("Unit {UnitId} not calculated by flowsheet solver, calling Calculate() directly", unitId);
+                                var calculateMethod = unit.GetType().GetMethod("Calculate");
+                                if (calculateMethod != null)
+                                {
+                                    calculateMethod.Invoke(unit, new object[] { null });
+                                    _logger.Information("Unit {UnitId} calculated successfully", unitId);
+
+                                    // Set Calculated property manually (Calculate() doesn't set it)
+                                    if (calculatedProp != null && calculatedProp.CanWrite)
+                                    {
+                                        calculatedProp.SetValue(unit, true);
+                                        _logger.Debug("Set Unit {UnitId} Calculated = true", unitId);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception unitEx)
+                    {
+                        _logger.Warning(unitEx, "Failed to calculate unit {UnitId}: {Message}", unitId, unitEx.InnerException?.Message ?? unitEx.Message);
+                    }
+                }
+
                 // Step 3: Create timing information
                 var timing = CalculationTiming.FromTimestamps(startTime, endTime);
+
+                // Step 3a: Try to mark flowsheet as solved if all units calculated successfully
+                try
+                {
+                    bool allUnitsCalculated = true;
+                    foreach (var unitId in _context.GetUnitIds())
+                    {
+                        var unit = _context.GetUnit(unitId);
+                        var calculatedProp = unit?.GetType().GetProperty("Calculated");
+                        var isCalculated = calculatedProp?.GetValue(unit) as bool?;
+                        if (isCalculated == false)
+                        {
+                            allUnitsCalculated = false;
+                            break;
+                        }
+                    }
+
+                    if (allUnitsCalculated)
+                    {
+                        var solvedProp = flowsheet.GetType().GetProperty("Solved");
+                        if (solvedProp != null && solvedProp.CanWrite)
+                        {
+                            _logger.Debug("All units calculated, setting Flowsheet.Solved = true");
+                            solvedProp.SetValue(flowsheet, true);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Debug(ex, "Could not set Flowsheet.Solved property");
+                }
 
                 // Step 4: Check convergence status
                 var convergenceStatus = GetConvergenceStatus(flowsheet);
@@ -204,28 +272,200 @@ namespace DwsimWorker.Adapters
                 var requestAndWait = flowsheetType.GetMethod("RequestCalculationAndWait");
                 if (requestAndWait != null)
                 {
-                    var result = requestAndWait.Invoke(flowsheet, null);
-                    if (result is System.Collections.IEnumerable enumerable)
+                    // DIAGNOSTICS: Check what's in SimulationObjects before calling solver
+                    try
                     {
-                        foreach (var item in enumerable)
+                        var simObjects = flowsheetType.GetProperty("SimulationObjects")?.GetValue(flowsheet);
+                        if (simObjects is System.Collections.IDictionary dict)
                         {
-                            if (item is Exception ex)
+                            _logger.Debug("Flowsheet has {Count} objects in SimulationObjects", dict.Count);
+                            foreach (System.Collections.DictionaryEntry entry in dict)
                             {
-                                _logger.Error(ex, "DWSIM solver returned exception");
-                                return false;
+                                var obj = entry.Value;
+                                var gobj = obj?.GetType().GetProperty("GraphicObject")?.GetValue(obj);
+                                var objType = gobj?.GetType().GetProperty("ObjectType")?.GetValue(gobj);
+
+                                // Check output connector status (critical for GetSolvingList)
+                                var outConnectors = gobj?.GetType().GetProperty("OutputConnectors")?.GetValue(gobj);
+                                bool? outIsAttached = null;
+                                if (outConnectors is System.Collections.IList outList && outList.Count > 0)
+                                {
+                                    var connector0 = outList[0];
+                                    outIsAttached = connector0?.GetType().GetProperty("IsAttached")?.GetValue(connector0) as bool?;
+                                }
+
+                                // Check Active property (GetSolvingList checks this)
+                                var isActive = gobj?.GetType().GetProperty("Active")?.GetValue(gobj);
+
+                                // Check input connector status (GetSolvingList walks backwards through InputConnectors)
+                                var inConnectors = gobj?.GetType().GetProperty("InputConnectors")?.GetValue(gobj);
+                                bool? inIsAttached = null;
+                                string inAttachedFromName = null;
+                                if (inConnectors is System.Collections.IList inList && inList.Count > 0)
+                                {
+                                    var connector0 = inList[0];
+                                    inIsAttached = connector0?.GetType().GetProperty("IsAttached")?.GetValue(connector0) as bool?;
+
+                                    // CRITICAL: Check if AttachedConnector is properly set (GetSolvingList needs this)
+                                    if (inIsAttached == true)
+                                    {
+                                        var attachedConnector = connector0?.GetType().GetProperty("AttachedConnector")?.GetValue(connector0);
+                                        if (attachedConnector != null)
+                                        {
+                                            var attachedFrom = attachedConnector.GetType().GetProperty("AttachedFrom")?.GetValue(attachedConnector);
+                                            if (attachedFrom != null)
+                                            {
+                                                inAttachedFromName = attachedFrom.GetType().GetProperty("Name")?.GetValue(attachedFrom) as string;
+                                            }
+                                            else
+                                            {
+                                                _logger.Warning("  Object '{Key}': InputConnector[0].AttachedConnector.AttachedFrom is NULL", entry.Key);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            _logger.Warning("  Object '{Key}': InputConnector[0].AttachedConnector is NULL (IsAttached=true but no attached connector!)", entry.Key);
+                                        }
+                                    }
+                                }
+
+                                _logger.Debug("  Object '{Key}': ObjectType={ObjectType}, OutConn[0].IsAttached={OutAttached}, InConn[0].IsAttached={InAttached}, InConn[0].AttachedFrom.Name={InAttachedFromName}, Active={Active}",
+                                    entry.Key, objType, outIsAttached?.ToString() ?? "null", inIsAttached?.ToString() ?? "null", inAttachedFromName ?? "null", isActive?.ToString() ?? "null");
                             }
                         }
                     }
+                    catch (Exception diagEx)
+                    {
+                        _logger.Debug(diagEx, "Could not inspect SimulationObjects");
+                    }
 
-                    _logger.Information("DWSIM solver completed");
+                    // DIAGNOSTICS: Try calling GetSolvingList() directly to see what it returns
+                    // GetSolvingList is a static method on FlowsheetSolver class, not an instance method
+                    try
+                    {
+                        // Find FlowsheetSolver type
+                        var flowsheetSolverAssembly = System.AppDomain.CurrentDomain.GetAssemblies()
+                            .FirstOrDefault(a => a.GetName().Name == "DWSIM.FlowsheetSolver");
+
+                        if (flowsheetSolverAssembly != null)
+                        {
+                            var flowsheetSolverType = flowsheetSolverAssembly.GetType("DWSIM.FlowsheetSolver.FlowsheetSolver");
+                            if (flowsheetSolverType != null)
+                            {
+                                var getSolvingList = flowsheetSolverType.GetMethod("GetSolvingList",
+                                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+
+                                if (getSolvingList != null)
+                                {
+                                    _logger.Debug("Calling FlowsheetSolver.GetSolvingList(flowsheet, false) for diagnostics...");
+                                    var solvingListResult = getSolvingList.Invoke(null, new object[] { flowsheet, false });
+
+                                    // GetSolvingList returns Object[] where each element is a List<string> for that phase
+                                    // Array[0] = Phase 0 endpoints, Array[1] = Phase 1, etc.
+                                    if (solvingListResult is object[] resultArray && resultArray.Length > 0)
+                                    {
+                                        _logger.Debug("GetSolvingList returned Object[] with {Count} phases", resultArray.Length);
+
+                                        for (int phaseIdx = 0; phaseIdx < resultArray.Length; phaseIdx++)
+                                        {
+                                            if (resultArray[phaseIdx] is System.Collections.IList phaseList)
+                                            {
+                                                var objectNames = phaseList.Cast<object>()
+                                                    .Select(x => x?.ToString() ?? "null")
+                                                    .ToList();
+
+                                                _logger.Debug("  Phase {Phase}: {Count} objects: {Objects}",
+                                                    phaseIdx,
+                                                    phaseList.Count,
+                                                    string.Join(", ", objectNames));
+
+                                                // Check if these names exist in SimulationObjects dictionary
+                                                if (phaseIdx == 0 && phaseList.Count > 0)
+                                                {
+                                                    var simObjsProp = flowsheet.GetType().GetProperty("SimulationObjects");
+                                                    if (simObjsProp != null)
+                                                    {
+                                                        var simObjs = simObjsProp.GetValue(flowsheet) as System.Collections.IDictionary;
+                                                        if (simObjs != null)
+                                                        {
+                                                            _logger.Debug("SimulationObjects dictionary has {Count} entries", simObjs.Count);
+                                                            foreach (var name in objectNames)
+                                                            {
+                                                                bool exists = simObjs.Contains(name);
+                                                                _logger.Debug("  Name '{Name}' exists in SimulationObjects: {Exists}", name, exists);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                _logger.Debug("  Phase {Phase}: type {Type}",
+                                                    phaseIdx,
+                                                    resultArray[phaseIdx]?.GetType().Name ?? "null");
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        _logger.Debug("GetSolvingList returned: {Type}", solvingListResult?.GetType().Name ?? "null");
+                                    }
+                                }
+                                else
+                                {
+                                    _logger.Warning("GetSolvingList method not found on FlowsheetSolver");
+                                }
+                            }
+                            else
+                            {
+                                _logger.Warning("FlowsheetSolver type not found in assembly");
+                            }
+                        }
+                        else
+                        {
+                            _logger.Warning("DWSIM.FlowsheetSolver assembly not loaded");
+                        }
+                    }
+                    catch (Exception diagEx2)
+                    {
+                        _logger.Warning(diagEx2, "Failed to call GetSolvingList for diagnostics");
+                    }
+
+                    _logger.Debug("Calling flowsheet.RequestCalculationAndWait()");
+                    var result = requestAndWait.Invoke(flowsheet, null);
+                    _logger.Debug("RequestCalculationAndWait returned: {ResultType}", result?.GetType().Name ?? "null");
+
+                    if (result is System.Collections.IEnumerable enumerable)
+                    {
+                        int exceptionCount = 0;
+                        int itemCount = 0;
+                        foreach (var item in enumerable)
+                        {
+                            itemCount++;
+                            if (item is Exception ex)
+                            {
+                                exceptionCount++;
+                                _logger.Error(ex, "DWSIM solver returned exception {Count}: {Message}", exceptionCount, ex.Message);
+                                return false;
+                            }
+                            else
+                            {
+                                _logger.Debug("RequestCalculationAndWait result item {Index}: {ItemType}", itemCount, item?.GetType().Name ?? "null");
+                            }
+                        }
+                        _logger.Debug("RequestCalculationAndWait returned {Count} items, {ExceptionCount} exceptions", itemCount, exceptionCount);
+                    }
+
+                    _logger.Information("DWSIM solver completed (RequestCalculationAndWait)");
                     return true;
                 }
 
                 var solveMethod = flowsheetType.GetMethod("Solve");
                 if (solveMethod != null)
                 {
+                    _logger.Debug("Calling flowsheet.Solve()");
                     solveMethod.Invoke(flowsheet, null);
-                    _logger.Information("DWSIM solver completed");
+                    _logger.Information("DWSIM solver completed (Solve)");
                     return true;
                 }
 
@@ -360,6 +600,13 @@ namespace DwsimWorker.Adapters
                                                     {
                                                         calculateMethod.Invoke(unit, new object[] { null });
                                                         _logger.Information("Direct Calculate() on unit {UnitId} succeeded", unitId);
+
+                                                        // Check if unit is now calculated
+                                                        if (calculatedProp != null)
+                                                        {
+                                                            var nowCalculated = calculatedProp.GetValue(unit);
+                                                            _logger.Debug("Unit {UnitId} Calculated property after direct call: {IsCalculated}", unitId, nowCalculated);
+                                                        }
                                                     }
                                                 }
                                                 catch (System.Reflection.TargetInvocationException directCalcEx)
