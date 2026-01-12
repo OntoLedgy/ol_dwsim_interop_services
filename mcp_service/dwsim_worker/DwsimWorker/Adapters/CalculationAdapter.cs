@@ -271,7 +271,7 @@ namespace DwsimWorker.Adapters
                         }
                         else
                         {
-                            // Try to get error messages from flowsheet
+                            // Try to get error messages from flowsheet and unit operations
                             var errorMessage = "Flowsheet not solved (Solved=false)";
                             try
                             {
@@ -282,6 +282,36 @@ namespace DwsimWorker.Adapters
                                     if (!string.IsNullOrWhiteSpace(error))
                                     {
                                         errorMessage += $": {error}";
+                                    }
+                                }
+
+                                // Check unit operations for errors
+                                foreach (var unitId in _context.GetUnitIds())
+                                {
+                                    var unit = _context.GetUnit(unitId);
+                                    if (unit != null)
+                                    {
+                                        try
+                                        {
+                                            var unitErrorProp = unit.GetType().GetProperty("ErrorMessage");
+                                            if (unitErrorProp != null)
+                                            {
+                                                var unitError = unitErrorProp.GetValue(unit)?.ToString();
+                                                if (!string.IsNullOrWhiteSpace(unitError))
+                                                {
+                                                    errorMessage += $"; Unit {unitId}: {unitError}";
+                                                }
+                                            }
+
+                                            // Check if unit is calculated
+                                            var calculatedProp = unit.GetType().GetProperty("Calculated");
+                                            if (calculatedProp != null)
+                                            {
+                                                var calculated = calculatedProp.GetValue(unit);
+                                                _logger.Debug("Unit {UnitId} Calculated property: {Calculated}", unitId, calculated);
+                                            }
+                                        }
+                                        catch { }
                                     }
                                 }
                             }
