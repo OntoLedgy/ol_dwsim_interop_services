@@ -190,8 +190,12 @@ namespace DwsimWorker.Models
             if (viscosityPaS.HasValue && viscosityPaS.Value < 0)
                 throw new ArgumentException("Viscosity cannot be negative.", nameof(viscosityPaS));
 
-            if (molecularWeightKgPerKmol.HasValue && molecularWeightKgPerKmol.Value <= 0)
-                throw new ArgumentException("Molecular weight must be positive.", nameof(molecularWeightKgPerKmol));
+            // Allow zero molecular weight only when flow is also zero (empty stream/phase)
+            if (molecularWeightKgPerKmol.HasValue && molecularWeightKgPerKmol.Value < 0)
+                throw new ArgumentException("Molecular weight cannot be negative.", nameof(molecularWeightKgPerKmol));
+
+            if (molecularWeightKgPerKmol.HasValue && molecularWeightKgPerKmol.Value == 0 && molarFlowMolPerSec > 0)
+                throw new ArgumentException("Molecular weight cannot be zero when flow is non-zero.", nameof(molecularWeightKgPerKmol));
 
             if (volumetricFlowM3PerSec.HasValue && volumetricFlowM3PerSec.Value < 0)
                 throw new ArgumentException("Volumetric flow cannot be negative.", nameof(volumetricFlowM3PerSec));

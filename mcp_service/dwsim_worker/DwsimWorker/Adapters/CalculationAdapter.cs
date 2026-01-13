@@ -491,6 +491,7 @@ namespace DwsimWorker.Adapters
                             var calculatorBusy = globalSettingsType.GetProperty("CalculatorBusy");
                             var solverBreakOnException = globalSettingsType.GetProperty("SolverBreakOnException");
                             var solverMode = globalSettingsType.GetProperty("SolverMode");
+                            var automationMode = globalSettingsType.GetProperty("AutomationMode");
 
                             if (calculatorActivated != null)
                             {
@@ -513,6 +514,15 @@ namespace DwsimWorker.Adapters
                             {
                                 solverMode.SetValue(null, 1);
                                 _logger.Debug("Set GlobalSettings.SolverMode = 1");
+                            }
+                            // CRITICAL: Set AutomationMode = true for headless operation
+                            // This signals to DWSIM that we're running in batch/automation mode without UI
+                            // While DWSIM 9.0.5.0 doesn't use this to skip UpdateInterface, it's the proper pattern
+                            // and may help with future DWSIM versions or other UI-related code paths
+                            if (automationMode != null)
+                            {
+                                automationMode.SetValue(null, true);
+                                _logger.Information("Set GlobalSettings.AutomationMode = true (headless mode)");
                             }
                         }
                         else
