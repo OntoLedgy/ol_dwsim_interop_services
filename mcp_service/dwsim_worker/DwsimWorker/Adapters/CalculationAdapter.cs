@@ -98,73 +98,24 @@ namespace DwsimWorker.Adapters
                 sw.Stop();
                 var endTime = DateTime.UtcNow;
 
-                // Step 2a: Fallback - If flowsheet solver didn't calculate units, do it manually
-                // This should NOT be needed now that GlobalSettings are properly set
-                // but we keep it as a safety net
-                bool anyUnitNotCalculated = false;
+                // REMOVED: Fallback Calculate() workaround
+                // We must solve the root cause: why RequestCalculationAndWait() doesn't properly
+                // calculate unit operations. The fallback was masking the real problem.
+
+                // Step 2a: Verify all units were calculated
                 foreach (var unitId in _context.GetUnitIds())
                 {
-                    try
+                    var unit = _context.GetUnit(unitId);
+                    if (unit != null)
                     {
-                        var unit = _context.GetUnit(unitId);
-                        if (unit != null)
-                        {
-                            var calculatedProp = unit.GetType().GetProperty("Calculated");
-                            var isCalculated = calculatedProp?.GetValue(unit) as bool?;
-
-                            if (isCalculated == false)
-                            {
-                                anyUnitNotCalculated = true;
-                                _logger.Warning("Unit {UnitId} not calculated by flowsheet solver - this indicates a solver initialization problem", unitId);
-                                _logger.Debug("Calling Calculate() directly as fallback");
-                                var calculateMethod = unit.GetType().GetMethod("Calculate");
-                                if (calculateMethod != null)
-                                {
-                                    calculateMethod.Invoke(unit, new object[] { null });
-                                    _logger.Information("Unit {UnitId} calculated successfully using fallback", unitId);
-
-                                    // Set Calculated property manually (Calculate() doesn't set it)
-                                    if (calculatedProp != null && calculatedProp.CanWrite)
-                                    {
-                                        calculatedProp.SetValue(unit, true);
-                                        _logger.Debug("Set Unit {UnitId} Calculated = true", unitId);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception unitEx)
-                    {
-                        _logger.Warning(unitEx, "Failed to calculate unit {UnitId}: {Message}", unitId, unitEx.InnerException?.Message ?? unitEx.Message);
-                    }
-                }
-
-                if (anyUnitNotCalculated)
-                {
-                    _logger.Warning("FALLBACK USED: Some units were not calculated by the solver. This suggests GlobalSettings initialization may have failed.");
-
-                    // Check if fallback successfully calculated all units
-                    bool allUnitsNowCalculated = true;
-                    foreach (var unitId in _context.GetUnitIds())
-                    {
-                        var unit = _context.GetUnit(unitId);
-                        var calculatedProp = unit?.GetType().GetProperty("Calculated");
+                        var calculatedProp = unit.GetType().GetProperty("Calculated");
                         var isCalculated = calculatedProp?.GetValue(unit) as bool?;
+
                         if (isCalculated == false)
                         {
-                            allUnitsNowCalculated = false;
-                            break;
+                            _logger.Error("Unit {UnitId} was NOT calculated by RequestCalculationAndWait(). This indicates the solver is not running properly.", unitId);
+                            calculationSuccess = false;
                         }
-                    }
-
-                    if (allUnitsNowCalculated)
-                    {
-                        _logger.Information("Fallback succeeded - all units calculated successfully");
-                        calculationSuccess = true; // Mark as success since fallback completed all calculations
-                    }
-                    else
-                    {
-                        _logger.Error("Fallback failed - some units still not calculated");
                     }
                 }
 

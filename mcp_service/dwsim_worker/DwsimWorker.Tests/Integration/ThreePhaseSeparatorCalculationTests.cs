@@ -108,12 +108,13 @@ namespace DwsimWorker.Tests.Integration
 
             // Create three-phase separator with proper configuration
             // Based on DWSIM sample 07fc8fdf-446f-4eed-af30-1c6b3dca501c.xml
+            // ITERATION 2: Add sizing properties
             var separatorConfig = new UnitOpConfig(new System.Collections.Generic.Dictionary<string, object>
             {
-                { "PressureDrop", 10000.0 },
                 { "CalculationMode", "Legacy" },  // Required for Vessel unit operation
-                { "Volume", 1.0 },  // m³ - from DWSIM sample dynamic properties
-                { "Height", 2.0 }   // m - from DWSIM sample dynamic properties
+                { "PressureCalculation", "Average" },  // How vessel calculates pressure
+                { "DimensionRatio", 3.0 },  // Length/Diameter ratio
+                { "ResidenceTime", 5.0 }  // Minutes
             });
 
             var separatorResult = unitOpAdapter.AddThreePhaseSeparator("SEP-101", separatorConfig);

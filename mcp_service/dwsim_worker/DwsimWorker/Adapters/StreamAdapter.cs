@@ -1338,12 +1338,14 @@ namespace DwsimWorker.Adapters
         {
             if (stream == null)
             {
+                _logger.Warning("TrySetStreamPropertyPackage: stream is null");
                 return;
             }
 
             var propertyPackage = _context.GetPropertyPackage();
             if (propertyPackage == null)
             {
+                _logger.Warning("TrySetStreamPropertyPackage: property package not set in context - stream will not have property package for flash calculations");
                 return;
             }
 
@@ -1356,15 +1358,20 @@ namespace DwsimWorker.Adapters
 
             if (property == null)
             {
+                _logger.Warning("TrySetStreamPropertyPackage: PropertyPackage property not found on stream type {StreamType}", stream.GetType().Name);
                 return;
             }
 
             if (!property.PropertyType.IsInstanceOfType(propertyPackage))
             {
+                _logger.Warning("TrySetStreamPropertyPackage: Property package type mismatch - expected {ExpectedType}, got {ActualType}",
+                    property.PropertyType.Name, propertyPackage.GetType().Name);
                 return;
             }
 
             property.SetValue(stream, propertyPackage);
+            _logger.Debug("TrySetStreamPropertyPackage: Successfully set property package {PackageType} on stream {StreamType}",
+                propertyPackage.GetType().Name, stream.GetType().Name);
         }
 
         private void TryAddCompoundsToStream(object flowsheet, object stream)

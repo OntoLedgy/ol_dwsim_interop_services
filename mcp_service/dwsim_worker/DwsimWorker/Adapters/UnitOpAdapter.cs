@@ -530,7 +530,15 @@ namespace DwsimWorker.Adapters
                 }
             }
 
-            _logger.Debug("Property {ParameterName} not found or not writable on unit operation", parameterName);
+            // Log available writable properties for diagnostics
+            var availableProps = unit.GetType().GetProperties(
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+                .Where(p => p.CanWrite && !p.GetIndexParameters().Any())
+                .Select(p => $"{p.Name}:{p.PropertyType.Name}")
+                .ToList();
+
+            _logger.Debug("Property {ParameterName} not found or not writable on unit operation. Available writable properties: {Properties}",
+                parameterName, string.Join(", ", availableProps.Take(20)));  // Limit to first 20 to avoid log spam
         }
 
         private object TryAddSeparatorViaFlowsheet(object flowsheet, string name, string unitId)

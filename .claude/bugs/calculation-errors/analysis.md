@@ -374,3 +374,235 @@ Instead of the previous failure:
 - Maintains immutability of result objects (no changes to Models)
 - Preserves separation of concerns (adapters handle DWSIM interaction, context manages state)
 - Uses same reflection approach as other DWSIM interop code
+
+---
+
+## Investigation Update (2026-01-13) - Property Package Initialization Issue
+
+### New Finding: Flash Calculation Failing Before UpdateInterface
+
+After removing the fallback Calculate() workaround code as requested, the test now reveals a different critical issue that occurs **BEFORE** we reach the UpdateInterface problem:
+
+**Error:**
+```
+[17:02:16 ERR] Flash calculation failed for stream 'S1': Index was outside the bounds of the array.
+System.IndexOutOfRangeException: Index was outside the bounds of the array.
+   at DWSIM.Thermodynamics.PropertyPackages.Auxiliary.FlashAlgorithms.NestedLoops.Flash_PT(Double[] Vz, Double P, Double T, PropertyPackage PP, Boolean ReuseKI, Double[] PrevKi) in D:\S\C#\dwsim\DWSIM.Thermodynamics\FlashAlgorithms\NestedLoops.vb:line 181
+```
+
+**Location:** ThreePhaseSeparatorCalculationTests.cs:107 (FlashStream call)
+
+### Root Cause: Property Package Not Initialized with Compounds
+
+The property package (Peng-Robinson) is being set on the flowsheet, but **it is not being initialized with the compound list**. This causes:
+
+1. The property package's internal compound arrays (Vz, Vx, Vy, etc.) are null or empty
+2. When FlashStream() tries to calculate phase equilibrium, it accesses these uninitialized arrays
+3. IndexOutOfRangeException is thrown because the array size doesn't match the compound count
+
+**Evidence:**
+- Compounds are added successfully (Methane, Water, n-Decane) - logs show 3 compounds added
+- Property package is set successfully (Peng-Robinson) - log confirms package set
+- Stream is created with composition correctly - logs show mole fractions set (0.333, 0.333, 0.334)
+- BUT when Calculate() is called on the stream, flash algorithm fails with array bounds error
+
+### Investigation of PropertyPackageAdapter
+
+**Current Implementation (FlowsheetContext.SetPropertyPackage - lines 426-439):**
+```csharp
+public void SetPropertyPackage(object propertyPackage, string packageName)
+{
+    if (propertyPackage == null)
+        throw new ArgumentNullException(nameof(propertyPackage));
+
+    if (string.IsNullOrWhiteSpace(packageName))
+        throw new ArgumentNullException(nameof(packageName), "Property package name cannot be null or empty.");
+
+    EnsureInitialized();
+
+    _propertyPackage = propertyPackage;
+    _propertyPackageName = packageName;
+    InvalidateCalculationCache("property package set");
+}
+```
+
+**Problem:** This method only stores the property package instance but does NOT:
+- Initialize the package's compound arrays
+- Call any initialization method on the property package
+- Link the property package to the flowsheet's compound list
+
+### Missing Initialization Step
+
+In DWSIM, property packages need to be initialized with the flowsheet's compound list before they can perform flash calculations. The property package maintains internal arrays like:
+- `Vz` - Overall composition array
+- `Vx` - Liquid phase composition array
+- `Vy` - Vapor phase composition array
+- Component properties arrays (critical temperatures, pressures, etc.)
+
+These arrays must be sized and populated based on the compounds in the flowsheet.
+
+### Actual Solution (Found via DWSIM Source Investigation)
+
+**From DWSIM Source Analysis:**
+
+Property packages in DWSIM access compounds through the `CurrentMaterialStream` property, NOT through explicit initialization. The data flow is:
+
+1. **Flowsheet.CreateAndAddPropertyPackage()** creates the property package and calls **AddPropertyPackage()**
+2. **AddPropertyPackage()** sets `propertyPackage.Flowsheet = flowsheet` (FlowsheetBase.vb:156)
+3. **MaterialStream.PropertyPackage** must be set to the property package instance
+4. When **Calculate()** is called on the stream, DWSIM internally sets `propertyPackage.CurrentMaterialStream = stream`
+5. Property package accesses compounds via `CurrentMaterialStream.Phases(0).Compounds` (PropertyPackage.vb:9660-9667)
+
+**The Key Issue:**
+
+The MaterialStream must have its **PropertyPackage property set** to the flowsheet's property package BEFORE calling Calculate(). This is how the property package gains access to the compound list during flash calculations.
+
+**From DWSIM Sample XML (07fc8fdf-446f-4eed-af30-1c6b3dca501c.xml):**
+- Line 351: Each MaterialStream has `<PropertyPackage>PP-16f5d140-81e0-44aa-9892-31d4dd3c046b</PropertyPackage>`
+- Line 4578-4580: PropertyPackage definition with type `DWSIM.Thermodynamics.PropertyPackages.PengRobinsonPropertyPackage`
+- Lines 355-431: Each Phase contains Compounds with proper mole fractions
+
+**What We're Currently Doing:**
+1. ✅ CreateAndAddPropertyPackage("Peng-Robinson") - creates and adds property package correctly
+2. ✅ MaterialStream created with compounds from flowsheet
+3. ⚠️ **MISSING**: MaterialStream.PropertyPackage property set?
+4. ❌ Calculate() called → property package has no CurrentMaterialStream → no compound access → IndexOutOfRangeException
+
+**Required Fix:**
+
+Verify that **StreamAdapter.TrySetStreamPropertyPackage()** is being called and successfully setting the PropertyPackage property on the MaterialStream before FlashStream() is called.
+
+### Resolution Status
+
+1. ✅ Document this finding in analysis.md
+2. ✅ Search DWSIM source code for property package initialization patterns
+3. ✅ Check if PropertyPackage has methods like Initialize(), SetCompounds(), or CompoundProperties setter
+4. ✅ Review DWSIM sample XML file to see how property packages are configured
+5. ✅ Added diagnostics to TrySetStreamPropertyPackage
+6. ✅ **Property package issue RESOLVED** - flash calculations now work correctly!
+
+**Test Results After Fix:**
+- ✅ Compounds added successfully (Methane, Water, n-Decane)
+- ✅ Property package set successfully (Peng-Robinson)
+- ✅ Streams created successfully (no flash calculation errors!)
+- ✅ Separator created successfully
+- ✅ GetSolvingList() returns 3 phases with 5 objects
+- ✅ Test now reaches RequestCalculationAndWait() phase
+- ⏳ **New Issue**: UpdateInterface NullReferenceException interrupts calculation
+
+### Relationship to UpdateInterface Issue
+
+The UpdateInterface NullReferenceException is a **SEPARATE** issue that occurs during RequestCalculationAndWait():
+- It happens AFTER flash calculations complete successfully
+- It interrupts the solver's wait loop when it tries to update UI elements in headless mode
+- It prevents the calculation from completing even though the solver is working
+
+**Current blocker:** We cannot reach the UpdateInterface issue until we fix property package initialization first.
+
+### Status Summary
+
+- ✅ AddGraphicObjectToSurface hypothesis tested and DISPROVEN (FlowsheetSurface has no GraphicObjects property)
+- ✅ GetSolvingList() now returns unit operations correctly (calculations CAN run)
+- ✅ Fallback Calculate() workaround code removed per user request
+- ⏳ **CURRENT ISSUE:** Property package not initialized with compounds, causing flash calculation to fail
+- ⏳ **BLOCKED:** UpdateInterface investigation blocked until flash calculations work
+
+### Code Locations for Property Package Fix
+
+- **File**: `mcp_service/dwsim_worker/DwsimWorker/Adapters/PropertyPackageAdapter.cs`
+  - **Method**: `SetPropertyPackage()`
+  - **Lines**: 107-151
+  - **Change Needed**: Add property package initialization after line 151
+
+- **File**: `mcp_service/dwsim_worker/DwsimWorker/Engine/FlowsheetContext.cs`
+  - **Method**: `SetPropertyPackage()`
+  - **Lines**: 426-439
+  - **Change Needed**: Add compound array initialization
+
+---
+
+## UpdateInterface Investigation (Active)
+
+### Current Status - Property Package Issue RESOLVED
+
+✅ **Major Progress**: Flash calculations now work! The test reaches RequestCalculationAndWait() phase successfully.
+
+### UpdateInterface Exception Details
+
+**Test Results (2026-01-13 17:42:10):**
+
+```
+[17:42:10 DBG] Calling flowsheet.RequestCalculationAndWait()
+[17:42:10 WRN] UpdateInterface NullRef (expected in headless mode) - waiting for background calculation to complete
+[17:42:12 DBG] Checking if units were calculated by background thread...
+[17:42:12 DBG] Unit U1 not calculated
+[17:42:12 WRN] Units not calculated after waiting - UpdateInterface exception interrupted solver before completion
+[17:42:12 ERR] Unit U1 was NOT calculated by RequestCalculationAndWait(). This indicates the solver is not running properly.
+```
+
+**Full Stack Trace:**
+```
+System.NullReferenceException: Object reference not set to an instance of an object.
+   at DWSIM.UI.Desktop.Shared.Flowsheet.UpdateInterface() in D:\S\C#\dwsim\DWSIM.UI.Desktop.Shared\Flowsheet.cs:line 67
+   at DWSIM.FlowsheetSolver.FlowsheetSolver.ProcessQueueInternalAsync(Object fobj, CancellationToken ct) in D:\S\C#\dwsim\DWSIM.FlowsheetSolver\FlowsheetSolver.vb:line 725
+   at DWSIM.FlowsheetSolver.FlowsheetSolver.ProcessCalculationQueue(Object fobj, CancellationToken ct, Boolean Adjusting) in D:\S\C#\dwsim\DWSIM.FlowsheetSolver\FlowsheetSolver.vb:line 489
+   at DWSIM.FlowsheetSolver.FlowsheetSolver._Closure$__47-1._Lambda$__1() in D:\S\C#\dwsim\DWSIM.FlowsheetSolver\FlowsheetSolver.vb:line 1436
+   at System.Threading.Tasks.Task.Execute()
+```
+
+**Key Findings:**
+
+1. **Exception Origin**: UpdateInterface() is called from FlowsheetSolver.ProcessQueueInternalAsync() at line 725
+2. **Exception Location**: DWSIM.UI.Desktop.Shared.Flowsheet.cs:line 67
+3. **Interruption Point**: The exception occurs DURING the solver's async processing, interrupting it before completion
+4. **Direct Calculate Works**: Direct call to unit.Calculate() succeeds, but unit still shows Calculated=False afterward
+5. **2-Second Wait Insufficient**: Even after waiting, units are not calculated
+
+### Root Cause Analysis
+
+**The Problem:**
+- The solver runs calculations in an async task (ProcessCalculationQueue → ProcessQueueInternalAsync)
+- UpdateInterface() is called during the solver loop to update UI progress
+- In headless mode, UpdateInterface() throws NullReferenceException (no UI elements initialized)
+- This exception terminates the async task BEFORE calculations complete
+- The solver never finishes calculating unit operations
+
+**Why Direct Calculate() Shows Calculated=False:**
+- Direct Calculate() on a unit doesn't set the Calculated flag
+- Only the FlowsheetSolver's proper calculation flow sets Calculated=true
+- The UpdateInterface exception prevents the solver from completing its work
+
+### Potential Solutions
+
+**Solution 1: Override UpdateInterface Method**
+- Use reflection/Harmony to replace UpdateInterface with a no-op method
+- **Risk**: Complex, may not work with private methods, fragile across DWSIM versions
+
+**Solution 2: Initialize Minimal Eto.Forms UI**
+- Create bare-minimum Eto.Forms application context
+- Initialize only the components UpdateInterface needs
+- **Risk**: May require significant Eto.Forms setup, memory overhead
+
+**Solution 3: Use Alternative Calculation API**
+- Use Solve() or lower-level Calculate() APIs instead of RequestCalculationAndWait()
+- Call Calculate() on each unit in sequence from GetSolvingList()
+- **Risk**: May miss some DWSIM initialization, need to manage solve order manually
+
+**Solution 4: Catch and Continue in Solver Context**
+- Modify how we call RequestCalculationAndWait() to handle the exception better
+- Use Task.ContinueWith() or similar to catch exception but let calculation continue
+- **Risk**: May not work if exception terminates the Task
+
+**Solution 5: Investigate FlowsheetSolver.vb:725**
+- Check if there's a flag or setting to disable UpdateInterface calls
+- Look for a "headless mode" or "batch mode" setting in DWSIM
+- **Risk**: May not exist in DWSIM 9.0.5.0
+
+### Recommended Next Steps
+
+1. ✅ Property package issue resolved
+2. ✅ Test reaches RequestCalculationAndWait() successfully
+3. ✅ Full UpdateInterface exception stack trace captured
+4. ⏳ **NEXT**: Investigate DWSIM.UI.Desktop.Shared.Flowsheet.cs:67 to see what's null
+5. ⏳ Investigate FlowsheetSolver.vb:725 to see if UpdateInterface call can be avoided
+6. ⏳ Test Solution 3 (sequential Calculate() calls) as simplest fallback
