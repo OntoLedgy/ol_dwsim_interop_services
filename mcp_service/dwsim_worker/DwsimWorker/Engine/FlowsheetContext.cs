@@ -1411,6 +1411,101 @@ namespace DwsimWorker.Engine
         }
 
         /// <summary>
+        /// Adds a GraphicObject to the FlowsheetSurface.GraphicObjects collection.
+        /// This is required for GetSolvingList() to identify objects for calculation.
+        /// </summary>
+        /// <param name="simulationObject">The simulation object (stream or unit operation) containing the GraphicObject.</param>
+        /// <returns>True if the GraphicObject was successfully added; otherwise, false.</returns>
+        /// <remarks>
+        /// CRITICAL: DWSIM's FlowsheetSolver.GetSolvingList() iterates through FlowsheetSurface.GraphicObjects
+        /// to build the solving sequence. Without this step, calculations will not run because the solver
+        /// has no objects to calculate.
+        ///
+        /// This method must be called after flowsheet.AddObject() for each stream and unit operation.
+        /// </remarks>
+        public bool AddGraphicObjectToSurface(object simulationObject)
+        {
+            if (simulationObject == null)
+            {
+                _logger.Warning("Cannot add null simulation object to FlowsheetSurface");
+                return false;
+            }
+
+            EnsureInitialized();
+
+            try
+            {
+                // Step 1: Extract GraphicObject from simulation object
+                var graphicObjectProp = simulationObject.GetType().GetProperty("GraphicObject");
+                if (graphicObjectProp == null)
+                {
+                    _logger.Warning("Simulation object does not have GraphicObject property");
+                    return false;
+                }
+
+                var graphicObject = graphicObjectProp.GetValue(simulationObject);
+                if (graphicObject == null)
+                {
+                    _logger.Warning("Simulation object GraphicObject property is null");
+                    return false;
+                }
+
+                // Step 2: Get FlowsheetSurface
+                var getSurfaceMethod = _flowsheet.GetType().GetMethod("GetSurface");
+                if (getSurfaceMethod == null)
+                {
+                    _logger.Error("Flowsheet does not expose GetSurface method");
+                    return false;
+                }
+
+                var surface = getSurfaceMethod.Invoke(_flowsheet, null);
+                if (surface == null)
+                {
+                    _logger.Error("GetSurface() returned null");
+                    return false;
+                }
+
+                // Step 3: Get GraphicObjects collection
+                var graphicObjectsProp = surface.GetType().GetProperty("GraphicObjects");
+                if (graphicObjectsProp == null)
+                {
+                    _logger.Error("FlowsheetSurface does not expose GraphicObjects property");
+                    return false;
+                }
+
+                var graphicObjects = graphicObjectsProp.GetValue(surface);
+                if (!(graphicObjects is System.Collections.IList list))
+                {
+                    _logger.Error("GraphicObjects is not an IList");
+                    return false;
+                }
+
+                // Step 4: Check if already in list (avoid duplicates)
+                if (list.Contains(graphicObject))
+                {
+                    _logger.Debug("GraphicObject already in FlowsheetSurface.GraphicObjects list");
+                    return true; // Already added, consider success
+                }
+
+                // Step 5: Add to GraphicObjects list
+                list.Add(graphicObject);
+
+                var objectName = graphicObject.GetType().GetProperty("Name")?.GetValue(graphicObject)?.ToString() ?? "unknown";
+                var objectType = graphicObject.GetType().GetProperty("ObjectType")?.GetValue(graphicObject)?.ToString() ?? "unknown";
+
+                _logger.Information("Added GraphicObject to FlowsheetSurface.GraphicObjects: Name={Name}, Type={Type}, TotalCount={Count}",
+                    objectName, objectType, list.Count);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to add GraphicObject to FlowsheetSurface: {Message}", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Disposes the flowsheet context and releases all resources.
         /// </summary>
         public void Dispose()

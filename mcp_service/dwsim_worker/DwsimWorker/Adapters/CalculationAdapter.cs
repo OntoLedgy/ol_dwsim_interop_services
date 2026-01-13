@@ -372,6 +372,49 @@ namespace DwsimWorker.Adapters
                         _logger.Debug(diagEx, "Could not inspect SimulationObjects");
                     }
 
+                    // DIAGNOSTICS: Check FlowsheetSurface.GraphicObjects count
+                    // This is CRITICAL - GetSolvingList() iterates this collection, not SimulationObjects!
+                    try
+                    {
+                        var getSurfaceMethod = flowsheetType.GetMethod("GetSurface");
+                        if (getSurfaceMethod != null)
+                        {
+                            var surface = getSurfaceMethod.Invoke(flowsheet, null);
+                            if (surface != null)
+                            {
+                                var graphicObjectsProp = surface.GetType().GetProperty("GraphicObjects");
+                                if (graphicObjectsProp != null)
+                                {
+                                    var graphicObjects = graphicObjectsProp.GetValue(surface);
+                                    if (graphicObjects is System.Collections.IList graphicList)
+                                    {
+                                        _logger.Information("FlowsheetSurface.GraphicObjects has {Count} objects", graphicList.Count);
+
+                                        if (graphicList.Count == 0)
+                                        {
+                                            _logger.Error("CRITICAL: FlowsheetSurface.GraphicObjects is EMPTY! GetSolvingList() will return 0 phases and calculations will not run.");
+                                        }
+                                        else
+                                        {
+                                            // Log each object in GraphicObjects for verification
+                                            for (int i = 0; i < graphicList.Count; i++)
+                                            {
+                                                var gobj = graphicList[i];
+                                                var name = gobj?.GetType().GetProperty("Name")?.GetValue(gobj)?.ToString() ?? "unknown";
+                                                var objType = gobj?.GetType().GetProperty("ObjectType")?.GetValue(gobj)?.ToString() ?? "unknown";
+                                                _logger.Debug("  GraphicObjects[{Index}]: Name={Name}, Type={Type}", i, name, objType);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception diagEx)
+                    {
+                        _logger.Warning(diagEx, "Could not inspect FlowsheetSurface.GraphicObjects");
+                    }
+
                     // DIAGNOSTICS: Try calling GetSolvingList() directly to see what it returns
                     // GetSolvingList is a static method on FlowsheetSolver class, not an instance method
                     try

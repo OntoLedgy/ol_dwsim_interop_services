@@ -111,6 +111,13 @@ namespace DwsimWorker.Adapters
                 var unitOperation = CreateThreePhaseSeparator(flowsheet, name, unitId);
                 _context.AddUnit(unitOperation, unitId);
 
+                // Step 2a: Add GraphicObject to FlowsheetSurface.GraphicObjects
+                // CRITICAL: Required for GetSolvingList() to identify unit operations for calculation
+                if (!_context.AddGraphicObjectToSurface(unitOperation))
+                {
+                    _logger.Warning("Failed to add unit operation GraphicObject to FlowsheetSurface - calculations may not work");
+                }
+
                 // Step 3: Initialize parameters from config
                 var parameters = new Dictionary<string, object>();
                 if (config != null && config.Parameters.Count > 0)
