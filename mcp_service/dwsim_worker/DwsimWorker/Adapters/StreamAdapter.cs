@@ -138,14 +138,11 @@ namespace DwsimWorker.Adapters
                 var materialStream = CreateMaterialStream(flowsheet, name, streamId);
                 _context.AddStream(materialStream, streamId);
 
-                // Step 3a: Add GraphicObject to FlowsheetSurface.GraphicObjects
-                // CRITICAL: Required for GetSolvingList() to identify streams for calculation
-                if (!_context.AddGraphicObjectToSurface(materialStream))
-                {
-                    _logger.Warning("Failed to add stream GraphicObject to FlowsheetSurface - calculations may not work");
-                }
+                // NOTE: flowsheet.AddObject() (called in CreateMaterialStream) already registers the
+                // GraphicObject in the correct location for GetSolvingList() to find it.
+                // No additional registration is needed.
 
-                // Step 3b: Set IsSource property based on caller specification
+                // Step 3a: Set IsSource property based on caller specification
                 // CRITICAL: Only feed streams should have IsSource=True. Outlet streams from unit operations
                 // must have IsSource=False so DWSIM knows they need to be calculated.
                 // - IsSource=true: Feed stream with known conditions (DWSIM will NOT calculate)

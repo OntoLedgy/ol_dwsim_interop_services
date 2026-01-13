@@ -17,7 +17,8 @@ Key points:
 
 **CRITICAL: Do NOT run `dotnet test` directly - it will cause Serilog and dependency errors!**
 
-Always build first using build.bat, then run tests via the build system:
+### Build First
+Always build first using build.bat to ensure proper compilation:
 ```bash
 cd "D:\S\C#\dwsim_interop_services\mcp_service\dwsim_worker" && ./build.bat 2>&1
 ```
@@ -26,9 +27,26 @@ The build.bat handles:
 - Proper dependency resolution
 - NuGet package restoration
 - Compilation with correct references
-- Test execution
 
-If you need to run specific tests, still use build.bat first to ensure proper compilation.
+**NOTE**: build.bat does NOT run tests automatically - you must run them separately using vstest.console.exe.
+
+### Running All Tests
+After building, run all tests using Visual Studio Test Console (from VS Professional 18):
+```bash
+"D:\Apps\Microsoft Visual Studio\18\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe" "D:\S\C#\dwsim_interop_services\mcp_service\dwsim_worker\DwsimWorker.Tests\bin\Debug\DwsimWorker.Tests.dll" --logger:"console;verbosity=detailed"
+```
+
+### Running Specific Tests
+To run a specific test by name:
+```bash
+"D:\Apps\Microsoft Visual Studio\18\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe" "D:\S\C#\dwsim_interop_services\mcp_service\dwsim_worker\DwsimWorker.Tests\bin\Debug\DwsimWorker.Tests.dll" --Tests:GoldenTest_ThreePhaseSeparatorCalculation_Succeeds --logger:"console;verbosity=detailed"
+```
+
+### Test Output Tips
+- Add `| tail -200` to see the last 200 lines of output
+- Logs will show detailed Serilog output from the test execution
+- Test results appear at the end with pass/fail status
+- Use `2>&1` if you need to capture stderr as well
 
 
 # Task Management

@@ -1,0 +1,456 @@
+VSTest version 18.0.1 (x64)
+
+Starting test discovery, please wait...
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.3.1+6b60a9e56a (64-bit .NET Framework 4.8.9323.0)
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.3.1+6b60a9e56a (64-bit .NET Framework 4.8.9323.0)
+[xUnit.net 00:00:01.40]   Discovering: DwsimWorker.Tests
+[xUnit.net 00:00:01.40]   Discovering: DwsimWorker.Tests
+[xUnit.net 00:00:01.63]   Discovered:  DwsimWorker.Tests
+[xUnit.net 00:00:01.63]   Discovered:  DwsimWorker.Tests
+A total of 1 test files matched the specified pattern.
+D:\S\C#\dwsim_interop_services\mcp_service\dwsim_worker\DwsimWorker.Tests\bin\Debug\DwsimWorker.Tests.dll
+[xUnit.net 00:00:01.33]   Starting:    DwsimWorker.Tests
+[16:37:58 INF] FlowsheetContext created: Three-Phase Separator Calculation Test
+[16:37:58 INF] Initializing FlowsheetContext: Three-Phase Separator Calculation Test
+[16:37:58 INF] Loading DWSIM assemblies...
+[16:37:58 INF] Starting DWSIM assembly loading process...
+[16:37:58 INF] Configuration: ValidateAfterLoad=False, LoadTimeout=00:00:30
+[16:37:58 INF] Using configured assembly path: D:\S\C#\dwsim\DWSIM\bin\Debug
+[16:37:58 INF] Assembly resolver registered with paths: D:\S\C#\dwsim\DWSIM\bin\Debug
+[16:37:58 INF] Loading assembly: DWSIM.Interfaces...
+[16:37:58 DBG] Loading assembly from path: D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.Interfaces.dll
+[16:37:58 DBG] Assembly loaded: DWSIM.Interfaces v9.0.5.0 from D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.Interfaces.dll
+[16:37:58 INF] Successfully loaded DWSIM.Interfaces v9.0.5.0
+[16:37:58 INF] Loading assembly: DWSIM.Thermodynamics...
+[16:37:58 DBG] Loading assembly from path: D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.Thermodynamics.dll
+[16:37:58 DBG] Assembly loaded: DWSIM.Thermodynamics v9.0.5.0 from D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.Thermodynamics.dll
+[16:37:58 INF] Successfully loaded DWSIM.Thermodynamics v9.0.5.0
+[16:37:58 INF] Loading assembly: DWSIM.SharedClasses...
+[16:37:58 DBG] Loading assembly from path: D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.SharedClasses.dll
+[16:37:58 DBG] Assembly loaded: DWSIM.SharedClasses v9.0.5.0 from D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.SharedClasses.dll
+[16:37:58 INF] Successfully loaded DWSIM.SharedClasses v9.0.5.0
+[16:37:58 INF] Loading assembly: DWSIM.GlobalSettings...
+[16:37:58 DBG] Loading assembly from path: D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.GlobalSettings.dll
+[16:37:58 DBG] Assembly loaded: DWSIM.GlobalSettings v9.0.5.0 from D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.GlobalSettings.dll
+[16:37:58 INF] Successfully loaded DWSIM.GlobalSettings v9.0.5.0
+[16:37:58 INF] Loading assembly: DWSIM.FlowsheetBase...
+[16:37:58 DBG] Loading assembly from path: D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.FlowsheetBase.dll
+[16:37:58 DBG] Assembly loaded: DWSIM.FlowsheetBase v9.0.5.0 from D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.FlowsheetBase.dll
+[16:37:58 INF] Successfully loaded DWSIM.FlowsheetBase v9.0.5.0
+[16:37:58 INF] Loading assembly: DWSIM.UnitOperations...
+[16:37:58 DBG] Loading assembly from path: D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.UnitOperations.dll
+[16:37:58 DBG] Assembly loaded: DWSIM.UnitOperations v9.0.5.0 from D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.UnitOperations.dll
+[16:37:58 INF] Successfully loaded DWSIM.UnitOperations v9.0.5.0
+[16:37:58 INF] Loading assembly: DWSIM.Drawing.SkiaSharp...
+[16:37:58 DBG] Loading assembly from path: D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.Drawing.SkiaSharp.dll
+[16:37:58 DBG] Assembly loaded: DWSIM.Drawing.SkiaSharp v9.0.5.0 from D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.Drawing.SkiaSharp.dll
+[16:37:58 INF] Successfully loaded DWSIM.Drawing.SkiaSharp v9.0.5.0
+[16:37:58 INF] Loading assembly: DWSIM.UI.Desktop.Shared...
+[16:37:58 DBG] Loading assembly from path: D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.UI.Desktop.Shared.dll
+[16:37:58 DBG] Assembly loaded: DWSIM.UI.Desktop.Shared v9.0.5.0 from D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.UI.Desktop.Shared.dll
+[16:37:58 INF] Successfully loaded DWSIM.UI.Desktop.Shared v9.0.5.0
+[16:37:58 INF] Loading assembly: DWSIM...
+[16:37:58 DBG] Loading assembly from path: D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.exe
+[16:37:58 DBG] Assembly loaded: DWSIM v9.0.5.0 from D:\S\C#\dwsim\DWSIM\bin\Debug\DWSIM.exe
+[16:37:58 INF] Successfully loaded DWSIM v9.0.5.0
+[16:37:58 INF] Loading assembly: CapeOpen...
+[16:37:58 DBG] Loading assembly from path: D:\S\C#\dwsim\DWSIM\bin\Debug\CapeOpen.dll
+[16:37:58 DBG] Assembly loaded: CapeOpen v1.0.0.0 from D:\S\C#\dwsim\DWSIM\bin\Debug\CapeOpen.dll
+[16:37:58 INF] Successfully loaded CapeOpen v1.0.0.0
+[16:37:58 INF] All assemblies loaded successfully. Total count: 10
+[16:37:58 INF] Validation skipped (ValidateAfterLoad=false)
+[16:37:58 INF] DWSIM assemblies loaded successfully: 10 assemblies
+[16:37:58 INF] Creating DWSIM Flowsheet instance...
+[16:37:58 DBG] Total loaded assemblies: 32
+[16:37:58 DBG] DWSIM assemblies found: 11
+[16:37:58 DBG]   - DwsimWorker.Tests, Version=0.1.0.0, Culture=neutral, PublicKeyToken=null
+[16:37:58 DBG]   - DwsimWorker, Version=0.1.0.0, Culture=neutral, PublicKeyToken=null
+[16:37:58 DBG]   - DWSIM.Interfaces, Version=9.0.5.0, Culture=neutral, PublicKeyToken=null
+[16:37:58 DBG]   - DWSIM.Thermodynamics, Version=9.0.5.0, Culture=neutral, PublicKeyToken=null
+[16:37:58 DBG]   - DWSIM.SharedClasses, Version=9.0.5.0, Culture=neutral, PublicKeyToken=null
+[16:37:58 DBG]   - DWSIM.GlobalSettings, Version=9.0.5.0, Culture=neutral, PublicKeyToken=null
+[16:37:58 DBG]   - DWSIM.FlowsheetBase, Version=9.0.5.0, Culture=neutral, PublicKeyToken=null
+[16:37:58 DBG]   - DWSIM.UnitOperations, Version=9.0.5.0, Culture=neutral, PublicKeyToken=null
+[16:37:58 DBG]   - DWSIM.Drawing.SkiaSharp, Version=9.0.5.0, Culture=neutral, PublicKeyToken=null
+[16:37:58 DBG]   - DWSIM.UI.Desktop.Shared, Version=9.0.5.0, Culture=neutral, PublicKeyToken=null
+[16:37:58 DBG]   - DWSIM, Version=9.0.5.0, Culture=neutral, PublicKeyToken=null
+[16:37:58 DBG] Trying type name: DWSIM.UI.Desktop.Shared.Flowsheet
+[16:37:58 DBG] Found type 'DWSIM.UI.Desktop.Shared.Flowsheet' in assembly: DWSIM.UI.Desktop.Shared, Version=9.0.5.0, Culture=neutral, PublicKeyToken=null
+[16:37:58 INF] Successfully located Flowsheet type: DWSIM.UI.Desktop.Shared.Flowsheet
+[16:37:58 DBG] Resolving assembly Eto from D:\S\C#\dwsim\DWSIM\bin\Debug\Eto.dll
+[16:37:58 DBG] Resolving assembly Eto from D:\S\C#\dwsim\DWSIM\bin\Debug\Eto.dll
+[16:37:58 DBG] Initializing minimal Eto.Forms application for headless mode
+[16:37:58 DBG] Found 0 Initialize methods on Eto.Forms.Application
+[16:37:58 DBG] Flowsheet instance created successfully
+[16:37:58 INF] Flowsheet instance created successfully
+[16:37:58 INF] Initializing DWSIM compound database...
+[16:37:58 DBG] Found 9 compound-related methods on flowsheet
+[16:37:58 DBG]   - AddCompound(String compname)
+[16:37:58 DBG]   - get_AvailableCompounds()
+[16:37:58 DBG]   - set_AvailableCompounds(Dictionary`2 AutoPropertyValue)
+[16:37:58 DBG]   - get_FileDatabaseProvider()
+[16:37:58 DBG]   - set_FileDatabaseProvider(IFileDatabaseProvider AutoPropertyValue)
+[16:37:58 DBG]   - GetCompound(String name)
+[16:37:58 DBG]   - AddCompoundsToMaterialStream(IMaterialStream ms)
+[16:37:58 DBG]   - get_SelectedCompounds()
+[16:37:58 DBG]   - set_SelectedCompounds(Dictionary`2 value)
+[16:37:58 DBG] AvailableCompounds type: System.Collections.Generic.Dictionary`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[DWSIM.Interfaces.ICompoundConstantProperties, DWSIM.Interfaces, Version=9.0.5.0, Culture=neutral, PublicKeyToken=null]]
+[16:37:58 DBG] AvailableCompounds count: 0
+[16:37:58 WRN] AvailableCompounds dictionary is empty - need to populate it
+[16:37:58 INF] Loading compounds from DWSIM databases (following DWSIM.Automation pattern)
+[16:37:58 DBG] Loading compounds from ChemSep
+[16:37:58 DBG] ChemSep.Load() completed
+[16:37:58 DBG] ChemSep.Transfer() requires 1 parameters: String CompName (optional)
+[16:37:58 DBG] ChemSep.Transfer() returned ConstantProperties[]
+[16:37:58 INF] Loaded 556 compounds from ChemSep
+[16:37:58 DBG] Loading compounds from CoolProp
+[16:37:58 DBG] CoolProp.Load() completed
+[16:37:58 DBG] CoolProp.Transfer() returned ConstantProperties[]
+[16:37:58 INF] Loaded 90 compounds from CoolProp
+[16:37:58 DBG] Loading compounds from Biodiesel
+[16:37:58 DBG] Biodiesel.Load() completed
+[16:37:58 DBG] Biodiesel.Transfer() requires 1 parameters: String CompName (optional)
+[16:37:58 DBG] Biodiesel.Transfer() returned ConstantProperties[]
+[16:37:58 INF] Loaded 13 compounds from Biodiesel
+[16:37:58 DBG] Loading compounds from ChEDL_Thermo
+[16:37:58 DBG] ChEDL_Thermo.Load() completed
+[16:37:59 DBG] ChEDL_Thermo.Transfer() returned List`1
+[16:37:59 INF] Loaded 1010 compounds from ChEDL_Thermo
+[16:37:59 DBG] Loading compounds from Electrolyte
+[16:37:59 DBG] Electrolyte.Load() completed
+[16:37:59 DBG] Electrolyte.Transfer() requires 1 parameters: String CompName (optional)
+[16:37:59 DBG] Electrolyte.Transfer() returned ConstantProperties[]
+[16:37:59 INF] Loaded 83 compounds from Electrolyte
+[16:37:59 INF] Compound database populated with 1752 compounds from DWSIM databases
+[16:37:59 DBG] Sample of loaded compounds: Air, Argon, Bromine, Carbon tetrachloride, Carbon monoxide, Carbon dioxide, Carbon disulfide, Phosgene, Trichloroacetyl chloride, Hydrogen chloride
+[16:37:59 DBG] Found common compounds: Water, Methane, Ethane, Propane, Nitrogen, Oxygen
+[16:37:59 WRN] Could not find compound database initialization method - compounds may need to be loaded manually
+[16:37:59 INF] Compound database initialized successfully
+[16:37:59 INF] Initializing DWSIM property package database...
+[16:37:59 DBG] AvailablePropertyPackages dictionary found with 0 entries
+[16:37:59 INF] Populating property package database
+[16:37:59 DBG] Adding property package: Peng-Robinson (DWSIM.Thermodynamics.PropertyPackages.PengRobinsonPropertyPackage)
+[16:37:59 INF] Added property package: Peng-Robinson
+[16:37:59 DBG] Adding property package: SRK (DWSIM.Thermodynamics.PropertyPackages.SRKPropertyPackage)
+[16:37:59 INF] Added property package: SRK
+[16:37:59 DBG] Adding property package: NRTL (DWSIM.Thermodynamics.PropertyPackages.NRTLPropertyPackage)
+[16:37:59 INF] Added property package: NRTL
+[16:37:59 DBG] Adding property package: UNIFAC (DWSIM.Thermodynamics.PropertyPackages.UNIFACPropertyPackage)
+[16:37:59 INF] Added property package: UNIFAC
+[16:37:59 INF] Property package database populated with 4 property packages
+[16:37:59 INF] Property package database initialized successfully
+[16:37:59 INF] FlowsheetContext initialization complete: Three-Phase Separator Calculation Test
+[16:37:59 DBG] Attempting to add compound: Methane
+[16:37:59 DBG] Compound name validated: Methane
+[16:37:59 DBG] Calculation cache invalidated: compound added
+[16:37:59 DBG] Compound added to flowsheet: Methane
+[16:37:59 INF] Compound added successfully: Methane
+[16:37:59 DBG] Attempting to add compound: Water
+[16:37:59 DBG] Compound name validated: Water
+[16:37:59 DBG] Calculation cache invalidated: compound added
+[16:37:59 DBG] Compound added to flowsheet: Water
+[16:37:59 INF] Compound added successfully: Water
+[16:37:59 DBG] Attempting to add compound: n-Decane
+[16:37:59 DBG] Compound name validated: n-Decane
+[16:37:59 DBG] Calculation cache invalidated: compound added
+[16:37:59 DBG] Compound added to flowsheet: n-Decane
+[16:37:59 INF] Compound added successfully: n-Decane
+[16:37:59 INF] Compounds added: Methane, Water, n-Decane
+[16:37:59 DBG] Attempting to set property package: Peng-Robinson
+[16:37:59 DBG] Calculation cache invalidated: property package set
+[16:37:59 INF] Property package set: Peng-Robinson
+[16:37:59 INF] Property package: Peng-Robinson
+[16:37:59 INF] Set BIP Methane-n-Decane = 0.0489
+[16:37:59 INF] Set BIP Water-Methane = 0.5
+[16:37:59 INF] Set BIP Water-n-Decane = 0.5
+[16:37:59 INF] Binary Interaction Parameters set
+[16:37:59 DBG] Attempting to create stream: FEED
+[16:37:59 DBG] Created DWSIM MaterialStream via flowsheet: S1 (Name: FEED)
+[16:37:59 DBG] Calculation cache invalidated: stream added
+[16:37:59 DBG] Stream added to flowsheet: S1
+[16:37:59 WRN] IsSource property is read-only - cannot set to True
+[16:37:59 DBG] Stream already has 3 compounds, skipping AddCompoundsToMaterialStream
+[16:37:59 DBG] SetPhaseProperty: Successfully set temperature = 300 on PhaseProperties
+[16:37:59 DBG] SetPhaseProperty: Successfully set pressure = 101325 on PhaseProperties
+[16:37:59 DBG] SetPhaseProperty: Successfully set molarflow = 544 on PhaseProperties
+[16:37:59 DBG] ApplyComposition: Phase has 3 compounds in dictionary
+[16:37:59 DBG] ApplyComposition: Context has 3 compound names
+[16:37:59 DBG] ApplyComposition: Composition has 3 mole fractions
+[16:37:59 DBG] ApplyComposition: Setting Methane mole fraction to 0.333
+[16:37:59 DBG] SetPhaseProperty: Successfully set MoleFraction = 0.333 on Compound
+[16:37:59 DBG] ApplyComposition: Methane MoleFraction after setting: 0.333
+[16:37:59 DBG] ApplyComposition: Setting Water mole fraction to 0.333
+[16:37:59 DBG] SetPhaseProperty: Successfully set MoleFraction = 0.333 on Compound
+[16:37:59 DBG] ApplyComposition: Water MoleFraction after setting: 0.333
+[16:37:59 DBG] ApplyComposition: Setting n-Decane mole fraction to 0.334
+[16:37:59 DBG] SetPhaseProperty: Successfully set MoleFraction = 0.334 on Compound
+[16:37:59 DBG] ApplyComposition: n-Decane MoleFraction after setting: 0.334
+[16:37:59 DBG] TrySetInputComposition: Building composition dictionary
+[16:37:59 DBG] TrySetInputComposition: Methane = 0.333
+[16:37:59 DBG] TrySetInputComposition: Water = 0.333
+[16:37:59 DBG] TrySetInputComposition: n-Decane = 0.334
+[16:37:59 DBG] TrySetInputComposition: Successfully set InputComposition dictionary with 3 compounds
+[16:37:59 DBG] TrySetInputComposition: InputComposition dictionary has 3 entries after setting
+[16:37:59 DBG] Set SpecType=Temperature_and_Pressure based on isSource=True
+[16:37:59 INF] Stream created successfully: S1 (Name: FEED)
+[16:37:59 DBG] Stream properties: Temperature=300 K, Pressure=101325 Pa, Flow=544 mol/s
+[16:37:59 INF] Feed stream created: S1
+[16:37:59 INF] Flashing inlet stream...
+[16:37:59 DBG] Flashing stream S1
+[16:37:59 DBG] Found 2 Calculate method overloads
+[16:37:59 DBG] Calling Calculate() with 1 default parameters
+[16:37:59 DBG] Stream S1 Calculated property after flash: False
+[16:37:59 DBG] Setting Calculated = true on stream S1
+[16:37:59 DBG] Stream S1 Calculated property after setting: True
+[16:37:59 DBG] Stream S1 GraphicObject.Calculated before: False
+[16:37:59 DBG] Stream S1 GraphicObject.Calculated after setting: True
+[16:37:59 INF] Stream S1 flashed successfully
+[16:37:59 INF] Inlet stream flashed successfully
+[16:37:59 DBG] Attempting to add three-phase separator: SEP-101
+[16:37:59 DBG] Attempting to add separator using enum TPVessel with AddObject(enum, int, int, string, string)
+[16:37:59 WRN] Failed to add separator using TPVessel: Object reference not set to an instance of an object.
+System.NullReferenceException: Object reference not set to an instance of an object.
+   at DWSIM.FlowsheetBase.FlowsheetBase.AddObjectToSurface(ObjectType type, Int32 x, Int32 y, String tag, String id, IExternalUnitOperation uoobj, Boolean CreateConnected) in D:\S\C#\dwsim\DWSIM.FlowsheetBase\FlowsheetBase.vb:line 1838
+   at DWSIM.FlowsheetBase.FlowsheetBase.AddObject(ObjectType t, Int32 xcoord, Int32 ycoord, String id, String tag) in D:\S\C#\dwsim\DWSIM.FlowsheetBase\FlowsheetBase.vb:line 149
+[16:37:59 DBG] Attempting to add separator using enum Vessel with AddObject(enum, int, int, string, string)
+[16:37:59 DBG] Created DWSIM three-phase separator: U1 (Name: SEP-101)
+[16:37:59 DBG] Calculation cache invalidated: unit added
+[16:37:59 DBG] Unit operation added to flowsheet: U1
+[16:37:59 INF] Set PropertyPackage on unit Vessel
+[16:37:59 DBG] Property PressureDrop not found or not writable on unit operation
+[16:37:59 DBG] Set unit parameter CalculationMode = Legacy
+[16:37:59 DBG] Property Volume not found or not writable on unit operation
+[16:37:59 DBG] Property Height not found or not writable on unit operation
+[16:37:59 INF] Three-phase separator added successfully: U1 (Name: SEP-101)
+[16:37:59 DBG] Separator parameters: PressureDrop=10000, CalculationMode=Legacy, Volume=1, Height=2
+[16:37:59 INF] Separator created: U1
+[16:37:59 DBG] Attempting to create stream: VAPOR
+[16:37:59 DBG] Created DWSIM MaterialStream via flowsheet: S2 (Name: VAPOR)
+[16:37:59 DBG] Calculation cache invalidated: stream added
+[16:37:59 DBG] Stream added to flowsheet: S2
+[16:37:59 WRN] IsSource property is read-only - cannot set to False
+[16:37:59 DBG] Stream already has 3 compounds, skipping AddCompoundsToMaterialStream
+[16:37:59 DBG] SetPhaseProperty: Successfully set temperature = 300 on PhaseProperties
+[16:37:59 DBG] SetPhaseProperty: Successfully set pressure = 91325 on PhaseProperties
+[16:37:59 DBG] SetPhaseProperty: Successfully set molarflow = 0.001 on PhaseProperties
+[16:37:59 DBG] ApplyComposition: Phase has 3 compounds in dictionary
+[16:37:59 DBG] ApplyComposition: Context has 3 compound names
+[16:37:59 DBG] ApplyComposition: Composition has 3 mole fractions
+[16:37:59 DBG] ApplyComposition: Setting Methane mole fraction to 0.333
+[16:37:59 DBG] SetPhaseProperty: Successfully set MoleFraction = 0.333 on Compound
+[16:37:59 DBG] ApplyComposition: Methane MoleFraction after setting: 0.333
+[16:37:59 DBG] ApplyComposition: Setting Water mole fraction to 0.333
+[16:37:59 DBG] SetPhaseProperty: Successfully set MoleFraction = 0.333 on Compound
+[16:37:59 DBG] ApplyComposition: Water MoleFraction after setting: 0.333
+[16:37:59 DBG] ApplyComposition: Setting n-Decane mole fraction to 0.334
+[16:37:59 DBG] SetPhaseProperty: Successfully set MoleFraction = 0.334 on Compound
+[16:37:59 DBG] ApplyComposition: n-Decane MoleFraction after setting: 0.334
+[16:37:59 DBG] TrySetInputComposition: Building composition dictionary
+[16:37:59 DBG] TrySetInputComposition: Methane = 0.333
+[16:37:59 DBG] TrySetInputComposition: Water = 0.333
+[16:37:59 DBG] TrySetInputComposition: n-Decane = 0.334
+[16:37:59 DBG] TrySetInputComposition: Successfully set InputComposition dictionary with 3 compounds
+[16:37:59 DBG] TrySetInputComposition: InputComposition dictionary has 3 entries after setting
+[16:37:59 DBG] Set SpecType=Pressure_and_Enthalpy based on isSource=False
+[16:37:59 INF] Stream created successfully: S2 (Name: VAPOR)
+[16:37:59 DBG] Stream properties: Temperature=300 K, Pressure=91325 Pa, Flow=0.001 mol/s
+[16:37:59 DBG] Attempting to create stream: LIGHT_LIQUID
+[16:37:59 DBG] Created DWSIM MaterialStream via flowsheet: S3 (Name: LIGHT_LIQUID)
+[16:37:59 DBG] Calculation cache invalidated: stream added
+[16:37:59 DBG] Stream added to flowsheet: S3
+[16:37:59 WRN] IsSource property is read-only - cannot set to False
+[16:37:59 DBG] Stream already has 3 compounds, skipping AddCompoundsToMaterialStream
+[16:37:59 DBG] SetPhaseProperty: Successfully set temperature = 300 on PhaseProperties
+[16:37:59 DBG] SetPhaseProperty: Successfully set pressure = 91325 on PhaseProperties
+[16:37:59 DBG] SetPhaseProperty: Successfully set molarflow = 0.001 on PhaseProperties
+[16:37:59 DBG] ApplyComposition: Phase has 3 compounds in dictionary
+[16:37:59 DBG] ApplyComposition: Context has 3 compound names
+[16:37:59 DBG] ApplyComposition: Composition has 3 mole fractions
+[16:37:59 DBG] ApplyComposition: Setting Methane mole fraction to 0.333
+[16:37:59 DBG] SetPhaseProperty: Successfully set MoleFraction = 0.333 on Compound
+[16:37:59 DBG] ApplyComposition: Methane MoleFraction after setting: 0.333
+[16:37:59 DBG] ApplyComposition: Setting Water mole fraction to 0.333
+[16:37:59 DBG] SetPhaseProperty: Successfully set MoleFraction = 0.333 on Compound
+[16:37:59 DBG] ApplyComposition: Water MoleFraction after setting: 0.333
+[16:37:59 DBG] ApplyComposition: Setting n-Decane mole fraction to 0.334
+[16:37:59 DBG] SetPhaseProperty: Successfully set MoleFraction = 0.334 on Compound
+[16:37:59 DBG] ApplyComposition: n-Decane MoleFraction after setting: 0.334
+[16:37:59 DBG] TrySetInputComposition: Building composition dictionary
+[16:37:59 DBG] TrySetInputComposition: Methane = 0.333
+[16:37:59 DBG] TrySetInputComposition: Water = 0.333
+[16:37:59 DBG] TrySetInputComposition: n-Decane = 0.334
+[16:37:59 DBG] TrySetInputComposition: Successfully set InputComposition dictionary with 3 compounds
+[16:37:59 DBG] TrySetInputComposition: InputComposition dictionary has 3 entries after setting
+[16:37:59 DBG] Set SpecType=Pressure_and_Enthalpy based on isSource=False
+[16:37:59 INF] Stream created successfully: S3 (Name: LIGHT_LIQUID)
+[16:37:59 DBG] Stream properties: Temperature=300 K, Pressure=91325 Pa, Flow=0.001 mol/s
+[16:37:59 DBG] Attempting to create stream: HEAVY_LIQUID
+[16:37:59 DBG] Created DWSIM MaterialStream via flowsheet: S4 (Name: HEAVY_LIQUID)
+[16:37:59 DBG] Calculation cache invalidated: stream added
+[16:37:59 DBG] Stream added to flowsheet: S4
+[16:37:59 WRN] IsSource property is read-only - cannot set to False
+[16:37:59 DBG] Stream already has 3 compounds, skipping AddCompoundsToMaterialStream
+[16:37:59 DBG] SetPhaseProperty: Successfully set temperature = 300 on PhaseProperties
+[16:37:59 DBG] SetPhaseProperty: Successfully set pressure = 91325 on PhaseProperties
+[16:37:59 DBG] SetPhaseProperty: Successfully set molarflow = 0.001 on PhaseProperties
+[16:37:59 DBG] ApplyComposition: Phase has 3 compounds in dictionary
+[16:37:59 DBG] ApplyComposition: Context has 3 compound names
+[16:37:59 DBG] ApplyComposition: Composition has 3 mole fractions
+[16:37:59 DBG] ApplyComposition: Setting Methane mole fraction to 0.333
+[16:37:59 DBG] SetPhaseProperty: Successfully set MoleFraction = 0.333 on Compound
+[16:37:59 DBG] ApplyComposition: Methane MoleFraction after setting: 0.333
+[16:37:59 DBG] ApplyComposition: Setting Water mole fraction to 0.333
+[16:37:59 DBG] SetPhaseProperty: Successfully set MoleFraction = 0.333 on Compound
+[16:37:59 DBG] ApplyComposition: Water MoleFraction after setting: 0.333
+[16:37:59 DBG] ApplyComposition: Setting n-Decane mole fraction to 0.334
+[16:37:59 DBG] SetPhaseProperty: Successfully set MoleFraction = 0.334 on Compound
+[16:37:59 DBG] ApplyComposition: n-Decane MoleFraction after setting: 0.334
+[16:37:59 DBG] TrySetInputComposition: Building composition dictionary
+[16:37:59 DBG] TrySetInputComposition: Methane = 0.333
+[16:37:59 DBG] TrySetInputComposition: Water = 0.333
+[16:37:59 DBG] TrySetInputComposition: n-Decane = 0.334
+[16:37:59 DBG] TrySetInputComposition: Successfully set InputComposition dictionary with 3 compounds
+[16:37:59 DBG] TrySetInputComposition: InputComposition dictionary has 3 entries after setting
+[16:37:59 DBG] Set SpecType=Pressure_and_Enthalpy based on isSource=False
+[16:37:59 INF] Stream created successfully: S4 (Name: HEAVY_LIQUID)
+[16:37:59 DBG] Stream properties: Temperature=300 K, Pressure=91325 Pa, Flow=0.001 mol/s
+[16:37:59 INF] Outlet streams created: S2, S3, S4
+[16:37:59 DBG] Connecting stream S1 to unit U1 port Inlet
+[16:37:59 DBG] Using mapped inlet index 0 for port Inlet
+[16:37:59 DBG] Calling FlowsheetSurface.ConnectObject(0, 0) for S1 -> U1
+[16:37:59 DBG] ConnectObject successful - AttachedConnector is properly set
+[16:37:59 DBG] Calculation cache invalidated: connection added
+[16:37:59 DBG] Connection added: Stream 'S1' -> Unit 'U1' Port 'Inlet'
+[16:37:59 INF] Stream connected successfully: S1 -> U1.Inlet
+[16:37:59 DBG] Connecting stream S2 to unit U1 port VaporOutlet
+[16:37:59 DBG] Using mapped outlet index 0 for port VaporOutlet
+[16:37:59 DBG] Calling FlowsheetSurface.ConnectObject(0, 0) for S2 -> U1
+[16:37:59 DBG] ConnectObject successful - AttachedConnector is properly set
+[16:37:59 DBG] Calculation cache invalidated: connection added
+[16:37:59 DBG] Connection added: Stream 'S2' -> Unit 'U1' Port 'VaporOutlet'
+[16:37:59 INF] Stream connected successfully: S2 -> U1.VaporOutlet
+[16:37:59 DBG] Connecting stream S3 to unit U1 port LiquidOutlet1
+[16:37:59 DBG] Using mapped outlet index 1 for port LiquidOutlet1
+[16:37:59 DBG] Calling FlowsheetSurface.ConnectObject(1, 0) for S3 -> U1
+[16:37:59 DBG] ConnectObject successful - AttachedConnector is properly set
+[16:37:59 DBG] Calculation cache invalidated: connection added
+[16:37:59 DBG] Connection added: Stream 'S3' -> Unit 'U1' Port 'LiquidOutlet1'
+[16:37:59 INF] Stream connected successfully: S3 -> U1.LiquidOutlet1
+[16:37:59 DBG] Connecting stream S4 to unit U1 port LiquidOutlet2
+[16:37:59 DBG] Using mapped outlet index 2 for port LiquidOutlet2
+[16:37:59 DBG] Calling FlowsheetSurface.ConnectObject(2, 0) for S4 -> U1
+[16:37:59 DBG] ConnectObject successful - AttachedConnector is properly set
+[16:37:59 DBG] Calculation cache invalidated: connection added
+[16:37:59 DBG] Connection added: Stream 'S4' -> Unit 'U1' Port 'LiquidOutlet2'
+[16:37:59 INF] Stream connected successfully: S4 -> U1.LiquidOutlet2
+[16:37:59 INF] All streams connected to separator
+[16:37:59 DBG] Validating flowsheet topology
+[16:37:59 INF] Flowsheet topology is valid: all 4 streams are connected
+[16:37:59 INF] Flowsheet topology validated
+[16:37:59 DBG] CalculationAdapter initialized
+[16:37:59 INF] === Starting Golden Calculation Test ===
+[16:37:59 INF] Running calculation...
+[16:37:59 INF] Starting flowsheet calculation (timeout: none)
+[16:37:59 DBG] Calculation cache invalidated: calculation started
+[16:37:59 DBG] Invoking DWSIM solver
+[16:37:59 DBG] Flowsheet has 5 objects in SimulationObjects
+[16:37:59 DBG]   Object 'S1': ObjectType=MaterialStream, OutConn[0].IsAttached=True, InConn[0].IsAttached=False, InConn[0].AttachedFrom.Name=null, Active=True
+[16:37:59 DBG]   Object 'U1': ObjectType=Vessel, OutConn[0].IsAttached=True, InConn[0].IsAttached=True, InConn[0].AttachedFrom.Name=S1, Active=True
+[16:37:59 DBG]   Object 'S2': ObjectType=MaterialStream, OutConn[0].IsAttached=False, InConn[0].IsAttached=True, InConn[0].AttachedFrom.Name=U1, Active=True
+[16:37:59 DBG]   Object 'S3': ObjectType=MaterialStream, OutConn[0].IsAttached=False, InConn[0].IsAttached=True, InConn[0].AttachedFrom.Name=U1, Active=True
+[16:37:59 DBG]   Object 'S4': ObjectType=MaterialStream, OutConn[0].IsAttached=False, InConn[0].IsAttached=True, InConn[0].AttachedFrom.Name=U1, Active=True
+[16:37:59 DBG] Calling FlowsheetSolver.GetSolvingList(flowsheet, false) for diagnostics...
+[16:37:59 DBG] GetSolvingList returned Object[] with 3 phases
+[16:37:59 DBG]   Phase 0: 5 objects: S1, U1, S2, S3, S4
+[16:37:59 DBG] SimulationObjects dictionary has 5 entries
+[16:37:59 DBG]   Name 'S1' exists in SimulationObjects: True
+[16:37:59 DBG]   Name 'U1' exists in SimulationObjects: True
+[16:37:59 DBG]   Name 'S2' exists in SimulationObjects: True
+[16:37:59 DBG]   Name 'S3' exists in SimulationObjects: True
+[16:37:59 DBG]   Name 'S4' exists in SimulationObjects: True
+[16:37:59 DBG]   Phase 1: type Dictionary`2
+[16:37:59 DBG]   Phase 2: type Dictionary`2
+[16:37:59 DBG] Found DWSIM.GlobalSettings.Settings type
+[16:37:59 DBG] Set GlobalSettings.CalculatorActivated = true
+[16:37:59 DBG] Set GlobalSettings.CalculatorBusy = false
+[16:37:59 DBG] Set GlobalSettings.SolverMode = 1
+[16:37:59 DBG] Attempting to override UpdateInterface with no-op delegate
+[16:37:59 DBG] Cannot directly override UpdateInterface - will handle exceptions instead
+[16:37:59 DBG] Calling flowsheet.RequestCalculationAndWait()
+[16:38:00 WRN] UpdateInterface NullRef (expected in headless mode) - waiting for background calculation to complete
+[16:38:02 DBG] Checking if units were calculated by background thread...
+[16:38:02 DBG] Unit U1 not calculated
+[16:38:02 WRN] Units not calculated after waiting - UpdateInterface exception interrupted solver before completion
+[16:38:02 WRN] Unit U1 not calculated by flowsheet solver - this indicates a solver initialization problem
+[16:38:02 DBG] Calling Calculate() directly as fallback
+[16:38:02 INF] Unit U1 calculated successfully using fallback
+[16:38:02 DBG] Set Unit U1 Calculated = true
+[16:38:02 WRN] FALLBACK USED: Some units were not calculated by the solver. This suggests GlobalSettings initialization may have failed.
+[16:38:02 INF] Fallback succeeded - all units calculated successfully
+[16:38:02 DBG] All units calculated, setting Flowsheet.Solved = true
+[16:38:02 DBG] Checking convergence status
+[16:38:02 DBG] Flowsheet Solved property value: True
+[16:38:02 INF] Flowsheet converged successfully (Solved=true)
+[16:38:02 DBG] Capturing solver messages
+[16:38:02 DBG] Extracting stream results
+[16:38:02 DBG] Getting calculated properties from stream S1
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 INF] Calculated properties retrieved for stream S1
+[16:38:02 DBG] Getting calculated properties from stream S2
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 INF] Calculated properties retrieved for stream S2
+[16:38:02 DBG] Getting calculated properties from stream S3
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 INF] Calculated properties retrieved for stream S3
+[16:38:02 DBG] Getting calculated properties from stream S4
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 WRN] Phase composition sum was zero; defaulting to pure first component.
+[16:38:02 INF] Calculated properties retrieved for stream S4
+[16:38:02 INF] Extracted results for 4 streams
+[16:38:02 DBG] Validating mass balance
+[16:38:02 WRN] Mass balance validation failed: 99.9994485294118%
+[16:38:02 INF] Calculation completed successfully in 2114.418ms
+[16:38:02 INF] ✓ Calculation completed successfully in 2181ms
+[16:38:02 INF] ✓ Convergence status: Converged
+[16:38:02 INF] ✓ Timing: 2114.42ms (< 5000ms requirement met)
+[16:38:02 INF] ✓ Stream results extracted: 4 streams
+[16:38:02 DBG]   Stream S1: T=300.00K, P=101325Pa, F=544.00mol/s
+[16:38:02 DBG]   Stream S2: T=300.00K, P=101325Pa, F=0.00mol/s
+[16:38:02 DBG]   Stream S3: T=300.00K, P=101325Pa, F=0.00mol/s
+[16:38:02 DBG]   Stream S4: T=300.00K, P=101325Pa, F=0.00mol/s
+[16:38:02 INF] Disposing FlowsheetContext: Three-Phase Separator Calculation Test
+[16:38:02 INF] FlowsheetContext disposed successfully
+[xUnit.net 00:00:05.78]     DwsimWorker.Tests.Integration.ThreePhaseSeparatorCalculationTests.GoldenTest_ThreePhaseSeparatorCalculation_Succeeds [FAIL]
+[xUnit.net 00:00:05.78]       Mass balance failed: 100.00% error
+[xUnit.net 00:00:05.78]       Stack Trace:
+[xUnit.net 00:00:05.78]         mcp_service\dwsim_worker\DwsimWorker.Tests\Integration\ThreePhaseSeparatorCalculationTests.cs(301,0): at DwsimWorker.Tests.Integration.ThreePhaseSeparatorCalculationTests.GoldenTest_ThreePhaseSeparatorCalculation_Succeeds()
+[xUnit.net 00:00:05.79]   Finished:    DwsimWorker.Tests
+  Failed DwsimWorker.Tests.Integration.ThreePhaseSeparatorCalculationTests.GoldenTest_ThreePhaseSeparatorCalculation_Succeeds [4 s]
+  Error Message:
+   Mass balance failed: 100.00% error
+  Stack Trace:
+     at DwsimWorker.Tests.Integration.ThreePhaseSeparatorCalculationTests.GoldenTest_ThreePhaseSeparatorCalculation_Succeeds() in D:\S\C#\dwsim_interop_services\mcp_service\dwsim_worker\DwsimWorker.Tests\Integration\ThreePhaseSeparatorCalculationTests.cs:line 301
+
+Test Run Failed.
+Total tests: 1
+     Failed: 1
+ Total time: 5.8818 Seconds

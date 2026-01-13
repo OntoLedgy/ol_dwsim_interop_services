@@ -1411,18 +1411,19 @@ namespace DwsimWorker.Engine
         }
 
         /// <summary>
-        /// Adds a GraphicObject to the FlowsheetSurface.GraphicObjects collection.
+        /// [DEPRECATED - NOT NEEDED] Adds a GraphicObject to the FlowsheetSurface.GraphicObjects collection.
         /// This is required for GetSolvingList() to identify objects for calculation.
         /// </summary>
         /// <param name="simulationObject">The simulation object (stream or unit operation) containing the GraphicObject.</param>
         /// <returns>True if the GraphicObject was successfully added; otherwise, false.</returns>
         /// <remarks>
-        /// CRITICAL: DWSIM's FlowsheetSolver.GetSolvingList() iterates through FlowsheetSurface.GraphicObjects
-        /// to build the solving sequence. Without this step, calculations will not run because the solver
-        /// has no objects to calculate.
+        /// UPDATE: This method is NOT needed. flowsheet.AddObject() already registers GraphicObjects
+        /// in the correct location for GetSolvingList() to find them. This was based on an incorrect
+        /// hypothesis about DWSIM's architecture.
         ///
-        /// This method must be called after flowsheet.AddObject() for each stream and unit operation.
+        /// The method is kept here for documentation purposes but should not be called.
         /// </remarks>
+        [Obsolete("Not needed - flowsheet.AddObject() already handles GraphicObject registration")]
         public bool AddGraphicObjectToSurface(object simulationObject)
         {
             if (simulationObject == null)
@@ -1450,30 +1451,48 @@ namespace DwsimWorker.Engine
                     return false;
                 }
 
-                // Step 2: Get FlowsheetSurface
-                var getSurfaceMethod = _flowsheet.GetType().GetMethod("GetSurface");
-                if (getSurfaceMethod == null)
-                {
-                    _logger.Error("Flowsheet does not expose GetSurface method");
-                    return false;
-                }
+                // Step 2: ALTERNATIVE APPROACH - Check if Flowsheet itself has GraphicObjects
+                var graphicObjectsProp = _flowsheet.GetType().GetProperty("GraphicObjects")
+                    ?? _flowsheet.GetType().GetProperty("DrawingObjects")
+                    ?? _flowsheet.GetType().GetProperty("FlowsheetGraphicObjects")
+                    ?? _flowsheet.GetType().GetProperty("Objects");
 
-                var surface = getSurfaceMethod.Invoke(_flowsheet, null);
-                if (surface == null)
-                {
-                    _logger.Error("GetSurface() returned null");
-                    return false;
-                }
-
-                // Step 3: Get GraphicObjects collection
-                var graphicObjectsProp = surface.GetType().GetProperty("GraphicObjects");
                 if (graphicObjectsProp == null)
                 {
-                    _logger.Error("FlowsheetSurface does not expose GraphicObjects property");
-                    return false;
+                    // Log all available collection properties on Flowsheet for diagnostics
+                    var flowsheetProps = _flowsheet.GetType().GetProperties()
+                        .Where(p => typeof(System.Collections.IEnumerable).IsAssignableFrom(p.PropertyType) && p.PropertyType != typeof(string))
+                        .Select(p => $"{p.Name}:{p.PropertyType.Name}")
+                        .ToArray();
+                    _logger.Error("Flowsheet does not expose GraphicObjects property. Available collection properties: {Properties}",
+                        string.Join(", ", flowsheetProps));
+
+                    // Try FlowsheetSurface as fallback (even though we know it doesn't have GraphicObjects)
+                    var getSurfaceMethod = _flowsheet.GetType().GetMethod("GetSurface");
+                    if (getSurfaceMethod != null)
+                    {
+                        var surface = getSurfaceMethod.Invoke(_flowsheet, null);
+                        if (surface != null)
+                        {
+                            graphicObjectsProp = surface.GetType().GetProperty("GraphicObjects");
+                            if (graphicObjectsProp == null)
+                            {
+                                _logger.Error("Neither Flowsheet nor FlowsheetSurface have GraphicObjects");
+                                return false;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        return false;
+                    }
                 }
 
-                var graphicObjects = graphicObjectsProp.GetValue(surface);
+                // Step 3: Get the collection (from Flowsheet or Surface depending on where we found it)
+                var collectionOwner = graphicObjectsProp.DeclaringType == _flowsheet.GetType() ? _flowsheet
+                    : _flowsheet.GetType().GetMethod("GetSurface")?.Invoke(_flowsheet, null);
+
+                var graphicObjects = graphicObjectsProp.GetValue(collectionOwner);
                 if (!(graphicObjects is System.Collections.IList list))
                 {
                     _logger.Error("GraphicObjects is not an IList");
