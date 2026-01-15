@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Optional, TypeVar
 
 TResult = TypeVar("TResult")
@@ -28,6 +29,9 @@ class OperationTimeoutError(RuntimeError):
 class OperationTimeoutRunner:
     """Run blocking operations with asyncio timeout enforcement."""
 
+    def __init__(self) -> None:
+        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="interop")
+
     async def run_with_timeout(
         self,
         func: Callable[[], TResult],
@@ -35,13 +39,14 @@ class OperationTimeoutRunner:
         *,
         session_id: Optional[str] = None,
     ) -> TResult:
+        loop = asyncio.get_running_loop()
         if timeout_seconds <= 0:
-            return await asyncio.to_thread(func)
+            return await loop.run_in_executor(self._executor, func)
 
         start_time = time.monotonic()
         try:
             return await asyncio.wait_for(
-                asyncio.to_thread(func),
+                loop.run_in_executor(self._executor, func),
                 timeout=timeout_seconds,
             )
         except asyncio.TimeoutError as exc:
