@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using Serilog;
 using DwsimWorker.Exceptions;
 using DwsimWorker.Models;
@@ -747,7 +748,28 @@ namespace DwsimWorker.Engine
                     }
                     catch (Exception ex)
                     {
-                        _logger.Warning(ex, "Failed to create flowsheet instance for {TypeName}, trying next type", flowsheetTypeName);
+                        if (Thread.CurrentThread.GetApartmentState() != ApartmentState.STA)
+                        {
+                            var staInstance = TryCreateInstanceOnStaThread(flowsheetType, out var staError);
+                            if (staInstance != null)
+                            {
+                                if (!HasRequiredFlowsheetApi(staInstance))
+                                {
+                                    _logger.Warning("Flowsheet type {TypeName} does not expose required methods; trying next type", flowsheetTypeName);
+                                }
+                                else
+                                {
+                                    _logger.Debug("Flowsheet instance created successfully on STA thread");
+                                    return staInstance;
+                                }
+                            }
+
+                            _logger.Warning(staError ?? ex, "Failed to create flowsheet instance for {TypeName} on STA thread, trying next type", flowsheetTypeName);
+                        }
+                        else
+                        {
+                            _logger.Warning(ex, "Failed to create flowsheet instance for {TypeName}, trying next type", flowsheetTypeName);
+                        }
                         flowsheetType = null;
                         flowsheetTypeName = null;
                     }
@@ -818,6 +840,42 @@ namespace DwsimWorker.Engine
                     ErrorCode.TypeLoadFailure);
             }
             return null;
+        }
+
+        private object TryCreateInstanceOnStaThread(Type flowsheetType, out Exception error)
+        {
+            error = null;
+            if (flowsheetType == null)
+            {
+                return null;
+            }
+
+            object instance = null;
+            Exception captured = null;
+            using (var ready = new ManualResetEventSlim(false))
+            {
+                var thread = new Thread(() =>
+                {
+                    try
+                    {
+                        instance = Activator.CreateInstance(flowsheetType);
+                    }
+                    catch (Exception ex)
+                    {
+                        captured = ex;
+                    }
+                    finally
+                    {
+                        ready.Set();
+                    }
+                });
+                thread.SetApartmentState(ApartmentState.STA);
+                thread.Start();
+                ready.Wait(TimeSpan.FromSeconds(5));
+            }
+
+            error = captured;
+            return instance;
         }
 
         private bool HasRequiredFlowsheetApi(object flowsheet)

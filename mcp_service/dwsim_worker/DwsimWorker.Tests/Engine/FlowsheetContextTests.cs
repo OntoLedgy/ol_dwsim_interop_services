@@ -224,7 +224,10 @@ namespace DwsimWorker.Tests.Engine
 
             // Assert
             Assert.NotNull(flowsheet);
-            Assert.Equal("DWSIM.SharedClasses.FOSSEEFlowsheet", flowsheet.GetType().FullName);
+            Assert.True(
+                flowsheet.GetType().FullName == "DWSIM.SharedClasses.FOSSEEFlowsheet" ||
+                flowsheet.GetType().FullName == "DWSIM.UI.Desktop.Shared.Flowsheet",
+                $"Unexpected flowsheet type: {flowsheet.GetType().FullName}");
         }
 
         [Fact]

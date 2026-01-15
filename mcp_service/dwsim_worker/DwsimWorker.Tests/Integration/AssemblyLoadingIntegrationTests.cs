@@ -255,8 +255,10 @@ namespace DwsimWorker.Tests.Integration
             if (result.Success)
             {
                 Assert.Single(result.ValidatedTypes);
-                Assert.Contains("DWSIM.SharedClasses.FOSSEEFlowsheet", result.ValidatedTypes);
-                _logger.Information("✓ Flowsheet can be instantiated without GUI context");
+                Assert.Contains(result.ValidatedTypes, typeName =>
+                    typeName == "DWSIM.FlowsheetBase.FlowsheetBase" ||
+                    typeName == "DWSIM.SharedClasses.FOSSEEFlowsheet");
+                _logger.Information("Flowsheet can be instantiated without GUI context");
             }
             else
             {
@@ -294,7 +296,7 @@ namespace DwsimWorker.Tests.Integration
             {
                 Assert.Single(result.ValidatedTypes);
                 Assert.Contains("DWSIM.Thermodynamics.Streams.MaterialStream", result.ValidatedTypes);
-                _logger.Information("✓ MaterialStream can be instantiated without GUI context");
+                _logger.Information("MaterialStream can be instantiated without GUI context");
             }
             else
             {

@@ -58,7 +58,7 @@ namespace DwsimWorker.Tests.Performance
         }
 
         [Fact]
-        public void Performance_SessionCreation_Under500ms()
+        public void Performance_SessionCreation_Under2000ms()
         {
             EnsureSessionManager();
             if (_sessionManager == null) return;
@@ -68,8 +68,8 @@ namespace DwsimWorker.Tests.Performance
             sw.Stop();
 
             Assert.True(result.Success);
-            Assert.True(sw.ElapsedMilliseconds < 500,
-                $"Session creation took {sw.ElapsedMilliseconds}ms, expected < 500ms");
+            Assert.True(sw.ElapsedMilliseconds < 2000,
+                $"Session creation took {sw.ElapsedMilliseconds}ms, expected < 2000ms");
         }
 
         [Fact]

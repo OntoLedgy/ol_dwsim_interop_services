@@ -1686,7 +1686,8 @@ namespace DwsimWorker.Adapters
 
             try
             {
-                var created = TryAddStreamViaFlowsheet(flowsheet, name, streamId);
+                var creationName = streamId;
+                var created = TryAddStreamViaFlowsheet(flowsheet, creationName, streamId);
                 if (created != null)
                 {
                     TrySetNameAndTag(created, name, streamId);

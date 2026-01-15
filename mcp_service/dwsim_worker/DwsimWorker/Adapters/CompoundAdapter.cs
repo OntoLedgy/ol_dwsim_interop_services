@@ -131,6 +131,14 @@ namespace DwsimWorker.Adapters
 
             try
             {
+                var normalizedName = GetCanonicalCompoundName(compoundName);
+                var existingCompounds = _context.GetCompounds();
+                if (existingCompounds.Any(c => string.Equals(c, normalizedName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    _logger.Information("Compound already present in flowsheet: {CompoundName}", normalizedName);
+                    return LoadResult.SuccessResult(new List<AssemblyInfo>());
+                }
+
                 // Step 2: Add compound to flowsheet
                 var flowsheet = _context.GetFlowsheet();
                 var flowsheetType = flowsheet.GetType();
@@ -142,10 +150,10 @@ namespace DwsimWorker.Adapters
                     return LoadResult.FailureResult(message, new MissingMethodException(message));
                 }
 
-                addCompound.Invoke(flowsheet, new object[] { compoundName });
+                addCompound.Invoke(flowsheet, new object[] { normalizedName });
 
                 // Step 3: Track compound in flowsheet context
-                _context.AddCompound(compoundName);
+                _context.AddCompound(normalizedName);
 
                 // Step 4: Ensure existing streams have updated compound list
                 var addToStream = flowsheetType.GetMethod("AddCompoundsToMaterialStream");
@@ -162,7 +170,7 @@ namespace DwsimWorker.Adapters
                 }
 
                 // Step 5: Log success with structured logging
-                _logger.Information("Compound added successfully: {CompoundName}", compoundName);
+                _logger.Information("Compound added successfully: {CompoundName}", normalizedName);
 
                 return LoadResult.SuccessResult(new List<AssemblyInfo>());
             }
@@ -318,6 +326,13 @@ namespace DwsimWorker.Adapters
         {
             _logger.Debug("Retrieving list of available compounds");
             return KnownCompounds.OrderBy(c => c).ToList().AsReadOnly();
+        }
+
+        private static string GetCanonicalCompoundName(string compoundName)
+        {
+            return KnownCompounds.FirstOrDefault(c =>
+                       string.Equals(c, compoundName, StringComparison.OrdinalIgnoreCase))
+                   ?? compoundName;
         }
     }
 }

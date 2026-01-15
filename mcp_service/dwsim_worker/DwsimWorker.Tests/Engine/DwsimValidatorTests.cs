@@ -359,7 +359,9 @@ namespace DwsimWorker.Tests.Engine
             // Assert
             Assert.True(result.Success, $"Validation failed: {result.Message}");
             Assert.NotEmpty(result.ValidatedTypes);
-            Assert.Contains("DWSIM.SharedClasses.FOSSEEFlowsheet", result.ValidatedTypes);
+            Assert.Contains(result.ValidatedTypes, typeName =>
+                typeName == "DWSIM.FlowsheetBase.FlowsheetBase" ||
+                typeName == "DWSIM.SharedClasses.FOSSEEFlowsheet");
             Assert.Contains("DWSIM.Thermodynamics.Streams.MaterialStream", result.ValidatedTypes);
             Assert.Null(result.Error);
         }
@@ -384,7 +386,9 @@ namespace DwsimWorker.Tests.Engine
             // Assert
             Assert.True(result.Success, $"Validation failed: {result.Message}");
             Assert.Single(result.ValidatedTypes);
-            Assert.Contains("DWSIM.SharedClasses.FOSSEEFlowsheet", result.ValidatedTypes);
+            Assert.Contains(result.ValidatedTypes, typeName =>
+                typeName == "DWSIM.FlowsheetBase.FlowsheetBase" ||
+                typeName == "DWSIM.SharedClasses.FOSSEEFlowsheet");
             Assert.Null(result.Error);
         }
 
