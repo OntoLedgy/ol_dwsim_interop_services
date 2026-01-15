@@ -95,6 +95,7 @@ artifacts/
 *.swo
 *~
 .DS_Store
+tmpclaude-*
 
 # MCP Server specific
 sessions/
