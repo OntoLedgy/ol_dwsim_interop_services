@@ -2,22 +2,82 @@
 
 from __future__ import annotations
 
+import threading
 from typing import Any, Dict, List, Optional
 
 from dwsim_mcp_server.ipc.clr_loader import load_dwsim_worker
 from dwsim_mcp_server.ipc.exceptions import SessionError, map_dotnet_exception
 
 
+def _ensure_sta_thread() -> None:
+    """Ensure current thread is set to STA mode for COM interop.
+
+    Must be called AFTER pythonnet/CLR is loaded, which happens in load_dwsim_worker().
+    """
+    import sys
+    try:
+        # Load CLR first if not already loaded
+        load_dwsim_worker()
+
+        from System.Threading import ApartmentState, Thread  # type: ignore
+
+        current_state = Thread.CurrentThread.GetApartmentState()
+        print(f"[STA] Thread {threading.get_ident()} current state: {current_state}", file=sys.stderr)
+
+        if str(current_state) != "STA":
+            Thread.CurrentThread.SetApartmentState(ApartmentState.STA)
+            new_state = Thread.CurrentThread.GetApartmentState()
+            print(f"[STA] Thread {threading.get_ident()} apartment state set to: {new_state}", file=sys.stderr)
+        else:
+            print(f"[STA] Thread {threading.get_ident()} already in STA mode", file=sys.stderr)
+    except Exception as e:
+        print(f"[STA] Failed to set apartment state: {e}", file=sys.stderr)
+        # Don't fail - continue and hope it works
+
+
 class SessionClient:
-    """Thin wrapper around DwsimWorker.Engine.SessionManager."""
+    """Thin wrapper around DwsimWorker.Engine.SessionManager.
+
+    Uses lazy initialization to create COM objects only when first accessed,
+    ensuring they are created on the thread that will use them.
+    """
 
     def __init__(self, default_flowsheet_name: Optional[str] = None) -> None:
-        self._dwsim_worker = load_dwsim_worker()
-        self._session_manager = self._create_session_manager(default_flowsheet_name)
-        self._logger = _create_logger()
-        self._cape_open_converter = _create_cape_open_converter()
+        self._default_flowsheet_name = default_flowsheet_name
+        self._session_manager = None
+        self._logger = None
+        self._cape_open_converter = None
+        self._lock = threading.Lock()
+        self._init_thread_id = None
+
+    def _ensure_initialized(self) -> None:
+        """Ensure COM objects are initialized (lazy initialization)."""
+        import sys
+        if self._session_manager is None:
+            with self._lock:
+                if self._session_manager is None:
+                    self._init_thread_id = threading.get_ident()
+                    print(f"[SessionClient] Initializing on thread {self._init_thread_id}", file=sys.stderr)
+
+                    # CRITICAL: Set thread to STA AFTER loading CLR
+                    # The ThreadPoolExecutor initializer runs before CLR is loaded, so we do it here
+                    _ensure_sta_thread()
+
+                    self._session_manager = self._create_session_manager(self._default_flowsheet_name)
+                    self._logger = _create_logger()
+                    self._cape_open_converter = _create_cape_open_converter()
+                    print(f"[SessionClient] Initialization complete on thread {self._init_thread_id}", file=sys.stderr)
+
+        # Verify we're on the same thread
+        current_thread_id = threading.get_ident()
+        if self._init_thread_id is not None and current_thread_id != self._init_thread_id:
+            raise RuntimeError(
+                f"COM object accessed from wrong thread! "
+                f"Initialized on {self._init_thread_id}, accessed from {current_thread_id}"
+            )
 
     def create_session(self, flowsheet_name: Optional[str] = None) -> str:
+        self._ensure_initialized()
         try:
             result = self._session_manager.CreateSession(flowsheet_name)
         except Exception as exc:
@@ -34,6 +94,7 @@ class SessionClient:
         return to_string() if callable(to_string) else str(session_id)
 
     def close_session(self, session_id: str) -> bool:
+        self._ensure_initialized()
         try:
             guid = _parse_guid(session_id)
             result = self._session_manager.CloseSession(guid)
@@ -49,6 +110,7 @@ class SessionClient:
         return bool(result.Data)
 
     def save_case(self, session_id: str, file_path: str) -> bool:
+        self._ensure_initialized()
         try:
             guid = _parse_guid(session_id)
             result = self._session_manager.SaveCase(guid, file_path)
@@ -64,6 +126,7 @@ class SessionClient:
         return bool(result.Data)
 
     def load_case(self, session_id: str, file_path: str) -> bool:
+        self._ensure_initialized()
         try:
             guid = _parse_guid(session_id)
             result = self._session_manager.LoadCase(guid, file_path)
@@ -79,6 +142,7 @@ class SessionClient:
         return bool(result.Data)
 
     def run_calculation(self, session_id: str, timeout_seconds: Optional[int] = None) -> Dict[str, Any]:
+        self._ensure_initialized()
         context = self._get_session_context(session_id)
         adapter = _create_calculation_adapter(self._logger, context)
 
@@ -98,6 +162,7 @@ class SessionClient:
         return _calculation_result_to_payload(result, context=context)
 
     def get_calculation_status(self, session_id: str) -> Dict[str, Any]:
+        self._ensure_initialized()
         context = self._get_session_context(session_id)
         adapter = _create_calculation_adapter(self._logger, context)
 
@@ -114,6 +179,7 @@ class SessionClient:
         *,
         object_id: Optional[str] = None,
     ) -> Dict[str, Any]:
+        self._ensure_initialized()
         context = self._get_session_context(session_id)
         adapter = _create_calculation_adapter(self._logger, context)
 
@@ -137,6 +203,7 @@ class SessionClient:
     @property
     def session_manager(self):
         """Expose the underlying SessionManager for dependent clients."""
+        self._ensure_initialized()
         return self._session_manager
 
     def _get_session_context(self, session_id: str):
@@ -154,8 +221,10 @@ class SessionClient:
 
     @staticmethod
     def _create_session_manager(default_flowsheet_name: Optional[str]):
+        # Load DwsimWorker assembly first
+        worker = load_dwsim_worker()
         try:
-            from DwsimWorker.Engine import SessionManager  # type: ignore
+            SessionManager = worker.Engine.SessionManager
         except Exception as exc:
             raise SessionError("Failed to import SessionManager.") from exc
 

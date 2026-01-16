@@ -45,6 +45,7 @@ class FlowsheetClientProtocol(Protocol):
         mass_flow: Optional[float],
         composition: Dict[str, float],
         phase_hint: Optional[str],
+        is_source: bool = False,
     ) -> str: ...
 
     def add_unit(
@@ -135,6 +136,7 @@ class FlowsheetService:
                     mass_flow=payload.mass_flow,
                     composition=payload.composition,
                     phase_hint=payload.phase_hint,
+                    is_source=payload.is_source,
                 )
             )
 
@@ -144,6 +146,7 @@ class FlowsheetService:
             session_id=payload.session_id,
             stream_id=stream_id,
             name=payload.name,
+            is_source=payload.is_source,
         )
         return AddStreamOutput(stream_id=stream_id, name=payload.name)
 

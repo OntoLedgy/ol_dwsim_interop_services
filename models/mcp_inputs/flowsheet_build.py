@@ -86,6 +86,10 @@ class AddStreamInput(BaseModel):
         description="Component mole fractions {compound_id: fraction}",
     )
     phase_hint: Optional[str] = Field(None, description="Optional phase hint: Vapor, Liquid, or Solid")
+    is_source: bool = Field(
+        default=False,
+        description="True for feed streams (known conditions), False for outlet streams (calculated by DWSIM)",
+    )
 
     @field_validator("composition")
     @classmethod

@@ -52,18 +52,44 @@ namespace DwsimWorker.Engine
             double temperatureK,
             double pressurePa,
             double molarFlow,
-            IDictionary<string, double> composition)
+            IDictionary<string, double> composition,
+            bool isSource = false)
         {
             var context = GetContext(sessionId);
             var adapter = new StreamAdapter(_logger, context);
 
-            var properties = BuildStreamProperties(context, temperatureK, pressurePa, molarFlow, composition);
-            var result = adapter.CreateStream(name, properties);
-            if (!result.Success || string.IsNullOrWhiteSpace(result.ObjectId))
+            try
             {
-                throw new InvalidOperationException(result.Message);
+                var properties = BuildStreamProperties(context, temperatureK, pressurePa, molarFlow, composition);
+                var result = adapter.CreateStream(name, properties, isSource);
+                if (!result.Success || string.IsNullOrWhiteSpace(result.ObjectId))
+                {
+                    var errorMsg = $"Unexpected error creating stream '{name}': {result.Message}";
+                    if (result.Error != null)
+                    {
+                        errorMsg += $" Inner: {result.Error.Message}";
+                        if (result.Error.InnerException != null)
+                        {
+                            errorMsg += $" InnerInner: {result.Error.InnerException.Message}";
+                        }
+                    }
+                    throw new InvalidOperationException(errorMsg, result.Error);
+                }
+                return result.ObjectId;
             }
-            return result.ObjectId;
+            catch (InvalidOperationException)
+            {
+                throw;  // Re-throw our own exceptions
+            }
+            catch (Exception ex)
+            {
+                var errorMsg = $"Failed to add stream '{name}': {ex.Message}";
+                if (ex.InnerException != null)
+                {
+                    errorMsg += $" Inner: {ex.InnerException.Message}";
+                }
+                throw new InvalidOperationException(errorMsg, ex);
+            }
         }
 
         public Tuple<string, string> AddUnit(string sessionId, string unitType, string name, IDictionary<string, object> parameters)
