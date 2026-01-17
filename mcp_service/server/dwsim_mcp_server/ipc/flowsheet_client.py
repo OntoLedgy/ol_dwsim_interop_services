@@ -195,3 +195,32 @@ class FlowsheetClient:
             return dict(self._ops.DeleteObject(session_id, object_id))
         except Exception as exc:
             raise map_dotnet_exception(exc, kind="interop") from exc
+
+    def flash_stream(self, session_id: str, stream_id: str) -> bool:
+        """Flash a stream to compute phase equilibrium.
+
+        This must be called on feed streams before running calculations
+        to ensure DWSIM has computed the phase distribution.
+        """
+        self._ensure_initialized()
+        try:
+            return bool(self._ops.FlashStream(session_id, stream_id))
+        except Exception as exc:
+            raise map_dotnet_exception(exc, kind="interop") from exc
+
+    def set_binary_interaction_parameter(
+        self,
+        session_id: str,
+        compound1: str,
+        compound2: str,
+        value: float,
+    ) -> bool:
+        """Set a binary interaction parameter (BIP) for a pair of compounds.
+
+        BIPs are critical for accurate phase equilibrium in multi-component systems.
+        """
+        self._ensure_initialized()
+        try:
+            return bool(self._ops.SetBinaryInteractionParameter(session_id, compound1, compound2, value))
+        except Exception as exc:
+            raise map_dotnet_exception(exc, kind="interop") from exc

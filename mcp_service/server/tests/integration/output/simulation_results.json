@@ -1,0 +1,975 @@
+{
+  "status": "converged",
+  "convergence_state": "Converged",
+  "elapsed_ms": 253.7354,
+  "stream_results": [
+    {
+      "id": "S1",
+      "name": "S1",
+      "temperature_k": 300.0,
+      "pressure_pa": 101325.0,
+      "total_molar_flow_mol_per_s": 544.0,
+      "phases": [
+        {
+          "phase_label": "Overall",
+          "phase_fraction": 1.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 0.333
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.333
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.334
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 544.0,
+            "mass_flow_kg_per_s": 32.021639845760006,
+            "volumetric_flow_m3_per_s": 4.5676626101622135,
+            "density_kg_per_m3": 7.0105090018071206,
+            "molecular_weight_kg_per_kmol": 58.863308540000006,
+            "enthalpy_kj_per_kg": -340.15943549348026,
+            "molar_enthalpy_kj_per_kmol": -20022.90980424496,
+            "entropy_kj_per_kg_k": -0.8457310260432901,
+            "molar_entropy_kj_per_kmol_k": -49.78252632783696,
+            "gibbs_free_energy": -86.44012768049326,
+            "helmholtz_energy": -100.92180030509108,
+            "internal_energy": -354.6411081180781
+          }
+        },
+        {
+          "phase_label": "OverallLiquid",
+          "phase_fraction": 0.6607805819080728,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 2.4195553291603056e-05
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.4950693770556352
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.5049064273910732
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 359.4646365579916,
+            "mass_flow_kg_per_s": 29.029694126861656,
+            "volumetric_flow_m3_per_s": 0.03466282802081624,
+            "mass_fraction": 0.906561971516601,
+            "volumetric_fraction": 0.007588720910743058,
+            "density_kg_per_m3": 837.4877580510255,
+            "viscosity_pa_s": 0.0008641856641977402,
+            "molecular_weight_kg_per_kmol": 80.7581363352786,
+            "enthalpy_kj_per_kg": -375.5250498571091,
+            "molar_enthalpy_kj_per_kmol": -30326.70317367271,
+            "entropy_kj_per_kg_k": -0.938399328113801,
+            "molar_entropy_kj_per_kmol_k": -75.78338087674818,
+            "gibbs_free_energy": -94.0052514229688,
+            "helmholtz_energy": -94.15753360411361,
+            "internal_energy": -375.6773320382539
+          }
+        },
+        {
+          "phase_label": "Vapor",
+          "phase_fraction": 0.3392194180919272,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 0.9816098989903186
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.017301979670407402
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0010881213392740195
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 184.5353634420084,
+            "mass_flow_kg_per_s": 2.9920484996213927,
+            "volumetric_flow_m3_per_s": 4.533014443091553,
+            "mass_fraction": 0.09343802848339892,
+            "volumetric_fraction": 0.992411279089257,
+            "density_kg_per_m3": 0.6600571291321081,
+            "viscosity_pa_s": 1.1388226124922282e-05,
+            "molecular_weight_kg_per_kmol": 16.21395728066868,
+            "enthalpy_kj_per_kg": 2.9676788278949733,
+            "molar_enthalpy_kj_per_kmol": 48.117817738233995,
+            "entropy_kj_per_kg_k": 0.05336284382645138,
+            "molar_entropy_kj_per_kmol_k": 0.8652228701770771,
+            "gibbs_free_energy": -13.041174320040442,
+            "helmholtz_energy": -166.55061392450258,
+            "internal_energy": -150.54176077656717
+          }
+        },
+        {
+          "phase_label": "Liquid1",
+          "phase_fraction": 0.6607805819080728,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 2.4195553291603053e-05
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.4950693770556352
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.5049064273910732
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 359.4646365579916,
+            "mass_flow_kg_per_s": 29.029694126861656,
+            "volumetric_flow_m3_per_s": 0.03466282802081623,
+            "mass_fraction": 0.906561971516601,
+            "volumetric_fraction": 0.007588720910743058,
+            "density_kg_per_m3": 837.4877580510256,
+            "viscosity_pa_s": 0.0008641856641977402,
+            "molecular_weight_kg_per_kmol": 80.7581363352786,
+            "enthalpy_kj_per_kg": -375.5250498571091,
+            "molar_enthalpy_kj_per_kmol": -30326.70317367271,
+            "entropy_kj_per_kg_k": -0.938399328113801,
+            "molar_entropy_kj_per_kmol_k": -75.78338087674818,
+            "gibbs_free_energy": -94.0052514229688,
+            "helmholtz_energy": -94.15753360411361,
+            "internal_energy": -375.6773320382539
+          }
+        },
+        {
+          "phase_label": "Liquid2",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "volumetric_fraction": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Liquid3",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Aqueous",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Solid",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "volumetric_fraction": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "id": "S2",
+      "name": "S2",
+      "temperature_k": 300.0,
+      "pressure_pa": 101325.0,
+      "total_molar_flow_mol_per_s": 184.5353634420084,
+      "phases": [
+        {
+          "phase_label": "Overall",
+          "phase_fraction": 1.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 0.9816098989903186
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.017301979670407402
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0010881213392740195
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 184.5353634420084,
+            "mass_flow_kg_per_s": 2.9920484996213927,
+            "volumetric_flow_m3_per_s": 4.533014443091553,
+            "density_kg_per_m3": 0.6600571291321081,
+            "molecular_weight_kg_per_kmol": 16.21395728066868,
+            "enthalpy_kj_per_kg": 2.9676788278949733,
+            "molar_enthalpy_kj_per_kmol": 48.117817738233995,
+            "entropy_kj_per_kg_k": 0.05336284382645138,
+            "molar_entropy_kj_per_kmol_k": 0.8652228701770771,
+            "gibbs_free_energy": -13.041174320040442,
+            "helmholtz_energy": -166.55061392450258,
+            "internal_energy": -150.54176077656717
+          }
+        },
+        {
+          "phase_label": "OverallLiquid",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "volumetric_flow_m3_per_s": 0.0,
+            "mass_fraction": 0.0,
+            "volumetric_fraction": 0.0,
+            "density_kg_per_m3": 0.0,
+            "viscosity_pa_s": 0.0,
+            "molecular_weight_kg_per_kmol": "NaN",
+            "enthalpy_kj_per_kg": 0.0,
+            "molar_enthalpy_kj_per_kmol": "NaN",
+            "entropy_kj_per_kg_k": 0.0,
+            "molar_entropy_kj_per_kmol_k": "NaN",
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Vapor",
+          "phase_fraction": 1.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 0.9816098989903186
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.017301979670407402
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0010881213392740195
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 184.5353634420084,
+            "mass_flow_kg_per_s": 2.9920484996213927,
+            "volumetric_flow_m3_per_s": 4.533014443091553,
+            "mass_fraction": 1.0,
+            "volumetric_fraction": 1.0,
+            "density_kg_per_m3": 0.6600571291321081,
+            "viscosity_pa_s": 1.1388226124922282e-05,
+            "molecular_weight_kg_per_kmol": 16.21395728066868,
+            "enthalpy_kj_per_kg": 2.9676788278949733,
+            "molar_enthalpy_kj_per_kmol": 48.117817738233995,
+            "entropy_kj_per_kg_k": 0.05336284382645138,
+            "molar_entropy_kj_per_kmol_k": 0.8652228701770771,
+            "gibbs_free_energy": -13.041174320040442,
+            "helmholtz_energy": -166.55061392450258,
+            "internal_energy": -150.54176077656717
+          }
+        },
+        {
+          "phase_label": "Liquid1",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "volumetric_fraction": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Liquid2",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "volumetric_fraction": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Liquid3",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Aqueous",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Solid",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "volumetric_fraction": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "id": "S3",
+      "name": "S3",
+      "temperature_k": 300.0,
+      "pressure_pa": 101325.0,
+      "total_molar_flow_mol_per_s": 359.4646365579915,
+      "phases": [
+        {
+          "phase_label": "Overall",
+          "phase_fraction": 1.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 2.419555329160305e-05
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.49506937705563525
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.5049064273910732
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 359.4646365579915,
+            "mass_flow_kg_per_s": 29.029694126861656,
+            "volumetric_flow_m3_per_s": 0.03466282802081624,
+            "density_kg_per_m3": 837.4877580510255,
+            "molecular_weight_kg_per_kmol": 80.7581363352786,
+            "enthalpy_kj_per_kg": -375.52504985710914,
+            "molar_enthalpy_kj_per_kmol": -30326.703173672715,
+            "entropy_kj_per_kg_k": -0.938399328113801,
+            "molar_entropy_kj_per_kmol_k": -75.78338087674818,
+            "gibbs_free_energy": -94.00525142296885,
+            "helmholtz_energy": -94.15753360411367,
+            "internal_energy": -375.67733203825395
+          }
+        },
+        {
+          "phase_label": "OverallLiquid",
+          "phase_fraction": 1.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 2.419555329160305e-05
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.49506937705563525
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.5049064273910732
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 359.4646365579915,
+            "mass_flow_kg_per_s": 29.029694126861653,
+            "volumetric_flow_m3_per_s": 0.03466282802081624,
+            "mass_fraction": 1.0,
+            "volumetric_fraction": 1.0,
+            "density_kg_per_m3": 837.4877580510255,
+            "viscosity_pa_s": 0.0008641856641977402,
+            "molecular_weight_kg_per_kmol": 80.7581363352786,
+            "enthalpy_kj_per_kg": -375.52504985710914,
+            "molar_enthalpy_kj_per_kmol": -30326.703173672715,
+            "entropy_kj_per_kg_k": -0.938399328113801,
+            "molar_entropy_kj_per_kmol_k": -75.78338087674818,
+            "gibbs_free_energy": -94.00525142296885,
+            "helmholtz_energy": -94.15753360411367,
+            "internal_energy": -375.67733203825395
+          }
+        },
+        {
+          "phase_label": "Vapor",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "volumetric_fraction": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Liquid1",
+          "phase_fraction": 1.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 2.419555329160305e-05
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.49506937705563525
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.5049064273910732
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 359.4646365579915,
+            "mass_flow_kg_per_s": 29.029694126861653,
+            "volumetric_flow_m3_per_s": 0.03466282802081624,
+            "mass_fraction": 1.0,
+            "volumetric_fraction": 1.0,
+            "density_kg_per_m3": 837.4877580510255,
+            "viscosity_pa_s": 0.0008641856641977402,
+            "molecular_weight_kg_per_kmol": 80.7581363352786,
+            "enthalpy_kj_per_kg": -375.52504985710914,
+            "molar_enthalpy_kj_per_kmol": -30326.703173672715,
+            "entropy_kj_per_kg_k": -0.938399328113801,
+            "molar_entropy_kj_per_kmol_k": -75.78338087674818,
+            "gibbs_free_energy": -94.00525142296885,
+            "helmholtz_energy": -94.15753360411367,
+            "internal_energy": -375.67733203825395
+          }
+        },
+        {
+          "phase_label": "Liquid2",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "volumetric_fraction": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Liquid3",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Aqueous",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Solid",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "volumetric_fraction": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "id": "S4",
+      "name": "S4",
+      "temperature_k": 300.0,
+      "pressure_pa": 101325.0,
+      "total_molar_flow_mol_per_s": 0.0,
+      "phases": [
+        {
+          "phase_label": "Overall",
+          "phase_fraction": 1.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "volumetric_flow_m3_per_s": 0.0,
+            "density_kg_per_m3": "Infinity",
+            "molecular_weight_kg_per_kmol": 0.0,
+            "enthalpy_kj_per_kg": 0.0,
+            "molar_enthalpy_kj_per_kmol": 0.0,
+            "entropy_kj_per_kg_k": 0.0,
+            "molar_entropy_kj_per_kmol_k": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "OverallLiquid",
+          "phase_fraction": 1.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "volumetric_flow_m3_per_s": 0.0,
+            "mass_fraction": 0.0,
+            "volumetric_fraction": "NaN",
+            "density_kg_per_m3": "Infinity",
+            "viscosity_pa_s": 0.0,
+            "molecular_weight_kg_per_kmol": 0.0,
+            "enthalpy_kj_per_kg": 0.0,
+            "molar_enthalpy_kj_per_kmol": 0.0,
+            "entropy_kj_per_kg_k": 0.0,
+            "molar_entropy_kj_per_kmol_k": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Vapor",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "volumetric_fraction": "NaN",
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Liquid1",
+          "phase_fraction": 1.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "volumetric_flow_m3_per_s": 0.0,
+            "mass_fraction": "NaN",
+            "volumetric_fraction": "NaN",
+            "density_kg_per_m3": "Infinity",
+            "viscosity_pa_s": 0.0,
+            "molecular_weight_kg_per_kmol": 0.0,
+            "enthalpy_kj_per_kg": 0.0,
+            "molar_enthalpy_kj_per_kmol": 0.0,
+            "entropy_kj_per_kg_k": 0.0,
+            "molar_entropy_kj_per_kmol_k": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Liquid2",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "volumetric_fraction": "NaN",
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Liquid3",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Aqueous",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        },
+        {
+          "phase_label": "Solid",
+          "phase_fraction": 0.0,
+          "composition": [
+            {
+              "compound": "Methane",
+              "mole_fraction": 1.0
+            },
+            {
+              "compound": "Water",
+              "mole_fraction": 0.0
+            },
+            {
+              "compound": "n-Decane",
+              "mole_fraction": 0.0
+            }
+          ],
+          "properties": {
+            "molar_flow_mol_per_s": 0.0,
+            "mass_flow_kg_per_s": 0.0,
+            "volumetric_fraction": "NaN",
+            "gibbs_free_energy": 0.0,
+            "helmholtz_energy": 0.0,
+            "internal_energy": 0.0
+          }
+        }
+      ]
+    }
+  ],
+  "messages": [],
+  "mass_balance_valid": true,
+  "mass_balance_error_percent": 2.0898315757650004e-14
+}

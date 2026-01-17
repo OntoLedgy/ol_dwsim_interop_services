@@ -13,17 +13,18 @@ The MCP server acts as a façade layer that:
 
 ## Installation
 
-### Using Poetry (recommended)
+### Using uv (recommended)
 
 ```bash
-poetry install
+cd /mcp_service/server
+uv sync
+source .venv/bin/activate
 ```
 
-### Using pip
+### DWSIM assemblies
 
-```bash
-pip install -r requirements.txt
-```
+- Ensure DWSIM binaries are available. The repo expects a local copy at [mcp_service/dwsim_worker/dwsim_binaries/x64/Debug](mcp_service/dwsim_worker/dwsim_binaries/x64/Debug) (sync from the sibling `../dwsim/DWSIM/bin/x64/Debug`).
+- Override with `DWSIM_PATH` if you want to point to a different DWSIM installation; this is used by the worker assembly loader and pythonnet smoke tests.
 
 ## Configuration
 

@@ -19,8 +19,12 @@ from models.mcp_inputs import (
     ConnectOutput,
     DeleteObjectInput,
     DeleteObjectOutput,
+    FlashStreamInput,
+    FlashStreamOutput,
     ListObjectsInput,
     ListObjectsOutput,
+    SetBinaryInteractionParameterInput,
+    SetBinaryInteractionParameterOutput,
     SetObjectParameterInput,
     SetObjectParameterOutput,
     SetPropertyPackageInput,
@@ -89,6 +93,20 @@ def build_flowsheet_tools() -> list[types.Tool]:
             inputSchema=DeleteObjectInput.model_json_schema(),
             outputSchema=DeleteObjectOutput.model_json_schema(),
         ),
+        types.Tool(
+            name="flash_stream",
+            title="Flash Stream",
+            description="Perform flash calculation on a stream to compute phase equilibrium. Must be called on feed streams before running calculations.",
+            inputSchema=FlashStreamInput.model_json_schema(),
+            outputSchema=FlashStreamOutput.model_json_schema(),
+        ),
+        types.Tool(
+            name="set_binary_interaction_parameter",
+            title="Set Binary Interaction Parameter",
+            description="Set a binary interaction parameter (BIP) for a pair of compounds. Critical for accurate phase equilibrium in multi-component systems.",
+            inputSchema=SetBinaryInteractionParameterInput.model_json_schema(),
+            outputSchema=SetBinaryInteractionParameterOutput.model_json_schema(),
+        ),
     ]
 
 
@@ -142,6 +160,16 @@ async def handle_flowsheet_tool(tool_name: str, arguments: Dict[str, Any], depen
         if tool_name == "delete_object":
             payload = DeleteObjectInput.model_validate(arguments)
             result = await service.delete_object(payload)
+            return result.model_dump()
+
+        if tool_name == "flash_stream":
+            payload = FlashStreamInput.model_validate(arguments)
+            result = await service.flash_stream(payload)
+            return result.model_dump()
+
+        if tool_name == "set_binary_interaction_parameter":
+            payload = SetBinaryInteractionParameterInput.model_validate(arguments)
+            result = await service.set_binary_interaction_parameter(payload)
             return result.model_dump()
 
         return types.CallToolResult(

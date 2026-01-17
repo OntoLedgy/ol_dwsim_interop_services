@@ -103,6 +103,7 @@ temp/
 logs/
 *.dwxmz
 *.dwxml
+/mcp_service/dwsim_worker/dwsim.config.json
 
 # Test results
 TestResults/

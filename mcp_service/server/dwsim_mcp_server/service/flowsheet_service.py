@@ -15,8 +15,12 @@ from models.mcp_inputs import (
     ConnectOutput,
     DeleteObjectInput,
     DeleteObjectOutput,
+    FlashStreamInput,
+    FlashStreamOutput,
     ListObjectsInput,
     ListObjectsOutput,
+    SetBinaryInteractionParameterInput,
+    SetBinaryInteractionParameterOutput,
     SetObjectParameterInput,
     SetObjectParameterOutput,
     SetPropertyPackageInput,
@@ -71,6 +75,16 @@ class FlowsheetClientProtocol(Protocol):
     ) -> Any: ...
 
     def delete_object(self, session_id: str, *, object_id: str) -> Dict[str, Any]: ...
+
+    def flash_stream(self, session_id: str, stream_id: str) -> bool: ...
+
+    def set_binary_interaction_parameter(
+        self,
+        session_id: str,
+        compound1: str,
+        compound2: str,
+        value: float,
+    ) -> bool: ...
 
 
 class FlowsheetService:
@@ -259,6 +273,55 @@ class FlowsheetService:
             removed_connections=len(result.removed_connections),
         )
         return result
+
+    async def flash_stream(self, payload: FlashStreamInput) -> FlashStreamOutput:
+        """Flash a stream to compute phase equilibrium.
+
+        This must be called on feed streams before running calculations.
+        """
+
+        def _op() -> bool:
+            return bool(self._client.flash_stream(payload.session_id, payload.stream_id))
+
+        flashed = await self._session_client.run_session_operation(payload.session_id, _op)
+        self._logger.info(
+            "stream_flashed",
+            session_id=payload.session_id,
+            stream_id=payload.stream_id,
+            flashed=bool(flashed),
+        )
+        return FlashStreamOutput(stream_id=payload.stream_id, flashed=bool(flashed))
+
+    async def set_binary_interaction_parameter(
+        self, payload: SetBinaryInteractionParameterInput
+    ) -> SetBinaryInteractionParameterOutput:
+        """Set a binary interaction parameter for a compound pair."""
+
+        def _op() -> bool:
+            return bool(
+                self._client.set_binary_interaction_parameter(
+                    payload.session_id,
+                    payload.compound1,
+                    payload.compound2,
+                    payload.value,
+                )
+            )
+
+        applied = await self._session_client.run_session_operation(payload.session_id, _op)
+        self._logger.info(
+            "bip_set",
+            session_id=payload.session_id,
+            compound1=payload.compound1,
+            compound2=payload.compound2,
+            value=payload.value,
+            applied=bool(applied),
+        )
+        return SetBinaryInteractionParameterOutput(
+            compound1=payload.compound1,
+            compound2=payload.compound2,
+            value=payload.value,
+            applied=bool(applied),
+        )
 
 
 def _normalize_parameter_result(result: Any) -> tuple[Any, Optional[Any]]:

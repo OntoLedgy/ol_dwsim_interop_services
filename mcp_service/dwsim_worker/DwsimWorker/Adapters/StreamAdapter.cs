@@ -29,7 +29,8 @@ namespace DwsimWorker.Adapters
     {
         private readonly ILogger _logger;
         private readonly FlowsheetContext _context;
-        private int _streamCounter = 0;
+        // NOTE: _streamCounter removed - we now use context.GetStreamIds().Count to generate unique IDs
+        // This ensures IDs are unique even when new StreamAdapter instances are created
 
         private static readonly Dictionary<int, string> PhaseIdToName = new Dictionary<int, string>
         {
@@ -129,9 +130,10 @@ namespace DwsimWorker.Adapters
                         new InvalidPropertyValueException("StreamProperties", properties.ToString(), errorMessage));
                 }
 
-                // Step 2: Generate unique stream ID
-                _streamCounter++;
-                var streamId = $"S{_streamCounter}";
+                // Step 2: Generate unique stream ID based on existing streams in context
+                // This ensures IDs are unique even when new StreamAdapter instances are created
+                var existingStreamCount = _context.GetStreamIds().Count;
+                var streamId = $"S{existingStreamCount + 1}";
 
                 // Step 3: Create DWSIM MaterialStream object
                 var flowsheet = _context.GetFlowsheet();

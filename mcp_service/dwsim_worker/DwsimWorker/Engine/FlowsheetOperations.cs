@@ -155,6 +155,47 @@ namespace DwsimWorker.Engine
             };
         }
 
+        public bool FlashStream(string sessionId, string streamId)
+        {
+            var context = GetContext(sessionId);
+            var adapter = new StreamAdapter(_logger, context);
+            var result = adapter.FlashStream(streamId);
+            if (!result.Success)
+            {
+                var errorMsg = $"Failed to flash stream '{streamId}': {result.Message}";
+                if (result.Error != null)
+                {
+                    errorMsg += $" Inner: {result.Error.Message}";
+                    if (result.Error.InnerException != null)
+                    {
+                        errorMsg += $" InnerInner: {result.Error.InnerException.Message}";
+                    }
+                }
+                throw new InvalidOperationException(errorMsg, result.Error);
+            }
+            return true;
+        }
+
+        public bool SetBinaryInteractionParameter(string sessionId, string compound1, string compound2, double value)
+        {
+            var context = GetContext(sessionId);
+            var adapter = new PropertyPackageAdapter(_logger, context);
+            try
+            {
+                adapter.SetBinaryInteractionParameter(compound1, compound2, value);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                var errorMsg = $"Failed to set BIP for '{compound1}'-'{compound2}': {ex.Message}";
+                if (ex.InnerException != null)
+                {
+                    errorMsg += $" Inner: {ex.InnerException.Message}";
+                }
+                throw new InvalidOperationException(errorMsg, ex);
+            }
+        }
+
         public object SetObjectParameter(string sessionId, string objectId, string parameterName, object value)
         {
             var context = GetContext(sessionId);

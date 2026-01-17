@@ -62,6 +62,23 @@ cd ../dwsim_worker
 dotnet build DwsimWorker.sln
 ```
 
+### DWSIM binaries setup
+
+- Build DWSIM in the sibling `../dwsim` repository (x64 Debug/Release).
+- Copy the built binaries into this repo (keeps tests and pythonnet loader self-contained):
+
+```powershell
+cd c:/Users/Mesbah.Khan/s/OntoLedgy/dwsim_interop_services
+$src = "..\dwsim\DWSIM\bin\x64\Debug"
+$dest = "mcp_service\dwsim_worker\dwsim_binaries\x64\Debug"
+New-Item -ItemType Directory -Path $dest -Force | Out-Null
+Copy-Item "$src\*.dll" $dest -Force
+Copy-Item "$src\data" "$dest\data" -Recurse -Force
+Copy-Item "$src\ThermoCS" "$dest\ThermoCS" -Recurse -Force
+```
+
+- Default paths in the worker/test configs now point to [mcp_service/dwsim_worker/dwsim_binaries/x64/Debug](mcp_service/dwsim_worker/dwsim_binaries/x64/Debug). For machine-specific installs, copy [mcp_service/dwsim_worker/dwsim.config.json.sample](mcp_service/dwsim_worker/dwsim.config.json.sample) to `mcp_service/dwsim_worker/dwsim.config.json` and set `dwsim_path` to your DWSIM build folder (gitignored).
+
 ### Quick Start
 
 ```bash

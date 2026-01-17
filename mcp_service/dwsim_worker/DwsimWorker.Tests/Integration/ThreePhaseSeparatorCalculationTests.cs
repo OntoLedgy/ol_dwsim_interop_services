@@ -204,7 +204,9 @@ namespace DwsimWorker.Tests.Integration
             return new StreamProperties(tempProperty, pressProperty, flowProperty, comp);
         }
 
-        private StreamProperties CreateEmptyStreamProperties(double temperature, double pressure)
+        private StreamProperties CreateEmptyStreamProperties(
+            double temperature, 
+            double pressure)
         {
             // Create outlet streams with minimal properties
             // Flow and composition will be calculated by DWSIM during separator calculation

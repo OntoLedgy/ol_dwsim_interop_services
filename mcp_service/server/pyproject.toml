@@ -26,6 +26,8 @@ dependencies = [
     "jsonrpcserver>=5",
     "typer>=0.9",
     "rich>=13",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
 ]
 
 [project.optional-dependencies]

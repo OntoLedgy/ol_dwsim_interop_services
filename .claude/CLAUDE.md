@@ -1,5 +1,21 @@
 # Building and Testing
 
+## Python Environment
+
+The Python environment for the MCP server is in the `mcp_service/server/` folder. 
+
+To run pytest (PowerShell script execution may be disabled, so call python directly):
+
+```powershell
+cd "c:\Users\Mesbah.Khan\s\OntoLedgy\dwsim_interop_services\mcp_service\server"
+.\.venv\Scripts\python.exe -m pytest tests/integration/test_simulation_integration.py -v
+```
+
+Alternatively, for a single test:
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/integration/test_simulation_integration.py::test_simulation_workflow_integration -v
+```
+
 ## Build Command
 
 Always use this exact command to build:

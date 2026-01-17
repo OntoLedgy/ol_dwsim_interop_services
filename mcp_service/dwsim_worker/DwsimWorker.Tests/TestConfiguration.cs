@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Newtonsoft.Json;
 
 namespace DwsimWorker.Tests
 {
@@ -9,11 +10,18 @@ namespace DwsimWorker.Tests
     /// </summary>
     public static class TestConfiguration
     {
+        private static readonly string ConfigFilePath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "dwsim.config.json"));
+
         /// <summary>
         /// Path to DWSIM assemblies for testing.
-        /// Points to main DWSIM application Debug build which contains all required DLLs.
+        /// Prefers local config file (gitignored), falls back to repo-copied binaries.
         /// </summary>
-        public static readonly string DwsimAssemblyPath = @"D:\S\C#\dwsim\DWSIM\bin\Debug";
+        public static readonly string DwsimAssemblyPath = ResolveDwsimPath();
 
         /// <summary>
         /// Validates that the DWSIM assembly path exists and contains required DLLs.
@@ -53,10 +61,58 @@ namespace DwsimWorker.Tests
         {
             if (!Directory.Exists(DwsimAssemblyPath))
             {
-                return $"DWSIM assembly path does not exist: {DwsimAssemblyPath}";
+                return $"DWSIM assembly path does not exist: {DwsimAssemblyPath} (set in dwsim.config.json)";
             }
 
             return $"DWSIM assembly path exists but required DLLs are missing: {DwsimAssemblyPath}";
+        }
+
+        private static string ResolveDwsimPath()
+        {
+            var configured = ReadConfigPath();
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                return configured;
+            }
+
+            return Path.GetFullPath(Path.Combine(
+                AppContext.BaseDirectory,
+                "..",
+                "..",
+                "..",
+                "dwsim_binaries",
+                "x64",
+                "Debug"));
+        }
+
+        private static string ReadConfigPath()
+        {
+            try
+            {
+                if (!File.Exists(ConfigFilePath))
+                {
+                    return null;
+                }
+
+                var text = File.ReadAllText(ConfigFilePath);
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    return null;
+                }
+
+                var config = JsonConvert.DeserializeObject<DwsimConfig>(text);
+                return string.IsNullOrWhiteSpace(config?.DwsimPath) ? null : config.DwsimPath.Trim();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private sealed class DwsimConfig
+        {
+            [JsonProperty("dwsim_path")]
+            public string DwsimPath { get; set; }
         }
     }
 }

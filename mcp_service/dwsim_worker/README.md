@@ -27,6 +27,9 @@ The following assemblies must be available:
 
 The worker resolves DWSIM assembly paths using this fallback order:
 
+- **Local repo copy (default)**: `App.config` now points to [mcp_service/dwsim_worker/dwsim_binaries/x64/Debug](mcp_service/dwsim_worker/dwsim_binaries/x64/Debug), populated by copying from the sibling `../dwsim/DWSIM/bin/x64/Debug` build.
+- **Local config override (gitignored)**: Create `mcp_service/dwsim_worker/dwsim.config.json` (use [dwsim.config.json.sample](dwsim.config.json.sample)) to point to a machine-specific DWSIM build without touching env vars.
+
 1. **Environment Variable**: Set `DWSIM_PATH` to your DWSIM installation directory
    ```cmd
    set DWSIM_PATH=C:\Program Files\DWSIM

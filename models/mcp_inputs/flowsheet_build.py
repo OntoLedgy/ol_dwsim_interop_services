@@ -290,3 +290,43 @@ class DeleteObjectOutput(BaseModel):
     removed_connections: List[ConnectionSummary] = Field(
         default_factory=list, description="Connections removed as part of deletion"
     )
+
+
+class FlashStreamInput(BaseModel):
+    """Input for flash_stream MCP tool."""
+
+    session_id: str = Field(..., description="Session identifier", min_length=1)
+    stream_id: str = Field(..., description="Stream identifier to flash", min_length=1)
+
+
+class FlashStreamOutput(BaseModel):
+    """Output for flash_stream MCP tool."""
+
+    stream_id: str = Field(..., description="Stream identifier that was flashed")
+    flashed: bool = Field(..., description="True when flash calculation succeeded")
+
+
+class SetBinaryInteractionParameterInput(BaseModel):
+    """Input for set_binary_interaction_parameter MCP tool."""
+
+    session_id: str = Field(..., description="Session identifier", min_length=1)
+    compound1: str = Field(..., description="First compound name", min_length=1)
+    compound2: str = Field(..., description="Second compound name", min_length=1)
+    value: float = Field(..., description="Binary interaction parameter value")
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, value: float) -> float:
+        """Ensure BIP value is finite."""
+        if not math.isfinite(value):
+            raise ValueError("BIP value must be finite")
+        return value
+
+
+class SetBinaryInteractionParameterOutput(BaseModel):
+    """Output for set_binary_interaction_parameter MCP tool."""
+
+    compound1: str = Field(..., description="First compound name")
+    compound2: str = Field(..., description="Second compound name")
+    value: float = Field(..., description="Applied BIP value")
+    applied: bool = Field(..., description="True when BIP was applied")
