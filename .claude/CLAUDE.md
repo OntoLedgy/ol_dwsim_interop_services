@@ -1,3 +1,15 @@
+# DWSIM Interop Services - Agent Instructions
+
+## Code Development Standards
+
+**IMPORTANT**: Before making any code changes, review the standards in [agents.md](agents.md) which references:
+- Clean coding standards: `docs/standards/clean_coding/`
+- Testing standards: `docs/standards/testing/`
+
+Apply these principles consistently in all code contributions.
+
+---
+
 # Building and Testing
 
 ## Python Environment
