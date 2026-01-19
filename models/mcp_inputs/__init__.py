@@ -28,3 +28,8 @@ from .flowsheet_build import (  # noqa: F401
     SUPPORTED_UNIT_TYPES,
     UnitSummary,
 )
+from .flash_inputs import (  # noqa: F401
+    FlashPHInputs,
+    FlashPSInputs,
+    FlashTPInputs,
+)

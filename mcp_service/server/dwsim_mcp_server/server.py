@@ -14,6 +14,7 @@ from dwsim_mcp_server.ipc.flowsheet_client import FlowsheetClient
 from dwsim_mcp_server.ipc.limited_session_client import LimitedSessionClient
 from dwsim_mcp_server.observability import configure_logging, get_logger
 from dwsim_mcp_server.service import FlowsheetService
+from dwsim_mcp_server.services import ThermodynamicsService
 from dwsim_mcp_server.tools.registry import register_tools
 
 
@@ -25,6 +26,7 @@ class ServerDependencies:
         *,
         settings: ServerSettings,
         flowsheet_service: Optional[FlowsheetService] = None,
+        thermodynamics_service: Optional[ThermodynamicsService] = None,
     ) -> None:
         self.settings = settings
         self.session_client = LimitedSessionClient(settings.resource_limits)
@@ -32,6 +34,9 @@ class ServerDependencies:
         self.flowsheet_service = flowsheet_service or FlowsheetService(
             session_client=self.session_client,
             flowsheet_client=self.flowsheet_client,
+        )
+        self.thermodynamics_service = thermodynamics_service or ThermodynamicsService(
+            session_client=self.session_client,
         )
 
     async def start(self) -> None:

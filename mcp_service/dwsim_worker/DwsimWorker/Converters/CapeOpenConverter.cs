@@ -195,7 +195,8 @@ namespace DwsimWorker.Converters
                 CalculationType = calculationType,
                 TemperatureK = temperatureK,
                 PressurePa = pressurePa,
-                Phases = phases?.ToList() ?? new List<PhaseDto>()
+                Phases = phases?.ToList() ?? new List<PhaseDto>(),
+                Converged = true
             };
         }
 

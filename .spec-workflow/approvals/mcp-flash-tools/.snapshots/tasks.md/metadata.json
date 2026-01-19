@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-flash-tools/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-19T14:38:37.404Z",
+      "trigger": "initial",
+      "approvalId": "approval_1768833517320_dvfqbrsux",
+      "approvalTitle": "Tasks Document: Thermodynamic Flash Calculation Tools"
+    }
+  ]
+}

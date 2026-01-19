@@ -86,6 +86,7 @@
     <Compile Include="Adapters\CompoundAdapter.cs" />
     <Compile Include="Adapters\PropertyPackageAdapter.cs" />
     <Compile Include="Adapters\StreamAdapter.cs" />
+    <Compile Include="Adapters\ThermodynamicsAdapter.cs" />
     <Compile Include="Adapters\UnitOpAdapter.cs" />
     <Compile Include="Adapters\ConnectionAdapter.cs" />
     <Compile Include="Adapters\CalculationAdapter.cs" />

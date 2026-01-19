@@ -26,5 +26,10 @@ namespace DwsimWorker.Contracts.CapeOpen
         /// Gets or sets the phase results.
         /// </summary>
         public List<PhaseDto> Phases { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether the flash calculation converged.
+        /// </summary>
+        public bool Converged { get; set; }
     }
 }
