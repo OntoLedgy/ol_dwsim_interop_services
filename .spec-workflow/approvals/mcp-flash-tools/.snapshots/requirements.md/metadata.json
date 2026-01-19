@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-flash-tools/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-18T00:51:56.092Z",
+      "trigger": "initial",
+      "approvalId": "approval_1768697515969_fs5rjjm0o",
+      "approvalTitle": "Requirements for Spec 6.1: Thermodynamic Flash Calculation Tools"
+    }
+  ]
+}
