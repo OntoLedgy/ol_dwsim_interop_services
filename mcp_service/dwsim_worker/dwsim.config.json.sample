@@ -1,3 +1,4 @@
 {
-  "dwsim_path": "C:/Path/To/dwsim/DWSIM/bin/x64/Debug"
+  "dwsim_path": "d:/path/to/dwsim/DWSIM/bin/x64/Debug",
+  "msbuild_path": "D:/Apps/Microsoft Visual Studio/2022/Professional/MSBuild/Current/Bin/MSBuild.exe"
 }

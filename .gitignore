@@ -104,6 +104,7 @@ logs/
 *.dwxmz
 *.dwxml
 /mcp_service/dwsim_worker/dwsim.config.json
+/mcp_service/dwsim_worker/dwsim_binaries/
 
 # Test results
 TestResults/

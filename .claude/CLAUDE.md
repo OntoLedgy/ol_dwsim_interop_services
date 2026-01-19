@@ -12,6 +12,22 @@ Apply these principles consistently in all code contributions.
 
 # Building and Testing
 
+## Initial Setup (New Machine)
+
+**IMPORTANT**: When setting up on a new machine or after cloning the repository, you MUST configure DWSIM binaries first.
+
+See the detailed setup guide: [mcp_service/dwsim_worker/SETUP.md](../mcp_service/dwsim_worker/SETUP.md)
+
+Quick setup steps:
+1. Create `mcp_service/dwsim_worker/DwsimWorker/dwsim.config.json` from the sample
+2. Set your DWSIM build path in the config file
+3. Run `./build.bat` (it automatically runs the setup script)
+
+The build.bat now automatically:
+- Copies DWSIM binaries from your DWSIM build to `dwsim_binaries/` folder
+- Verifies all critical assemblies are present
+- Then builds the solution
+
 ## Python Environment
 
 The Python environment for the MCP server is in the `mcp_service/server/` folder. 
