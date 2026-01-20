@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-sensitivity-tools/design.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-20T16:44:12.085Z",
+      "trigger": "initial",
+      "approvalId": "approval_1768927451968_cltip3zqe",
+      "approvalTitle": "Design for mcp-sensitivity-tools (Spec 6.2)"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-sensitivity-tools/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-20T16:56:50.132Z",
+      "trigger": "initial",
+      "approvalId": "approval_1768928210018_9sf654m2y",
+      "approvalTitle": "Tasks for mcp-sensitivity-tools (Spec 6.2)"
+    }
+  ]
+}
