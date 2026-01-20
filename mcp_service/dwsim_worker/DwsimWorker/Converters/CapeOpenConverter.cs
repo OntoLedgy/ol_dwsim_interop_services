@@ -363,5 +363,191 @@ namespace DwsimWorker.Converters
 
             return new[] { Convert.ToDouble(value) };
         }
+
+        /// <summary>
+        /// Converts a DWSIM material stream to a DTO by reading directly from DWSIM's internal
+        /// Phases dictionary. This bypasses CAPE-OPEN interfaces which may not be available
+        /// for streams that have been flashed but not fully calculated by the flowsheet solver.
+        /// </summary>
+        /// <param name="materialStream">DWSIM MaterialStream object.</param>
+        /// <returns>Material stream DTO populated from DWSIM internal data.</returns>
+        public MaterialStreamDto ToDwsimMaterialStreamDto(dynamic materialStream)
+        {
+            if (materialStream == null)
+            {
+                throw new ArgumentNullException(nameof(materialStream));
+            }
+
+            var streamType = materialStream.GetType();
+
+            // Get basic stream properties
+            var name = TryGetString(materialStream, "GraphicObjectName") ?? TryGetString(materialStream, "Name");
+            var id = TryGetString(materialStream, "Name");
+
+            // Get Phases dictionary
+            var phasesProperty = streamType.GetProperty("Phases");
+            if (phasesProperty == null)
+            {
+                throw new InvalidOperationException("MaterialStream does not have a Phases property");
+            }
+
+            var phases = phasesProperty.GetValue(materialStream) as System.Collections.IDictionary;
+            if (phases == null)
+            {
+                throw new InvalidOperationException("Could not get Phases dictionary from MaterialStream");
+            }
+
+            // Get overall phase (phase 0) for temperature, pressure, flow
+            double temperature = 0, pressure = 0, molarFlow = 0;
+            var phaseDtos = new List<PhaseDto>();
+
+            foreach (System.Collections.DictionaryEntry entry in phases)
+            {
+                var phaseId = Convert.ToInt32(entry.Key);
+                var phase = entry.Value;
+                var phaseType = phase.GetType();
+
+                // Get phase properties
+                var propsProperty = phaseType.GetProperty("Properties");
+                var props = propsProperty?.GetValue(phase);
+
+                if (props != null)
+                {
+                    var propsType = props.GetType();
+                    var molarFracProp = propsType.GetProperty("molarfraction");
+                    var molarFraction = molarFracProp != null ? Convert.ToDouble(molarFracProp.GetValue(props) ?? 0) : 0;
+
+                    if (phaseId == 0) // Overall phase
+                    {
+                        var tempProp = propsType.GetProperty("temperature");
+                        var presProp = propsType.GetProperty("pressure");
+                        var flowProp = propsType.GetProperty("molarflow");
+
+                        temperature = tempProp != null ? Convert.ToDouble(tempProp.GetValue(props) ?? 0) : 0;
+                        pressure = presProp != null ? Convert.ToDouble(presProp.GetValue(props) ?? 0) : 0;
+                        molarFlow = flowProp != null ? Convert.ToDouble(flowProp.GetValue(props) ?? 0) : 0;
+                    }
+
+                    // Only add phases with non-zero molar fraction (excluding overall phase 0)
+                    if (phaseId > 0 && molarFraction > 1e-10)
+                    {
+                        var phaseLabel = GetDwsimPhaseLabel(phaseId);
+                        var compoundDtos = GetDwsimPhaseComposition(phase, phaseType);
+
+                        phaseDtos.Add(new PhaseDto
+                        {
+                            PhaseLabel = phaseLabel,
+                            PhaseFraction = molarFraction,
+                            Composition = compoundDtos,
+                            Properties = GetDwsimPhaseProperties(props, propsType)
+                        });
+                    }
+                }
+            }
+
+            return new MaterialStreamDto
+            {
+                Id = id,
+                Name = name,
+                TemperatureK = temperature,
+                PressurePa = pressure,
+                TotalMolarFlowMolPerS = molarFlow,
+                Phases = phaseDtos
+            };
+        }
+
+        private static string GetDwsimPhaseLabel(int phaseId)
+        {
+            // DWSIM phase IDs: 0=Overall, 1=Liquid1, 2=Vapor, 3=Liquid2, 4=Liquid3, 5=Aqueous, 6=Solid, 7=Liquid
+            return phaseId switch
+            {
+                0 => "Overall",
+                1 => "Liquid1",
+                2 => "Vapor",
+                3 => "Liquid2",
+                4 => "Liquid3",
+                5 => "Aqueous",
+                6 => "Solid",
+                7 => "Liquid",
+                _ => $"Phase{phaseId}"
+            };
+        }
+
+        private static List<CompoundFractionDto> GetDwsimPhaseComposition(object phase, Type phaseType)
+        {
+            var result = new List<CompoundFractionDto>();
+
+            var compoundsProperty = phaseType.GetProperty("Compounds");
+            if (compoundsProperty == null)
+            {
+                return result;
+            }
+
+            var compounds = compoundsProperty.GetValue(phase) as System.Collections.IDictionary;
+            if (compounds == null)
+            {
+                return result;
+            }
+
+            foreach (System.Collections.DictionaryEntry entry in compounds)
+            {
+                var compoundName = entry.Key?.ToString();
+                var compound = entry.Value;
+
+                if (compound != null)
+                {
+                    var compoundType = compound.GetType();
+                    var moleFracProp = compoundType.GetProperty("MoleFraction");
+                    var moleFraction = moleFracProp != null ? Convert.ToDouble(moleFracProp.GetValue(compound) ?? 0) : 0;
+
+                    result.Add(new CompoundFractionDto
+                    {
+                        Compound = compoundName,
+                        MoleFraction = moleFraction
+                    });
+                }
+            }
+
+            return result;
+        }
+
+        private static Dictionary<string, double> GetDwsimPhaseProperties(object props, Type propsType)
+        {
+            var result = new Dictionary<string, double>();
+
+            // List of important thermodynamic properties to extract
+            var propertyNames = new[]
+            {
+                "enthalpy", "entropy", "density", "molecularWeight",
+                "compressibilityFactor", "heatCapacityCp", "heatCapacityCv",
+                "thermalConductivity", "viscosity", "surfaceTension"
+            };
+
+            foreach (var propName in propertyNames)
+            {
+                try
+                {
+                    var propInfo = propsType.GetProperty(propName);
+                    if (propInfo != null)
+                    {
+                        var value = propInfo.GetValue(props);
+                        if (value != null)
+                        {
+                            var doubleValue = Convert.ToDouble(value);
+                            if (!double.IsNaN(doubleValue) && !double.IsInfinity(doubleValue))
+                            {
+                                result[propName] = doubleValue;
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // Skip properties that can't be read
+                }
+            }
+
+            return result;
+        }
     }
 }

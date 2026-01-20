@@ -157,8 +157,8 @@ namespace DwsimWorker.Adapters
                 }
                 _logger.Information("[ThermodynamicsAdapter] Retrieved stream, type={StreamType}", stream.GetType().Name);
 
-                _logger.Information("[ThermodynamicsAdapter] Converting stream to DTO");
-                var materialDto = _converter.ToMaterialStreamDto(stream);
+                _logger.Information("[ThermodynamicsAdapter] Converting stream to DTO using DWSIM internal data");
+                var materialDto = _converter.ToDwsimMaterialStreamDto(stream);
                 _logger.Information("[ThermodynamicsAdapter] MaterialStreamDto: T={Temperature}K, P={Pressure}Pa, PhaseCount={PhaseCount}",
                     materialDto.TemperatureK, materialDto.PressurePa, materialDto.Phases?.Count ?? 0);
 

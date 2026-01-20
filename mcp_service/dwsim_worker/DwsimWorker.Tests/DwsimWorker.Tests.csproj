@@ -60,6 +60,7 @@
     <Compile Include="Integration\ThreePhaseSeparatorCalculationTests.cs" />
     <Compile Include="Integration\ConvergenceScenarioTests.cs" />
     <Compile Include="Integration\SessionConcurrencyTests.cs" />
+    <Compile Include="Integration\ThermodynamicsAdapterIntegrationTests.cs" />
     <Compile Include="Performance\AssemblyLoadingPerformanceTests.cs" />
     <Compile Include="Performance\PropertySetPerformanceTests.cs" />
     <Compile Include="Performance\CalculationPerformanceTests.cs" />

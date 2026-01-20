@@ -862,7 +862,12 @@ namespace DwsimWorker.Adapters
                 {
                     _logger.Debug("Calling parameterless Calculate()");
                     parameterlessCalculate.Invoke(stream, null);
-                    EnsureStreamCalculated(stream, streamId, streamType);
+                    if (!CheckStreamCalculated(stream, streamId, streamType))
+                    {
+                        var message = $"Flash calculation did not converge for stream '{streamId}'";
+                        _logger.Warning(message);
+                        return PropertySetResult.FailureResult(message, new InvalidOperationException(message));
+                    }
                     _logger.Information("Stream {StreamId} flashed successfully", streamId);
                     return PropertySetResult.SuccessResult(streamId);
                 }
@@ -877,7 +882,12 @@ namespace DwsimWorker.Adapters
                     var args = parameters.Select(p => p.DefaultValue).ToArray();
                     _logger.Debug("Calling Calculate() with {Count} default parameters", parameters.Length);
                     calculateWithOptionals.Invoke(stream, args);
-                    EnsureStreamCalculated(stream, streamId, streamType);
+                    if (!CheckStreamCalculated(stream, streamId, streamType))
+                    {
+                        var message = $"Flash calculation did not converge for stream '{streamId}'";
+                        _logger.Warning(message);
+                        return PropertySetResult.FailureResult(message, new InvalidOperationException(message));
+                    }
                     _logger.Information("Stream {StreamId} flashed successfully", streamId);
                     return PropertySetResult.SuccessResult(streamId);
                 }
@@ -888,7 +898,12 @@ namespace DwsimWorker.Adapters
                 var nullArgs = new object[paramCount];
                 _logger.Debug("Calling Calculate() with {Count} null parameters", paramCount);
                 firstCalculate.Invoke(stream, nullArgs);
-                EnsureStreamCalculated(stream, streamId, streamType);
+                if (!CheckStreamCalculated(stream, streamId, streamType))
+                {
+                    var message = $"Flash calculation did not converge for stream '{streamId}'";
+                    _logger.Warning(message);
+                    return PropertySetResult.FailureResult(message, new InvalidOperationException(message));
+                }
                 _logger.Information("Stream {StreamId} flashed successfully", streamId);
                 return PropertySetResult.SuccessResult(streamId);
             }
@@ -908,62 +923,109 @@ namespace DwsimWorker.Adapters
         }
 
         /// <summary>
-        /// Ensures a stream is marked as calculated after a flash operation.
+        /// Checks if a stream flash calculation succeeded by verifying phase data is populated.
         /// </summary>
-        private void EnsureStreamCalculated(object stream, string streamId, Type streamType)
+        /// <remarks>
+        /// IMPORTANT: The Calculated property is set by DWSIM's FlowsheetSolver AFTER calculation,
+        /// not by stream.Calculate() itself. So we cannot rely on it to verify flash success.
+        /// Instead, we check if the flash actually populated phase data (vapor/liquid fractions).
+        /// </remarks>
+        private bool CheckStreamCalculated(object stream, string streamId, Type streamType)
         {
-            // Set Calculated property on the stream itself
-            var calculatedProp = streamType.GetProperty("Calculated");
-            if (calculatedProp != null)
-            {
-                var isCalculated = calculatedProp.GetValue(stream);
-                _logger.Debug("Stream {StreamId} Calculated property after flash: {IsCalculated}", streamId, isCalculated);
-
-                // If not calculated, try setting it explicitly
-                if (isCalculated is bool calc && !calc)
-                {
-                    if (!calculatedProp.CanWrite)
-                    {
-                        _logger.Warning("Stream {StreamId} Calculated property is read-only", streamId);
-                    }
-                    else
-                    {
-                        _logger.Debug("Setting Calculated = true on stream {StreamId}", streamId);
-                        calculatedProp.SetValue(stream, true);
-
-                        // Verify it was set
-                        var verifyCalculated = calculatedProp.GetValue(stream);
-                        _logger.Debug("Stream {StreamId} Calculated property after setting: {IsCalculated}", streamId, verifyCalculated);
-                    }
-                }
-            }
-
-            // CRITICAL: Also set Calculated property on the GraphicObject
-            // DWSIM checks cp.AttachedConnector.AttachedFrom.Calculated (the graphic object, not the stream)
+            // Try to verify flash success by checking phase data
+            // DWSIM's Calculate() method runs the flash but doesn't set Calculated=true
+            // (that's done by the FlowsheetSolver framework externally)
+            
             try
             {
-                var graphicObj = streamType.GetProperty("GraphicObject")?.GetValue(stream);
-                if (graphicObj != null)
+                // Get the Phases dictionary
+                var phasesProp = streamType.GetProperty("Phases");
+                if (phasesProp == null)
                 {
-                    var graphicType = graphicObj.GetType();
-                    var graphicCalculatedProp = graphicType.GetProperty("Calculated");
-                    if (graphicCalculatedProp != null && graphicCalculatedProp.CanWrite)
+                    _logger.Warning("Stream {StreamId} does not have a Phases property", streamId);
+                    return false;
+                }
+                
+                var phases = phasesProp.GetValue(stream) as IDictionary;
+                if (phases == null || phases.Count == 0)
+                {
+                    _logger.Warning("Stream {StreamId} has no phases after flash", streamId);
+                    return false;
+                }
+                
+                // Check if at least one phase has a non-zero molar fraction
+                // Phase 0 = Overall, Phase 1 = Liquid1, Phase 2 = Vapor, etc.
+                bool hasPhaseData = false;
+                
+                foreach (DictionaryEntry entry in phases)
+                {
+                    if (!(entry.Key is int phaseId) || phaseId == 0) // Skip overall phase
+                        continue;
+                        
+                    var phase = entry.Value;
+                    if (phase == null) continue;
+                    
+                    var propsProp = phase.GetType().GetProperty("Properties");
+                    if (propsProp == null) continue;
+                    
+                    var props = propsProp.GetValue(phase);
+                    if (props == null) continue;
+                    
+                    // Try to get molar fraction of this phase
+                    var molarFracProp = props.GetType().GetProperty("molarfraction");
+                    if (molarFracProp != null)
                     {
-                        var graphicCalc = graphicCalculatedProp.GetValue(graphicObj);
-                        _logger.Debug("Stream {StreamId} GraphicObject.Calculated before: {IsCalculated}", streamId, graphicCalc);
-
-                        if (graphicCalc is bool gCalc && !gCalc)
+                        var molarFracValue = molarFracProp.GetValue(props);
+                        double? molarFrac = null;
+                        
+                        if (molarFracValue != null)
                         {
-                            graphicCalculatedProp.SetValue(graphicObj, true);
-                            var verifyGraphicCalc = graphicCalculatedProp.GetValue(graphicObj);
-                            _logger.Debug("Stream {StreamId} GraphicObject.Calculated after setting: {IsCalculated}", streamId, verifyGraphicCalc);
+                            // Handle Nullable<double>
+                            var valueType = molarFracValue.GetType();
+                            if (valueType.IsGenericType && valueType.GetGenericTypeDefinition() == typeof(Nullable<>))
+                            {
+                                var hasValue = (bool)valueType.GetProperty("HasValue").GetValue(molarFracValue);
+                                if (hasValue)
+                                {
+                                    molarFrac = (double)valueType.GetProperty("Value").GetValue(molarFracValue);
+                                }
+                            }
+                            else if (molarFracValue is double d)
+                            {
+                                molarFrac = d;
+                            }
+                        }
+                        
+                        if (molarFrac.HasValue && molarFrac.Value > 0)
+                        {
+                            _logger.Debug("Stream {StreamId} Phase {PhaseId} has molar fraction {Fraction}", 
+                                streamId, phaseId, molarFrac.Value);
+                            hasPhaseData = true;
                         }
                     }
                 }
+                
+                if (hasPhaseData)
+                {
+                    _logger.Debug("Stream {StreamId} flash calculation verified - phase data populated", streamId);
+                    // Set Calculated = true since DWSIM's Calculate() doesn't do this
+                    // (it's normally done by the FlowsheetSolver framework)
+                    var calculatedProp = streamType.GetProperty("Calculated");
+                    if (calculatedProp != null && calculatedProp.CanWrite)
+                    {
+                        calculatedProp.SetValue(stream, true);
+                        _logger.Debug("Stream {StreamId} Calculated property set to true", streamId);
+                    }
+                    return true;
+                }
+                
+                _logger.Warning("Stream {StreamId} flash calculation did not populate phase data", streamId);
+                return false;
             }
             catch (Exception ex)
             {
-                _logger.Warning(ex, "Could not set GraphicObject.Calculated for stream {StreamId}", streamId);
+                _logger.Error(ex, "Error checking flash results for stream {StreamId}", streamId);
+                return false;
             }
         }
 

@@ -168,6 +168,11 @@ def _get_session_context(session_manager, session_id: str):
 
 
 def _create_serilog_logger():
+    """Create a Serilog logger for C# adapter diagnostics.
+    
+    Note: Extension methods like .WriteTo.Console() don't work via pythonnet.
+    We use the base LoggerConfiguration which still enables internal C# logging.
+    """
     try:
         from Serilog import LoggerConfiguration  # type: ignore
     except Exception as exc:
