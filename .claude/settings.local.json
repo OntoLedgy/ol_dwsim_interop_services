@@ -12,7 +12,11 @@
       "Bash(git add:*)",
       "Bash(cmd /c build.bat)",
       "Bash(\"D:\\\\Apps\\\\Microsoft Visual Studio\\\\18\\\\Professional\\\\Common7\\\\IDE\\\\CommonExtensions\\\\Microsoft\\\\TestWindow\\\\vstest.console.exe\" \"DwsimWorker.Tests\\\\bin\\\\Debug\\\\DwsimWorker.Tests.dll\" /Tests:GoldenTest_ThreePhaseSeparatorCalculation_Succeeds)",
-      "Bash(.venv/Scripts/python.exe -m pytest tests/integration/test_simulation_integration.py::test_simulation_workflow_integration -v -s --tb=short)"
+      "Bash(.venv/Scripts/python.exe -m pytest tests/integration/test_simulation_integration.py::test_simulation_workflow_integration -v -s --tb=short)",
+      "Bash(test:*)",
+      "Bash(\".venv/Scripts/python.exe\" debug_flash.py)",
+      "mcp__codex__codex",
+      "mcp__codex__codex-reply"
     ]
   }
 }
