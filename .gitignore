@@ -111,6 +111,9 @@ TestResults/
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 
+# Python test outputs (timestamped run folders)
+/mcp_service/server/tests/integration/output/
+
 # NUNIT
 *.VisualState.xml
 TestResult.xml

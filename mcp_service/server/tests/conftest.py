@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from pathlib import Path
 import sys
 import json
@@ -85,3 +86,94 @@ def dwsim_worker_types(pythonnet_clr, dwsim_worker_dll_path: Path):
     from Serilog import LoggerConfiguration  # type: ignore
 
     return SessionManager, FlowsheetContextConfigBuilder, LoggerConfiguration
+
+
+# =============================================================================
+# Test Output Fixtures
+# =============================================================================
+
+@pytest.fixture(scope="session")
+def test_outputs_root() -> Path:
+    """Base directory for all test outputs.
+
+    Returns:
+        Path to mcp_service/server/tests/integration/output/
+    """
+    outputs_dir = Path(__file__).resolve().parent / "integration" / "output"
+    outputs_dir.mkdir(parents=True, exist_ok=True)
+    return outputs_dir
+
+
+@pytest.fixture(scope="function")
+def test_run_output_dir(request, test_outputs_root: Path) -> Path:
+    """Create a timestamped output directory for the current test.
+
+    Directory structure:
+        tests/integration/output/<test_name>/<timestamp>/
+
+    Example:
+        tests/integration/output/test_sensitivity_analysis_end_to_end/20260121_163045/
+
+    Returns:
+        Path to the test-specific timestamped output directory.
+    """
+    test_name = request.node.name
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = test_outputs_root / test_name / timestamp
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return output_dir
+
+
+@pytest.fixture(scope="function")
+def test_output_writer(test_run_output_dir: Path):
+    """Helper to write test outputs to files.
+
+    Usage:
+        def test_something(test_output_writer):
+            result = run_analysis()
+            test_output_writer("result.json", result, format="json")
+            test_output_writer("data.csv", rows, format="csv")
+    """
+    def _write(filename: str, data, format: str = "auto"):
+        filepath = test_run_output_dir / filename
+
+        if format == "auto":
+            if filename.endswith(".json"):
+                format = "json"
+            elif filename.endswith(".csv"):
+                format = "csv"
+            else:
+                format = "text"
+
+        if format == "json":
+            import json as json_mod
+            with open(filepath, "w", encoding="utf-8") as f:
+                if hasattr(data, "model_dump"):
+                    json_mod.dump(data.model_dump(), f, indent=2, default=str)
+                elif hasattr(data, "__dict__"):
+                    json_mod.dump(data.__dict__, f, indent=2, default=str)
+                else:
+                    json_mod.dump(data, f, indent=2, default=str)
+        elif format == "csv":
+            import csv as csv_mod
+            with open(filepath, "w", encoding="utf-8", newline="") as f:
+                if isinstance(data, list) and len(data) > 0:
+                    if hasattr(data[0], "model_dump"):
+                        rows = [row.model_dump() for row in data]
+                    elif isinstance(data[0], dict):
+                        rows = data
+                    else:
+                        rows = [{"value": row} for row in data]
+                    if rows:
+                        writer = csv_mod.DictWriter(f, fieldnames=rows[0].keys())
+                        writer.writeheader()
+                        writer.writerows(rows)
+                else:
+                    f.write(str(data))
+        else:
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(str(data))
+
+        return filepath
+
+    return _write

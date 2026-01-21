@@ -2,6 +2,7 @@ import asyncio
 import csv
 import json
 import tempfile
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -186,8 +187,8 @@ async def _build_basic_flowsheet(session_client, session_id: str) -> tuple[str, 
 
 @pytest.mark.integration
 @pytest.mark.slow
-def test_sensitivity_analysis_end_to_end():
-    async def _run():
+def test_sensitivity_analysis_end_to_end(test_run_output_dir: Path):
+    async def _run(output_dir: Path):
         settings = ServerSettings()
         session_client = LimitedSessionClient(settings.resource_limits)
         session_client.start_monitoring()
@@ -199,6 +200,7 @@ def test_sensitivity_analysis_end_to_end():
             service = SensitivityService(
                 session_client=session_client,
                 flowsheet_client=flowsheet_client,
+                allowed_export_roots=[str(output_dir)],
             )
             request = SensitivityAnalysisRequest(
                 session_id=session_id,
@@ -217,6 +219,17 @@ def test_sensitivity_analysis_end_to_end():
             )
 
             result = await service.run_sensitivity_analysis(request)
+
+            # Write outputs to test output directory
+            json_path = output_dir / "sensitivity_result.json"
+            await service.export_results(result.study_id, str(json_path))
+
+            csv_path = output_dir / "sensitivity_result.csv"
+            await service.export_results(result.study_id, str(csv_path))
+
+            # Write request info
+            with open(output_dir / "request.json", "w", encoding="utf-8") as f:
+                json.dump(request.model_dump(), f, indent=2, default=str)
 
             assert result.total_steps == 5
             assert len(result.rows) == 5
@@ -245,15 +258,15 @@ def test_sensitivity_analysis_end_to_end():
             await session_client.stop_monitoring()
 
     try:
-        asyncio.run(_run())
+        asyncio.run(_run(test_run_output_dir))
     except (AssemblyLoadError, InteropError) as exc:
         pytest.skip(f"DWSIM worker not available: {exc}")
 
 
 @pytest.mark.integration
 @pytest.mark.slow
-def test_optimization_end_to_end():
-    async def _run():
+def test_optimization_end_to_end(test_run_output_dir: Path):
+    async def _run(output_dir: Path):
         settings = ServerSettings()
         session_client = LimitedSessionClient(settings.resource_limits)
         session_client.start_monitoring()
@@ -268,6 +281,7 @@ def test_optimization_end_to_end():
             service = SensitivityService(
                 session_client=session_client,
                 flowsheet_client=flowsheet_client,
+                allowed_export_roots=[str(output_dir)],
             )
             request = OptimizationRequest(
                 session_id=session_id,
@@ -290,6 +304,13 @@ def test_optimization_end_to_end():
 
             result = await service.run_optimization(request)
 
+            # Write outputs to test output directory
+            with open(output_dir / "optimization_result.json", "w", encoding="utf-8") as f:
+                json.dump(result.model_dump(), f, indent=2, default=str)
+
+            with open(output_dir / "request.json", "w", encoding="utf-8") as f:
+                json.dump(request.model_dump(), f, indent=2, default=str)
+
             assert result.converged, f"Optimization did not converge: {result.status} {result.message}"
 
             value_key = f"{feed_stream_id}.temperature"
@@ -304,15 +325,15 @@ def test_optimization_end_to_end():
             await session_client.stop_monitoring()
 
     try:
-        asyncio.run(_run())
+        asyncio.run(_run(test_run_output_dir))
     except (AssemblyLoadError, InteropError) as exc:
         pytest.skip(f"DWSIM worker not available: {exc}")
 
 
 @pytest.mark.integration
 @pytest.mark.slow
-def test_export_results_csv():
-    async def _run():
+def test_export_results_csv(test_run_output_dir: Path):
+    async def _run(output_dir: Path):
         settings = ServerSettings()
         session_client = LimitedSessionClient(settings.resource_limits)
         session_client.start_monitoring()
@@ -324,46 +345,49 @@ def test_export_results_csv():
             )
 
             flowsheet_client = FlowsheetClient(session_client)
-            with tempfile.TemporaryDirectory() as temp_dir:
-                service = SensitivityService(
-                    session_client=session_client,
-                    flowsheet_client=flowsheet_client,
-                    allowed_export_roots=[temp_dir],
-                )
-                request = SensitivityAnalysisRequest(
-                    session_id=session_id,
-                    variable=VariableSpec(
-                        object_id=feed_stream_id,
-                        property_name="temperature",
-                    ),
-                    range=RangeSpec(min_value=295.0, max_value=305.0),
-                    steps=3,
-                    outputs=[
-                        OutputSpec(
-                            object_id=vapor_stream_id,
-                            property_name="total_molar_flow_mol_per_s",
-                        )
-                    ],
-                )
+            service = SensitivityService(
+                session_client=session_client,
+                flowsheet_client=flowsheet_client,
+                allowed_export_roots=[str(output_dir)],
+            )
+            request = SensitivityAnalysisRequest(
+                session_id=session_id,
+                variable=VariableSpec(
+                    object_id=feed_stream_id,
+                    property_name="temperature",
+                ),
+                range=RangeSpec(min_value=295.0, max_value=305.0),
+                steps=3,
+                outputs=[
+                    OutputSpec(
+                        object_id=vapor_stream_id,
+                        property_name="total_molar_flow_mol_per_s",
+                    )
+                ],
+            )
 
-                result = await service.run_sensitivity_analysis(request)
-                file_path = f"{temp_dir}/sensitivity.csv"
-                exported = await service.export_results(result.study_id, file_path)
-                assert exported is True
+            result = await service.run_sensitivity_analysis(request)
+            file_path = output_dir / "sensitivity.csv"
+            exported = await service.export_results(result.study_id, str(file_path))
+            assert exported is True
 
-                with open(file_path, "r", encoding="utf-8", newline="") as handle:
-                    reader = csv.reader(handle)
-                    header = next(reader)
-                    rows = list(reader)
+            # Write request info
+            with open(output_dir / "request.json", "w", encoding="utf-8") as f:
+                json.dump(request.model_dump(), f, indent=2, default=str)
 
-                expected_columns = {
-                    f"{feed_stream_id}.temperature",
-                    f"{vapor_stream_id}.total_molar_flow_mol_per_s",
-                    "converged",
-                    "error",
-                }
-                assert expected_columns.issubset(set(header))
-                assert len(rows) == result.total_steps
+            with open(file_path, "r", encoding="utf-8", newline="") as handle:
+                reader = csv.reader(handle)
+                header = next(reader)
+                rows = list(reader)
+
+            expected_columns = {
+                f"{feed_stream_id}.temperature",
+                f"{vapor_stream_id}.total_molar_flow_mol_per_s",
+                "converged",
+                "error",
+            }
+            assert expected_columns.issubset(set(header))
+            assert len(rows) == result.total_steps
         finally:
             try:
                 await session_client.close_session(session_id)
@@ -372,15 +396,15 @@ def test_export_results_csv():
             await session_client.stop_monitoring()
 
     try:
-        asyncio.run(_run())
+        asyncio.run(_run(test_run_output_dir))
     except (AssemblyLoadError, InteropError) as exc:
         pytest.skip(f"DWSIM worker not available: {exc}")
 
 
 @pytest.mark.integration
 @pytest.mark.slow
-def test_export_results_json():
-    async def _run():
+def test_export_results_json(test_run_output_dir: Path):
+    async def _run(output_dir: Path):
         settings = ServerSettings()
         session_client = LimitedSessionClient(settings.resource_limits)
         session_client.start_monitoring()
@@ -392,40 +416,43 @@ def test_export_results_json():
             )
 
             flowsheet_client = FlowsheetClient(session_client)
-            with tempfile.TemporaryDirectory() as temp_dir:
-                service = SensitivityService(
-                    session_client=session_client,
-                    flowsheet_client=flowsheet_client,
-                    allowed_export_roots=[temp_dir],
-                )
-                request = SensitivityAnalysisRequest(
-                    session_id=session_id,
-                    variable=VariableSpec(
-                        object_id=feed_stream_id,
-                        property_name="temperature",
-                    ),
-                    range=RangeSpec(min_value=295.0, max_value=305.0),
-                    steps=3,
-                    outputs=[
-                        OutputSpec(
-                            object_id=vapor_stream_id,
-                            property_name="total_molar_flow_mol_per_s",
-                        )
-                    ],
-                )
+            service = SensitivityService(
+                session_client=session_client,
+                flowsheet_client=flowsheet_client,
+                allowed_export_roots=[str(output_dir)],
+            )
+            request = SensitivityAnalysisRequest(
+                session_id=session_id,
+                variable=VariableSpec(
+                    object_id=feed_stream_id,
+                    property_name="temperature",
+                ),
+                range=RangeSpec(min_value=295.0, max_value=305.0),
+                steps=3,
+                outputs=[
+                    OutputSpec(
+                        object_id=vapor_stream_id,
+                        property_name="total_molar_flow_mol_per_s",
+                    )
+                ],
+            )
 
-                result = await service.run_sensitivity_analysis(request)
-                file_path = f"{temp_dir}/sensitivity.json"
-                exported = await service.export_results(result.study_id, file_path)
-                assert exported is True
+            result = await service.run_sensitivity_analysis(request)
+            file_path = output_dir / "sensitivity.json"
+            exported = await service.export_results(result.study_id, str(file_path))
+            assert exported is True
 
-                with open(file_path, "r", encoding="utf-8") as handle:
-                    payload = json.load(handle)
+            # Write request info
+            with open(output_dir / "request.json", "w", encoding="utf-8") as f:
+                json.dump(request.model_dump(), f, indent=2, default=str)
 
-                assert payload.get("study_id") == result.study_id
-                assert payload.get("status") in {"completed", "cancelled"}
-                assert isinstance(payload.get("rows"), list)
-                assert payload.get("total_steps") == result.total_steps
+            with open(file_path, "r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+
+            assert payload.get("study_id") == result.study_id
+            assert payload.get("status") in {"completed", "cancelled"}
+            assert isinstance(payload.get("rows"), list)
+            assert payload.get("total_steps") == result.total_steps
         finally:
             try:
                 await session_client.close_session(session_id)
@@ -434,15 +461,15 @@ def test_export_results_json():
             await session_client.stop_monitoring()
 
     try:
-        asyncio.run(_run())
+        asyncio.run(_run(test_run_output_dir))
     except (AssemblyLoadError, InteropError) as exc:
         pytest.skip(f"DWSIM worker not available: {exc}")
 
 
 @pytest.mark.integration
 @pytest.mark.slow
-def test_export_invalid_path_rejected():
-    async def _run():
+def test_export_invalid_path_rejected(test_run_output_dir: Path):
+    async def _run(output_dir: Path):
         settings = ServerSettings()
         session_client = LimitedSessionClient(settings.resource_limits)
         session_client.start_monitoring()
@@ -454,11 +481,11 @@ def test_export_invalid_path_rejected():
             )
 
             flowsheet_client = FlowsheetClient(session_client)
-            with tempfile.TemporaryDirectory() as temp_dir, tempfile.TemporaryDirectory() as other_dir:
+            with tempfile.TemporaryDirectory() as other_dir:
                 service = SensitivityService(
                     session_client=session_client,
                     flowsheet_client=flowsheet_client,
-                    allowed_export_roots=[temp_dir],
+                    allowed_export_roots=[str(output_dir)],
                 )
                 request = SensitivityAnalysisRequest(
                     session_id=session_id,
@@ -477,9 +504,20 @@ def test_export_invalid_path_rejected():
                 )
 
                 result = await service.run_sensitivity_analysis(request)
+
+                # Write request info
+                with open(output_dir / "request.json", "w", encoding="utf-8") as f:
+                    json.dump(request.model_dump(), f, indent=2, default=str)
+
+                # This should fail because other_dir is not in allowed_export_roots
                 invalid_path = f"{other_dir}/outside.csv"
                 with pytest.raises(ValueError):
                     await service.export_results(result.study_id, invalid_path)
+
+                # Write a note about what was tested
+                with open(output_dir / "test_result.txt", "w", encoding="utf-8") as f:
+                    f.write(f"Successfully rejected invalid export path: {invalid_path}\n")
+                    f.write(f"Allowed roots: {[str(output_dir)]}\n")
         finally:
             try:
                 await session_client.close_session(session_id)
@@ -488,6 +526,6 @@ def test_export_invalid_path_rejected():
             await session_client.stop_monitoring()
 
     try:
-        asyncio.run(_run())
+        asyncio.run(_run(test_run_output_dir))
     except (AssemblyLoadError, InteropError) as exc:
         pytest.skip(f"DWSIM worker not available: {exc}")
