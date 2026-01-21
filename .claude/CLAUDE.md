@@ -86,6 +86,12 @@ To run a specific test by name:
 "D:\Apps\Microsoft Visual Studio\18\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe" "D:\S\C#\dwsim_interop_services\mcp_service\dwsim_worker\DwsimWorker.Tests\bin\Debug\DwsimWorker.Tests.dll" --Tests:GoldenTest_ThreePhaseSeparatorCalculation_Succeeds --logger:"console;verbosity=detailed"
 ```
 
+### Excluding Performance Tests
+Performance tests are marked with `[Trait("Category", "Performance")]` and can take a long time. To run tests excluding performance tests:
+```bash
+"D:\Apps\Microsoft Visual Studio\18\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe" "D:\S\C#\dwsim_interop_services\mcp_service\dwsim_worker\DwsimWorker.Tests\bin\Debug\DwsimWorker.Tests.dll" --TestCaseFilter:"Category!=Performance" --logger:"console;verbosity=detailed"
+```
+
 ### Test Output Tips
 - Add `| tail -200` to see the last 200 lines of output
 - Logs will show detailed Serilog output from the test execution

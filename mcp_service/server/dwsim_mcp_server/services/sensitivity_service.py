@@ -352,7 +352,7 @@ class SensitivityService:
             clamped = min(max(variable.initial, variable.lower), variable.upper)
             initial_guess.append(clamped)
 
-        loop = asyncio.new_event_loop()
+        main_loop = asyncio.get_running_loop()
         best_solution: Dict[str, object] = {
             "score": float("inf"),
             "values": None,
@@ -412,7 +412,11 @@ class SensitivityService:
 
         def _objective_func(values: List[float]) -> float:
             try:
-                evaluation = loop.run_until_complete(_evaluate_candidate(list(values)))
+                future = asyncio.run_coroutine_threadsafe(
+                    _evaluate_candidate(list(values)),
+                    main_loop,
+                )
+                evaluation = future.result(timeout=300)
             except Exception as exc:
                 self._logger.warning(
                     "optimization_step_failed",
@@ -449,16 +453,16 @@ class SensitivityService:
                 best_solution["objective"] = objective_value
             return score
 
-        try:
-            result = minimize(
+        result = await main_loop.run_in_executor(
+            None,
+            lambda: minimize(
                 _objective_func,
                 x0=initial_guess,
                 bounds=bounds,
                 method="L-BFGS-B",
                 options={"maxiter": request.max_iterations},
-            )
-        finally:
-            loop.close()
+            ),
+        )
 
         best_values = best_solution["values"] or list(result.x)
         best_objective = best_solution["objective"]
