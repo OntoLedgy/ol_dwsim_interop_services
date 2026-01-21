@@ -33,3 +33,15 @@ from .flash_inputs import (  # noqa: F401
     FlashPSInputs,
     FlashTPInputs,
 )
+from .sensitivity_inputs import (  # noqa: F401
+    ConstraintSpec,
+    ObjectiveSpec,
+    OptimizationRequest,
+    OutputSpec,
+    ParameterSweepRequest,
+    RangeSpec,
+    SensitivityAnalysisRequest,
+    SweepVariableSpec,
+    VariableSpec,
+    VariableWithBounds,
+)
