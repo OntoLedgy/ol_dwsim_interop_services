@@ -1,7 +1,7 @@
 # Threading Fix and Integration Test Investigation Report
 
-**Date**: 2026-01-15 (Updated 2026-01-17)
-**Status**: ✅ ALL ISSUES RESOLVED - Threading issue fixed, BIP and FlashStream APIs exposed, duplicate key bug fixed
+**Date**: 2026-01-15 (Updated 2026-01-22)
+**Status**: ✅ ALL ISSUES RESOLVED - Threading issue fixed, BIP and FlashStream APIs exposed, duplicate key bug fixed, DLL binary mismatch documented
 
 ## Executive Summary
 
@@ -436,6 +436,68 @@ InnerInner: Exception has been thrown by the target of invocation.
 -> An item with the same key has already been added.
 ```
 
+## Critical: DLL Binary Mismatch Issue (2026-01-22)
+
+### Problem
+
+Access violations were occurring in integration tests despite having the correct `fix/headless-updateinterface` branch checked out in the DWSIM repository. The source code had the `UpdateInterface()` fix with `AutomationMode` guard, but tests still crashed.
+
+### Root Cause
+
+**The compiled DLL in the binaries folder was an OLD build that did NOT contain the `AutomationMode` fix.**
+
+The `DWSIM.UI.Desktop.Shared.dll` in `mcp_service/dwsim_worker/dwsim_binaries/x64/Debug/` was from an earlier date (01/17/2026) and was built before the fix was committed.
+
+### How to Verify
+
+Use binary string search to check if a DLL contains the fix:
+
+```powershell
+# Check if DLL has AutomationMode fix
+$dll = "path\to\DWSIM.UI.Desktop.Shared.dll"
+$content = [System.IO.File]::ReadAllBytes($dll)
+$text = [System.Text.Encoding]::ASCII.GetString($content)
+if ($text -match "AutomationMode") { "✅ DLL HAS fix" } else { "❌ DLL MISSING fix" }
+```
+
+### Solution
+
+1. **Rebuild DWSIM for x64**:
+   ```powershell
+   cd C:\path\to\dwsim
+   MSBuild DWSIM.sln /p:Configuration=Debug /p:Platform=x64 /t:Rebuild
+   ```
+
+2. **Copy the new DLL to binaries folder**:
+   ```powershell
+   Copy-Item "dwsim\bin\x64\Debug\DWSIM.UI.Desktop.Shared.dll" `
+             "dwsim_interop_services\mcp_service\dwsim_worker\dwsim_binaries\x64\Debug\"
+   ```
+
+3. **Rebuild DwsimWorker**:
+   ```powershell
+   cd mcp_service\dwsim_worker
+   .\build.bat
+   ```
+
+4. **Verify the fix is in place** using the binary string search above.
+
+### Lesson Learned
+
+⚠️ **Always verify compiled binaries match source code!**
+
+- Source code changes don't automatically propagate to binaries folder
+- When troubleshooting interop issues, check DLL timestamps and contents
+- Binary string search is a quick way to verify a fix is compiled in
+- The `x64` vs `AnyCPU` build configuration matters - ensure correct platform
+
+### Symptoms of This Issue
+
+- Access violations in `add_unit()` or `run_calculation()` 
+- Stack trace pointing to `flowsheet_client.py` line 126
+- Tests that pass on one machine but crash on another
+- DWSIM source code appears correct but crashes persist
+
 ## References
 
 ### Key Code Locations
@@ -443,6 +505,7 @@ InnerInner: Exception has been thrown by the target of invocation.
 - Stream Creation: `mcp_service/dwsim_worker/DwsimWorker/Adapters/StreamAdapter.cs:103-160`
 - FlowsheetOperations: `mcp_service/dwsim_worker/DwsimWorker/Engine/FlowsheetOperations.cs:49-93`
 - Integration Test: `mcp_service/server/tests/integration/test_simulation_integration.py:15-174`
+- DWSIM UpdateInterface Fix: `DWSIM.UI.Desktop.Shared/Flowsheet/Flowsheet.cs:65-77`
 
 ### Related Documentation
 - DWSIM Documentation: https://dwsim.org
@@ -452,5 +515,6 @@ InnerInner: Exception has been thrown by the target of invocation.
 ---
 
 **Report Generated**: 2026-01-15
+**Last Updated**: 2026-01-22
 **Author**: Claude Code
-**Status**: Threading resolved, DWSIM API issue identified
+**Status**: Threading resolved, DWSIM API issue identified, DLL binary mismatch documented

@@ -97,9 +97,9 @@ def test_outputs_root() -> Path:
     """Base directory for all test outputs.
 
     Returns:
-        Path to mcp_service/server/tests/integration/output/
+        Path to mcp_service/server/tests/output/
     """
-    outputs_dir = Path(__file__).resolve().parent / "integration" / "output"
+    outputs_dir = Path(__file__).resolve().parent / "output"
     outputs_dir.mkdir(parents=True, exist_ok=True)
     return outputs_dir
 
@@ -109,10 +109,10 @@ def test_run_output_dir(request, test_outputs_root: Path) -> Path:
     """Create a timestamped output directory for the current test.
 
     Directory structure:
-        tests/integration/output/<test_name>/<timestamp>/
+        tests/output/<test_name>/<timestamp>/
 
     Example:
-        tests/integration/output/test_sensitivity_analysis_end_to_end/20260121_163045/
+        tests/output/test_sensitivity_analysis_end_to_end/20260121_163045/
 
     Returns:
         Path to the test-specific timestamped output directory.
