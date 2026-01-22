@@ -9,18 +9,38 @@ DWSIM provides a comprehensive library of unit operations for building chemical 
 Separates a feed stream into vapor, liquid hydrocarbon, and aqueous phases based on density differences.
 
 **Parameters:**
-- `pressure_drop`: Pressure drop across separator (Pa)
-- `heat_duty`: External heat input/removal (W)
+- `CalculationMode`: "Legacy" (recommended) or "Experiment"
+- `PressureCalculation`: "Average" or other modes
+- `DimensionRatio`: Length/diameter ratio (default: 3.0)
+- `ResidenceTime`: Liquid residence time in minutes (default: 5.0)
 
-**Ports:**
-- Inlet: Feed (single mixed stream)
-- Outlets: Vapor, Liquid1 (hydrocarbon), Liquid2 (aqueous)
+**Port Names (for `connect` tool):**
+- `Inlet` - Feed stream (single mixed stream)
+- `VaporOutlet` - Vapor product stream
+- `LiquidOutlet1` - First liquid product (light liquid/hydrocarbon)
+- `LiquidOutlet2` - Second liquid product (heavy liquid/aqueous)
 
 **Usage:**
-```python
-add_unit(session_id, "ThreePhaseSeparator", "V-100", {
-    "pressure_drop": 10000  # 10 kPa pressure drop
-})
+```json
+{"tool": "add_unit", "arguments": {
+  "session_id": "SESSION_ID",
+  "unit_type": "separator",
+  "name": "V-100",
+  "parameters": {
+    "CalculationMode": "Legacy",
+    "PressureCalculation": "Average",
+    "DimensionRatio": 3.0,
+    "ResidenceTime": 5.0
+  }
+}}
+```
+
+**Connecting Streams:**
+```json
+{"tool": "connect", "arguments": {"session_id": "SESSION_ID", "source_id": "S1", "target_id": "U1", "port_name": "Inlet"}}
+{"tool": "connect", "arguments": {"session_id": "SESSION_ID", "source_id": "S2", "target_id": "U1", "port_name": "VaporOutlet"}}
+{"tool": "connect", "arguments": {"session_id": "SESSION_ID", "source_id": "S3", "target_id": "U1", "port_name": "LiquidOutlet1"}}
+{"tool": "connect", "arguments": {"session_id": "SESSION_ID", "source_id": "S4", "target_id": "U1", "port_name": "LiquidOutlet2"}}
 ```
 
 ### Flash Separator (Vessel)
