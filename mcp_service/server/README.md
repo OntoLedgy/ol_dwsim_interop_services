@@ -6,25 +6,139 @@ Python-based Model Context Protocol (MCP) server that provides a clean, typed in
 
 The MCP server acts as a façade layer that:
 - Implements MCP protocol using the official Python SDK
-- Exposes DWSIM capabilities as composable MCP tools
-- Communicates with the .NET worker via JSON-RPC over Named Pipes
+- Exposes DWSIM capabilities as composable MCP tools (26 tools available)
+- Uses pythonnet for in-process .NET interop with DWSIM assemblies
 - Provides structured logging and observability
 - Enforces safety and resource limits
 
-## Installation
+## Quick Start
 
-### Using uv (recommended)
+### Prerequisites
+
+- Python 3.11+ 
+- .NET Framework 4.8 (Windows)
+- DWSIM binaries (see below)
+- uv package manager (recommended)
+
+### Installation
 
 ```bash
-cd /mcp_service/server
+cd mcp_service/server
 uv sync
-source .venv/bin/activate
 ```
 
-### DWSIM assemblies
+### DWSIM Assemblies
 
-- Ensure DWSIM binaries are available. The repo expects a local copy at [mcp_service/dwsim_worker/dwsim_binaries/x64/Debug](mcp_service/dwsim_worker/dwsim_binaries/x64/Debug) (sync from the sibling `../dwsim/DWSIM/bin/x64/Debug`).
-- Override with `DWSIM_PATH` if you want to point to a different DWSIM installation; this is used by the worker assembly loader and pythonnet smoke tests.
+Ensure DWSIM binaries are available:
+- Default location: `mcp_service/dwsim_worker/dwsim_binaries/x64/Debug`
+- Override with `DWSIM_PATH` environment variable
+
+## Connecting to AI Assistants
+
+### Quick Setup for Beta Testers
+
+If you don't want to build the C# layer, use the pre-built distribution:
+```bash
+cd dwsim_interop_services
+.\prebuilt\setup.ps1
+```
+
+See [prebuilt/README.md](../../prebuilt/README.md) for details.
+
+### Option A: VS Code Copilot (settings.json)
+
+Add to your VS Code `settings.json` (Ctrl+, → Open Settings JSON):
+
+```json
+{
+  "github.copilot.chat.mcpServers": {
+    "dwsim": {
+      "command": "uv",
+      "args": ["run", "dwsim-mcp"],
+      "cwd": "C:\\path\\to\\dwsim_interop_services\\mcp_service\\server",
+      "env": {
+        "PYTHONPATH": "C:\\path\\to\\dwsim_interop_services"
+      }
+    }
+  }
+}
+```
+
+### Option B: VS Code Copilot (mcp.json)
+
+Create/edit `%APPDATA%\Code\User\mcp.json`:
+
+```json
+{
+  "servers": {
+    "dwsim": {
+      "command": "uv",
+      "args": ["run", "dwsim-mcp"],
+      "cwd": "C:\\path\\to\\dwsim_interop_services\\mcp_service\\server",
+      "env": {
+        "PYTHONPATH": "C:\\path\\to\\dwsim_interop_services"
+      }
+    }
+  }
+}
+```
+
+### Option C: Claude Desktop
+
+Edit `%APPDATA%\Claude\claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "dwsim": {
+      "command": "uv",
+      "args": ["run", "dwsim-mcp"],
+      "cwd": "C:\\path\\to\\dwsim_interop_services\\mcp_service\\server",
+      "env": {
+        "PYTHONPATH": "C:\\path\\to\\dwsim_interop_services"
+      }
+    }
+  }
+}
+```
+
+### Option D: OpenAI Codex CLI
+
+Edit `%USERPROFILE%\.codex\config.json`:
+
+```json
+{
+  "mcpServers": {
+    "dwsim": {
+      "command": "uv",
+      "args": ["run", "dwsim-mcp"],
+      "cwd": "C:\\path\\to\\dwsim_interop_services\\mcp_service\\server",
+      "env": {
+        "PYTHONPATH": "C:\\path\\to\\dwsim_interop_services"
+      }
+    }
+  }
+}
+```
+
+Then run: `codex --mcp`
+
+### Verification
+
+After configuration:
+1. **Reload/Restart** your AI assistant
+2. **Ask**: "What DWSIM tools do you have available?"
+3. **You should see** 26 tools listed
+
+For detailed instructions, see [docs/resources/getting-started.md](../../docs/resources/getting-started.md)
+
+### Running Manually (for testing)
+
+```powershell
+cd C:\path\to\dwsim_interop_services\mcp_service\server
+$env:PYTHONPATH = "C:\path\to\dwsim_interop_services"
+uv run dwsim-mcp
+```
 
 ## Configuration
 

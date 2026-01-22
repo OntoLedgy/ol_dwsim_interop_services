@@ -91,6 +91,33 @@ cd mcp_service/dwsim_worker/DwsimWorker/bin/Debug
 ./DwsimWorker.exe
 ```
 
+## Connecting to AI Assistants
+
+The DWSIM MCP Server can be connected to multiple AI platforms:
+
+| Platform | Configuration File | Guide |
+|----------|-------------------|-------|
+| **VS Code Copilot** | `settings.json` or `mcp.json` | [Getting Started](docs/resources/getting-started.md) |
+| **Claude Desktop** | `claude_desktop_config.json` | [Getting Started](docs/resources/getting-started.md) |
+| **OpenAI Codex** | `~/.codex/config.json` | [Getting Started](docs/resources/getting-started.md) |
+
+### Beta Testers - Quick Setup
+
+For beta testers who don't want to build the C# layer:
+
+```powershell
+# From repository root
+.\prebuilt\setup.ps1
+```
+
+This will:
+1. Set up the DwsimWorker DLLs
+2. Link your DWSIM installation
+3. Install Python dependencies
+4. Print your MCP configuration
+
+See [prebuilt/README.md](prebuilt/README.md) for details.
+
 ## Documentation
 
 - [API Documentation](docs/api/) - MCP tool reference and API specifications
