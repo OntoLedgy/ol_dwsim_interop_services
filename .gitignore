@@ -106,6 +106,9 @@ logs/
 /mcp_service/dwsim_worker/DwsimWorker/dwsim.config.json
 /mcp_service/dwsim_worker/dwsim_binaries/
 
+# Prebuilt distribution (downloaded, not committed)
+/prebuilt/dwsim_binaries.zip
+
 # Test results
 TestResults/
 [Tt]est[Rr]esult*/
