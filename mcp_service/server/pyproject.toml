@@ -44,10 +44,10 @@ dev = [
 ]
 
 [project.scripts]
-dwsim-mcp = "dwsim_mcp_server.server:main"
+dwsim-mcp = "dwsim_mcp_server.server:run"
 
 [tool.poetry.scripts]
-dwsim-mcp = "dwsim_mcp_server.server:main"
+dwsim-mcp = "dwsim_mcp_server.server:run"
 
 [build-system]
 requires = ["poetry-core"]

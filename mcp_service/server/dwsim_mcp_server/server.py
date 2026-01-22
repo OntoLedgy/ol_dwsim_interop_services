@@ -80,8 +80,7 @@ async def main() -> None:
             await server.run(
                 read_stream,
                 write_stream,
-                server_name="dwsim-mcp-server",
-                server_version="0.1.0",
+                server.create_initialization_options(),
             )
     finally:
         await dependencies.close()
