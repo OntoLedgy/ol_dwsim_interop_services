@@ -24,8 +24,10 @@ def build_simulation_tools() -> list[types.Tool]:
             name="run",
             title="Run Simulation",
             description=(
-                "Execute the DWSIM solver for a session and return convergence details, "
-                "timing, stream properties, and mass balance diagnostics."
+                "Execute the DWSIM solver for a session. PREREQUISITES: 1) All compounds added, "
+                "2) Property package set, 3) BIPs configured, 4) Feed stream created and flashed, "
+                "5) Outlet streams created, 6) Unit operation added, 7) All streams connected. "
+                "Returns convergence status, stream properties, and mass balance diagnostics."
             ),
             inputSchema=RunSimulationRequest.model_json_schema(),
             outputSchema=SimulationResultResponse.model_json_schema(),
@@ -33,7 +35,7 @@ def build_simulation_tools() -> list[types.Tool]:
         types.Tool(
             name="get_status",
             title="Get Simulation Status",
-            description="Retrieve the latest simulation status for a session (idle, running, converged, failed).",
+            description="Retrieve the latest simulation status for a session: idle, running, converged, or failed.",
             inputSchema=GetStatusRequest.model_json_schema(),
             outputSchema=SimulationStatusResponse.model_json_schema(),
         ),
@@ -41,7 +43,8 @@ def build_simulation_tools() -> list[types.Tool]:
             name="get_results",
             title="Get Simulation Results",
             description=(
-                "Retrieve cached simulation results for a session, optionally filtered by object ID."
+                "Retrieve detailed simulation results including all stream properties, phase compositions, "
+                "thermodynamic properties (enthalpy, entropy, density, viscosity), and mass balance error."
             ),
             inputSchema=GetResultsRequest.model_json_schema(),
             outputSchema=SimulationResultResponse.model_json_schema(),
