@@ -7,3 +7,19 @@ This package contains all shared models that facilitate interoperability between
 """
 
 __version__ = "0.1.0"
+
+# Resource models for MCP resource providers
+from models.resources import (
+    ResourceMetadata,
+    SampleCaseInfo,
+    DocumentationTopic,
+    SessionResultResource,
+)
+
+__all__ = [
+    # Resource models
+    "ResourceMetadata",
+    "SampleCaseInfo", 
+    "DocumentationTopic",
+    "SessionResultResource",
+]

@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-resource-providers/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-22T12:58:53.157Z",
+      "trigger": "initial",
+      "approvalId": "approval_1769086733092_9izfkwxjl",
+      "approvalTitle": "MCP Resource Providers - Tasks Document"
+    }
+  ]
+}

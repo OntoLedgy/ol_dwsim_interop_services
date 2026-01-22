@@ -39,3 +39,20 @@ class ServerSettings(BaseSettings):
         default_factory=ResourceLimitSettings,
         description="Nested resource limit settings for sessions and operations.",
     )
+
+    # Resource provider settings
+    docs_path: str = Field(
+        "./docs/resources",
+        validation_alias="DWSIM_DOCS_PATH",
+        description="Path to documentation resources directory.",
+    )
+    sample_cases_path: str = Field(
+        "./cases/samples",
+        validation_alias="DWSIM_SAMPLE_CASES_PATH",
+        description="Path to sample cases metadata directory.",
+    )
+    max_resource_size_kb: int = Field(
+        1024,
+        validation_alias="DWSIM_MAX_RESOURCE_SIZE_KB",
+        description="Maximum size in KB for resource content responses.",
+    )

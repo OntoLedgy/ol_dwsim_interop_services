@@ -1,0 +1,27 @@
+{
+  "name": "three-phase-separator",
+  "description": "Simple three-phase separator demonstrating vapor-liquid-water separation of a hydrocarbon mixture. Good starting point for learning DWSIM flowsheet building.",
+  "compounds": ["Methane", "Ethane", "Propane", "n-Butane", "Water"],
+  "unit_operations": ["ThreePhaseSeparator"],
+  "complexity": "simple",
+  "file_path": "cases/samples/three-phase-separator.dwxmz",
+  "inlet_conditions": {
+    "temperature_K": 300,
+    "pressure_Pa": 500000,
+    "total_flow_mol_s": 100,
+    "vapor_fraction": 0.3
+  },
+  "expected_outputs": {
+    "vapor_stream": "Light hydrocarbons (mainly methane)",
+    "liquid_stream": "Heavier hydrocarbons (propane, butane)",
+    "water_stream": "Separated aqueous phase"
+  },
+  "learning_objectives": [
+    "Adding compounds to a session",
+    "Setting property package (Peng-Robinson)",
+    "Creating material streams with composition",
+    "Adding unit operations",
+    "Connecting streams to units",
+    "Running simulation and interpreting results"
+  ]
+}

@@ -1,1 +1,29 @@
 """MCP resource providers for documentation, samples, and results."""
+
+from dwsim_mcp_server.resources.base import (
+    ResourceProvider,
+    BaseResourceProvider,
+    ResourceError,
+    ResourceNotFoundError,
+    ResourceInvalidStateError,
+)
+from dwsim_mcp_server.resources.docs import DocsProvider
+from dwsim_mcp_server.resources.samples import SamplesProvider
+from dwsim_mcp_server.resources.results import ResultsProvider
+from dwsim_mcp_server.resources.registry import register_resources
+
+__all__ = [
+    # Protocol and base
+    "ResourceProvider",
+    "BaseResourceProvider",
+    # Errors
+    "ResourceError",
+    "ResourceNotFoundError",
+    "ResourceInvalidStateError",
+    # Providers
+    "DocsProvider",
+    "SamplesProvider",
+    "ResultsProvider",
+    # Registration
+    "register_resources",
+]

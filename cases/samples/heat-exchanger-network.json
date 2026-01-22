@@ -1,0 +1,30 @@
+{
+  "name": "heat-exchanger-network",
+  "description": "Simple heat integration example with two heaters demonstrating temperature control and energy calculations.",
+  "compounds": ["Water"],
+  "unit_operations": ["Heater", "Cooler"],
+  "complexity": "moderate",
+  "file_path": "cases/samples/heat-exchanger-network.dwxmz",
+  "inlet_conditions": {
+    "stream_1": {
+      "temperature_K": 300,
+      "pressure_Pa": 101325,
+      "flow_kg_s": 1.0
+    },
+    "stream_2": {
+      "temperature_K": 400,
+      "pressure_Pa": 101325,
+      "flow_kg_s": 0.5
+    }
+  },
+  "expected_outputs": {
+    "heat_duties": "Calculated heat transfer rates in Watts",
+    "outlet_temperatures": "Based on specified targets or duties"
+  },
+  "learning_objectives": [
+    "Working with pure water (Steam Tables)",
+    "Heat duty calculations",
+    "Energy balance verification",
+    "Multiple unit operations"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-resource-providers/design.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-22T12:56:19.870Z",
+      "trigger": "initial",
+      "approvalId": "approval_1769086579804_r1nubkp44",
+      "approvalTitle": "MCP Resource Providers - Design Document"
+    }
+  ]
+}

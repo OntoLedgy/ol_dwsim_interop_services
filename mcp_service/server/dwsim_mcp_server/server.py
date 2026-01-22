@@ -17,6 +17,7 @@ from dwsim_mcp_server.service import FlowsheetService
 from dwsim_mcp_server.services import ThermodynamicsService
 from dwsim_mcp_server.services.sensitivity_service import SensitivityService
 from dwsim_mcp_server.tools.registry import register_tools
+from dwsim_mcp_server.resources.registry import register_resources
 
 
 class ServerDependencies:
@@ -60,6 +61,7 @@ def create_server(settings: ServerSettings, dependencies: ServerDependencies) ->
     """Create and register MCP server instance."""
     server = Server("dwsim-mcp-server")
     register_tools(server, dependencies)
+    register_resources(server, dependencies)
     return server
 
 

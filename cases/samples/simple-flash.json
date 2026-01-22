@@ -1,0 +1,29 @@
+{
+  "name": "simple-flash",
+  "description": "Temperature-pressure flash calculation showing vapor-liquid equilibrium. Demonstrates basic phase equilibrium without unit operations.",
+  "compounds": ["Methane", "Ethane", "Propane"],
+  "unit_operations": ["Vessel"],
+  "complexity": "simple",
+  "file_path": "cases/samples/simple-flash.dwxmz",
+  "inlet_conditions": {
+    "temperature_K": 250,
+    "pressure_Pa": 2000000,
+    "total_flow_mol_s": 50,
+    "composition": {
+      "Methane": 0.7,
+      "Ethane": 0.2,
+      "Propane": 0.1
+    }
+  },
+  "expected_outputs": {
+    "vapor_fraction": "Approximately 0.6-0.7 at these conditions",
+    "vapor_composition": "Enriched in methane",
+    "liquid_composition": "Enriched in propane"
+  },
+  "learning_objectives": [
+    "Understanding flash calculations",
+    "Using Peng-Robinson equation of state",
+    "Interpreting phase equilibrium results",
+    "Mass balance validation"
+  ]
+}
