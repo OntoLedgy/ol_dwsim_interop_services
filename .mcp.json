@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "codex": {
+      "type": "stdio",
+      "command": "C:\\Users\\khanm\\AppData\\Roaming\\npm\\codex.cmd",
+      "args": ["-m", "gpt-5.2-codex", "mcp-server"]
+    }
+  }
+}
