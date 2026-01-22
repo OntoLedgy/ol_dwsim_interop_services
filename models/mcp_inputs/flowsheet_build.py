@@ -112,9 +112,9 @@ class AddStreamInput(BaseModel):
 
     @model_validator(mode="after")
     def validate_flows(self) -> "AddStreamInput":
-        """Require at least one of molar_flow or mass_flow when setting a stream."""
-        if self.molar_flow is None and self.mass_flow is None:
-            raise ValueError("either molar_flow or mass_flow must be provided")
+        """Require at least one of molar_flow or mass_flow when setting a source stream."""
+        if self.is_source and self.molar_flow is None and self.mass_flow is None:
+            raise ValueError("either molar_flow or mass_flow must be provided for source streams")
         return self
 
 
