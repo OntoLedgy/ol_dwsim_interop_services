@@ -16,7 +16,18 @@
       "Bash(test:*)",
       "Bash(\".venv/Scripts/python.exe\" debug_flash.py)",
       "mcp__codex__codex",
-      "mcp__codex__codex-reply"
+      "mcp__codex__codex-reply",
+      "Bash(uv --version:*)",
+      "mcp__dwsim__add_compound",
+      "mcp__dwsim__set_property_package",
+      "mcp__dwsim__set_binary_interaction_parameter",
+      "mcp__dwsim__add_stream",
+      "mcp__dwsim__flash_stream",
+      "mcp__dwsim__add_unit",
+      "mcp__dwsim__connect",
+      "mcp__dwsim__list_objects",
+      "mcp__dwsim__run",
+      "mcp__dwsim__close_session"
     ]
   }
 }

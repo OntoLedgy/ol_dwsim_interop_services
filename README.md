@@ -43,24 +43,79 @@ dwsim_interop_services/
 ### Prerequisites
 
 - Python 3.10+
-- .NET Framework 4.8 (Windows) or .NET Core 6+ (cross-platform)
+- uv (Python package manager)
+- .NET Framework 4.8 Developer Pack/Targeting Pack (Windows) or .NET 6+ SDK (cross-platform)
 - DWSIM assemblies (referenced from parent repository or installed separately)
 
 ### Installation
 
+#### Install uv
+
+**Windows (PowerShell)**
+
+```powershell
+irm https://astral.sh/uv/install.ps1 | iex
+```
+
+If this fails due to execution policy or PowerShell closing:
+
+```powershell
+# Allow local scripts for current user (permanent and safe)
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+
+# Run the installer without piping to iex
+$uv = "$env:TEMP\uv-install.ps1"
+irm https://astral.sh/uv/install.ps1 -OutFile $uv
+Unblock-File $uv
+& $uv
+```
+
+If your profile is breaking the session, launch without it:
+
+```powershell
+powershell -NoProfile
+```
+
+**macOS / Linux (bash)**
+
 ```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Verify:
+
+```bash
+uv --version
+```
+
+#### Install dependencies and build (Windows / PowerShell)
+
+```powershell
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/OntoLedgy/dwsim_interop_services.git
 cd dwsim_interop_services
 
 # Install Python dependencies
-cd mcp_service/server
-pip install -r requirements.txt
+cd mcp_service\server
+uv sync
+.\.venv\Scripts\Activate.ps1
 
 # Build .NET worker
-cd ../dwsim_worker
-dotnet build DwsimWorker.sln
+cd ..\dwsim_worker
+build.bat
 ```
+
+For a step-by-step guide (including **prebuilt binaries**), see `docs/resources/getting-started.md`.
+
+**Notes on .NET (Windows)**
+- This project targets **.NET Framework 4.8** for the DWSIM worker. Install the **.NET Framework 4.8 Developer Pack** (includes the Targeting Pack) and **Visual Studio Build Tools** with the ".NET desktop development" workload.
+  - .NET Framework 4.8 download page (Developer Pack + Runtime): https://dotnet.microsoft.com/download/dotnet-framework/net48
+  - .NET Framework installation guide (Microsoft Learn): https://learn.microsoft.com/dotnet/framework/install/guide-for-developers
+  - Visual Studio Build Tools download: https://visualstudio.microsoft.com/downloads/ (scroll to "Build Tools for Visual Studio")
+- The `build.bat` script sets the correct framework/tooling and builds `DwsimWorker.sln`. Use it instead of `dotnet build` on Windows to avoid framework/SDK mismatch.
+
+**Notes on macOS/Linux**
+- The .NET Framework worker is Windows-only. On macOS/Linux you can build/run the Python server, but the worker requires Windows with .NET Framework.
 
 ### DWSIM binaries setup
 

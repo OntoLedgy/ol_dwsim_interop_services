@@ -612,15 +612,63 @@ Implement tools for exporting simulation results and generating reports. This en
   - Generates human-readable report (Markdown or HTML)
   - Includes flowsheet diagram (optional), property tables, convergence info
 - File path sandboxing (security)
+- **Save case functionality** (fix the missing save method)
 
 **Success Criteria**:
 - Exports readable by Excel/Python pandas
 - JSON export/import round-trip (save/load via JSON)
 - Reports include all key information
 - Paths validated (no directory traversal)
+- **Save case works and returns file path**
 
 **Validation Test**:
 Export separator results to CSV, load in pandas, verify data structure and values.
+
+---
+
+#### LLM Usability Improvements (Added 2026-01-23)
+
+Based on real-world usage of the DWSIM MCP tools with an LLM agent, the following issues were identified and should be addressed:
+
+##### Issues Encountered
+
+1. **Missing Compound Names**: Several common compound names not recognized:
+   - `Isobutane`, `Isopentane`, `i-Butane`, `i-Pentane` - not found
+   - `2-Methylpropane`, `2-Methylbutane` - not found
+   - Agent had to lump iso-compounds into n-compounds, reducing accuracy
+
+2. **Outlet Streams Require Dummy Compositions**: When creating outlet streams with `is_source=false`, composition was still required, forcing the LLM to provide placeholder values that DWSIM will overwrite anyway.
+
+3. **Save Case Not Working**: `save_case` tool returned "Flowsheet does not expose a supported save method" - unable to persist simulations.
+
+4. **Compound Name Case Sensitivity**: Names like `Carbon dioxide` vs `Carbon Dioxide` caused confusion.
+
+##### Required Improvements
+
+**For Compound Handling**:
+- [ ] Add `validate_compounds` tool - LLM should validate compounds exist before attempting to add them
+- [ ] Add `list_available_compounds` tool - Returns list of valid DWSIM compound names, searchable by pattern
+- [ ] Suggest alternatives - When compound not found, return list of similar compound names (fuzzy match)
+- [ ] Case-insensitive matching - Accept compound names regardless of case
+- [ ] Common alias support - Map common names (e.g., "isobutane", "i-C4", "iC4", "2-methylpropane") to correct DWSIM name
+
+**For Outlet Streams**:
+- [ ] Auto-generate dummy compositions - When `is_source=false`, MCP should automatically create placeholder compositions using session compounds
+- [ ] Inherit from session - Use equal mole fractions of all compounds registered in the session as default
+- [ ] Document behavior clearly - Make it explicit that outlet streams are calculated, not specified
+
+**For Documentation**:
+- [ ] Document exact compound names - Provide reference list of all valid DWSIM compound names
+- [ ] Clarify outlet stream requirements - State that outlet streams don't need real values
+- [ ] Document save limitations - Note which file formats and methods are supported
+- [ ] Add LLM workflow guide - Best practices for building flowsheets step by step
+
+**For Save Functionality**:
+- [ ] Fix save_case tool - Implement proper flowsheet saving to .dwxmz format
+- [ ] Return file path on success - Allow LLM to reference saved file
+- [ ] Support multiple formats - .dwxml, .dwxmz, .json export options
+
+---
 
 ---
 

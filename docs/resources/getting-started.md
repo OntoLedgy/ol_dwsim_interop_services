@@ -5,19 +5,29 @@ This guide walks you through connecting the DWSIM MCP Server to VS Code Copilot 
 ## Prerequisites
 
 - Windows with .NET Framework 4.8
-- Python 3.11+
+- Python 3.10+
 - VS Code with GitHub Copilot extension
 - DWSIM binaries
 
 ## Installation
 
-### 1. Clone and Setup
+### 1. Clone and Setup (Windows / PowerShell)
 
-```bash
-git clone <repo-url>
-cd dwsim_interop_services/mcp_service/server
+```powershell
+git clone https://github.com/OntoLedgy/dwsim_interop_services.git
+cd dwsim_interop_services\mcp_service\server
 uv sync
 ```
+
+### 2. Use prebuilt binaries (optional, recommended for quick setup)
+
+If you don't want to build the C# layer, use the prebuilt setup script from the repo root:
+
+```powershell
+.\prebuilt\setup.ps1
+```
+
+See `prebuilt/README.md` for details on what it installs and configures.
 
 ---
 

@@ -18,6 +18,35 @@ if (-not (Test-Path "mcp_service")) {
     exit 1
 }
 
+# Preflight: .NET Framework 4.8 and MSBuild (Windows)
+Write-Host "Checking .NET Framework prerequisites..." -ForegroundColor Yellow
+
+$netFx48Release = 528040
+$netFxKey = "HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full"
+$netFxInstalled = $false
+try {
+    $release = (Get-ItemProperty -Path $netFxKey -Name Release -ErrorAction Stop).Release
+    if ($release -ge $netFx48Release) { $netFxInstalled = $true }
+} catch { }
+
+$msbuildFound = $false
+$vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+if (Test-Path $vsWhere) {
+    $msbuildPath = & $vsWhere -latest -products * -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe 2>$null | Select-Object -First 1
+    if ($msbuildPath) { $msbuildFound = $true }
+}
+
+if (-not $netFxInstalled -or -not $msbuildFound) {
+    Write-Host "Missing .NET Framework 4.8 and/or MSBuild." -ForegroundColor Yellow
+    Write-Host "Install the .NET Framework 4.8 Developer Pack (includes Targeting Pack):" -ForegroundColor Yellow
+    Write-Host "  https://dotnet.microsoft.com/download/dotnet-framework/net48" -ForegroundColor Cyan
+    Write-Host "Install Visual Studio Build Tools with the '.NET desktop development' workload:" -ForegroundColor Yellow
+    Write-Host "  https://visualstudio.microsoft.com/downloads/" -ForegroundColor Cyan
+    Write-Host ""
+} else {
+    Write-Host ".NET Framework 4.8 and MSBuild detected." -ForegroundColor Green
+}
+
 # Create target directories
 Write-Host "Creating directory structure..." -ForegroundColor Yellow
 
@@ -49,6 +78,19 @@ Write-Host "Setting up DWSIM binaries..." -ForegroundColor Yellow
 Write-Host ""
 Write-Host "This MCP server requires DWSIM v9.0.5+ (includes headless UpdateInterface fix)" -ForegroundColor Cyan
 Write-Host ""
+
+# If no path/switch was provided, ask the user which option to use
+if (-not $DwsimPath -and -not $DownloadDwsim) {
+    Write-Host "Choose DWSIM binaries source:" -ForegroundColor Yellow
+    Write-Host "  [1] Use prebuilt binaries (download)" -ForegroundColor Cyan
+    Write-Host "  [2] Use a custom local DWSIM build" -ForegroundColor Cyan
+    $choice = Read-Host "Enter 1 or 2"
+    if ($choice -eq "2") {
+        $DwsimPath = Read-Host "Enter full path to DWSIM binaries (e.g. D:\\path\\to\\DWSIM\\bin\\x64\\Debug)"
+    } else {
+        $DownloadDwsim = $true
+    }
+}
 
 # Check if binaries already exist
 $existingFiles = Get-ChildItem $dwsimBinDir -ErrorAction SilentlyContinue
@@ -136,6 +178,69 @@ try {
     Write-Host "Then run: cd mcp_service\server && uv sync" -ForegroundColor Yellow
 }
 Pop-Location
+
+# Write DWSIM config with binaries path
+Write-Host ""
+Write-Host "Writing DWSIM config..." -ForegroundColor Yellow
+
+$configPath = "mcp_service\dwsim_worker\dwsim.config.json"
+try {
+    $effectivePath = if ($DwsimPath) { $DwsimPath } else { $dwsimBinDir }
+    $absDwsimBinDir = (Resolve-Path $effectivePath).Path -replace '\\', '/'
+    $cfg = @{}
+    if (Test-Path $configPath) {
+        try {
+            $cfg = Get-Content $configPath -Raw | ConvertFrom-Json
+        } catch {
+            $cfg = @{}
+        }
+    }
+    $cfg.dwsim_path = $absDwsimBinDir
+    $cfg | ConvertTo-Json -Depth 4 | Set-Content $configPath -Encoding UTF8
+    Write-Host "Wrote: $configPath" -ForegroundColor Green
+    Write-Host "  dwsim_path = $absDwsimBinDir" -ForegroundColor Gray
+} catch {
+    Write-Host "Warning: Could not write $configPath - $_" -ForegroundColor Yellow
+}
+
+# Update App.config files with absolute DwsimPath (for worker/assembly config)
+Write-Host ""
+Write-Host "Updating App.config with DwsimPath..." -ForegroundColor Yellow
+
+$configFiles = @(
+    "mcp_service\dwsim_worker\DwsimWorker\App.config",
+    "mcp_service\dwsim_worker\DwsimWorker.Tests\App.config",
+    "mcp_service\dwsim_worker\DwsimWorker\bin\Debug\DwsimWorker.dll.config"
+)
+
+foreach ($cfgFile in $configFiles) {
+    if (-not (Test-Path $cfgFile)) { continue }
+    try {
+        [xml]$xml = Get-Content $cfgFile
+        $appSettings = $xml.configuration.appSettings
+        if (-not $appSettings) {
+            $appSettings = $xml.CreateElement("appSettings")
+            $xml.configuration.AppendChild($appSettings) | Out-Null
+        }
+        $dwsimPathSetting = $appSettings.add | Where-Object { $_.key -eq "DwsimPath" }
+        if (-not $dwsimPathSetting) {
+            $dwsimPathSetting = $xml.CreateElement("add")
+            $dwsimPathSetting.SetAttribute("key", "DwsimPath")
+            $dwsimPathSetting.SetAttribute("value", $absDwsimBinDir)
+            $appSettings.AppendChild($dwsimPathSetting) | Out-Null
+        } else {
+            $dwsimPathSetting.value = $absDwsimBinDir
+        }
+        $xml.Save($cfgFile)
+        Write-Host "  Updated: $cfgFile" -ForegroundColor Gray
+    } catch {
+        Write-Host "  Warning: Could not update $cfgFile - $_" -ForegroundColor Yellow
+    }
+}
+
+# Set DWSIM_PATH for this session (helps immediate test runs)
+$env:DWSIM_PATH = $absDwsimBinDir
+Write-Host "Set DWSIM_PATH for current session: $absDwsimBinDir" -ForegroundColor Gray
 
 # Generate MCP config
 Write-Host ""
