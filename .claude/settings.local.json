@@ -27,7 +27,11 @@
       "mcp__dwsim__connect",
       "mcp__dwsim__list_objects",
       "mcp__dwsim__run",
-      "mcp__dwsim__close_session"
+      "mcp__dwsim__close_session",
+      "Bash(tasklist /FI \"IMAGENAME eq python.exe\" /V)",
+      "Bash(powershell -Command \"Get-Process vstest*, testhost* -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host ''Test processes cleared''\")",
+      "Bash(powershell \"taskkill /F /PID 37392\")",
+      "Bash(powershell \"Get-Content ''C:\\\\Users\\\\KHANM~1.ONT\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--S-C--dwsim-interop-services\\\\tasks\\\\b127b9f.output'' -Tail 80\")"
     ]
   }
 }
