@@ -31,6 +31,10 @@ namespace DwsimWorker.Adapters
         private readonly FlowsheetContext _context;
         // NOTE: _streamCounter removed - we now use context.GetStreamIds().Count to generate unique IDs
         // This ensures IDs are unique even when new StreamAdapter instances are created
+        private const double Unity = 1.0;
+        private const int MinimumCount = 1;
+        private const string NoCompoundsMessage =
+            "Cannot auto-generate composition: no compounds registered in session. Add compounds first.";
 
         private static readonly Dictionary<int, string> PhaseIdToName = new Dictionary<int, string>
         {
@@ -121,6 +125,24 @@ namespace DwsimWorker.Adapters
 
             try
             {
+                var hasComposition = properties.Composition?.MoleFractions?.Count >= MinimumCount;
+                if (!isSource && !hasComposition)
+                {
+                    if (!TryAutoGenerateComposition(properties, out var updatedProperties))
+                    {
+                        _logger.Warning(NoCompoundsMessage);
+                        return PropertySetResult.FailureResult(
+                            NoCompoundsMessage,
+                            new InvalidOperationException(NoCompoundsMessage));
+                    }
+
+                    properties = updatedProperties;
+                    _logger.Information(
+                        "Auto-generated composition for outlet stream {StreamName} with {CompoundCount} compounds",
+                        name,
+                        properties.Composition.MoleFractions.Count);
+                }
+
                 // Step 1: Validate properties
                 if (!properties.IsValid(out string errorMessage))
                 {
@@ -173,6 +195,20 @@ namespace DwsimWorker.Adapters
                 _logger.Error(ex, message);
                 return PropertySetResult.FailureResult(message, ex);
             }
+        }
+
+        private bool TryAutoGenerateComposition(StreamProperties properties, out StreamProperties updated)
+        {
+            updated = properties;
+            var compoundCount = _context.GetCompounds().Count;
+            if (compoundCount < MinimumCount) return false;
+            var lastIndex = compoundCount - MinimumCount;
+            var fraction = Unity / compoundCount;
+            var fractions = new double[compoundCount];
+            for (var i = 0; i < lastIndex; i++) fractions[i] = fraction;
+            fractions[lastIndex] = Unity - (fraction * lastIndex);
+            updated = new StreamProperties(properties.Temperature, properties.Pressure, properties.MolarFlow, new Composition(fractions));
+            return true;
         }
 
         /// <summary>

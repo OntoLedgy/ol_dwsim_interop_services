@@ -4,6 +4,8 @@ using System.Linq;
 using Serilog;
 using DwsimWorker.Engine;
 using DwsimWorker.Exceptions;
+using DwsimWorker.Models;
+using DwsimWorker.Utilities;
 
 namespace DwsimWorker.Adapters
 {
@@ -24,41 +26,72 @@ namespace DwsimWorker.Adapters
         private readonly ILogger _logger;
         private readonly FlowsheetContext _context;
 
-        // Common compound names for validation
-        // This is a subset of available compounds - DWSIM has hundreds more
-        private static readonly HashSet<string> KnownCompounds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        private const int DefaultSuggestionLimit = 5;
+        private const int DefaultSuggestionDistance = 3;
+        private const int DefaultListLimit = 50;
+        private const int MaxListLimit = 200;
+        private const string CategoryOther = "Other";
+
+        private const string CategoryAlkanes = "Alkanes";
+        private const string CategoryAlkenes = "Alkenes";
+        private const string CategoryAromatics = "Aromatics";
+        private const string CategoryInorganics = "Inorganics";
+        private const string CategoryAlcohols = "Alcohols";
+        private const string CategoryOtherOrganics = "Other Organics";
+
+        private static readonly string[] AlkaneCompounds =
         {
-            // Alkanes
             "Methane", "Ethane", "Propane", "n-Butane", "i-Butane", "Butane",
-            "n-Pentane", "i-Pentane", "Pentane",
-            "n-Hexane", "Hexane", "n-Heptane", "Heptane",
-            "n-Octane", "Octane", "n-Nonane", "n-Decane",
+            "n-Pentane", "i-Pentane", "Pentane", "n-Hexane", "Hexane",
+            "n-Heptane", "Heptane", "n-Octane", "Octane", "n-Nonane", "n-Decane"
+        };
 
-            // Alkenes
-            "Ethylene", "Ethene", "Propylene", "Propene",
-            "1-Butene", "2-Butene",
+        private static readonly string[] AlkeneCompounds =
+        {
+            "Ethylene", "Ethene", "Propylene", "Propene", "1-Butene", "2-Butene"
+        };
 
-            // Aromatics
+        private static readonly string[] AromaticCompounds =
+        {
             "Benzene", "Toluene", "Xylene", "o-Xylene", "m-Xylene", "p-Xylene",
-            "Ethylbenzene", "Styrene",
+            "Ethylbenzene", "Styrene"
+        };
 
-            // Other hydrocarbons
-            "Acetylene", "Cyclopentane", "Cyclohexane",
+        private static readonly string[] OtherHydrocarbons =
+        {
+            "Acetylene", "Cyclopentane", "Cyclohexane"
+        };
 
-            // Inorganics
+        private static readonly string[] InorganicCompounds =
+        {
             "Water", "H2O", "Oxygen", "O2", "Nitrogen", "N2",
             "Carbon Dioxide", "CO2", "Carbon Monoxide", "CO",
             "Hydrogen", "H2", "Hydrogen Sulfide", "H2S",
-            "Ammonia", "NH3", "Sulfur Dioxide", "SO2",
-
-            // Alcohols
-            "Methanol", "Ethanol", "Propanol", "1-Propanol",
-            "2-Propanol", "Butanol", "1-Butanol",
-
-            // Other organics
-            "Acetic Acid", "Acetone", "Formaldehyde",
-            "Methyl Ethyl Ketone", "MEK"
+            "Ammonia", "NH3", "Sulfur Dioxide", "SO2"
         };
+
+        private static readonly string[] AlcoholCompounds =
+        {
+            "Methanol", "Ethanol", "Propanol", "1-Propanol", "2-Propanol",
+            "Butanol", "1-Butanol"
+        };
+
+        private static readonly string[] OtherOrganicCompounds =
+        {
+            "Acetic Acid", "Acetone", "Formaldehyde", "Methyl Ethyl Ketone", "MEK"
+        };
+
+        private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> CompoundCategories =
+            BuildCompoundCategories();
+
+        private static readonly HashSet<string> KnownCompounds =
+            BuildKnownCompounds(CompoundCategories);
+
+        private static readonly IReadOnlyDictionary<string, string> CompoundCategoryLookup =
+            BuildCategoryLookup(CompoundCategories);
+
+        private static readonly IReadOnlyList<string> SortedCompounds =
+            KnownCompounds.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList().AsReadOnly();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CompoundAdapter"/> class.
@@ -120,79 +153,13 @@ namespace DwsimWorker.Adapters
 
             _logger.Debug("Attempting to add compound: {CompoundName}", compoundName);
 
-            // Step 1: Validate compound name exists in database
-            if (!ValidateCompoundName(compoundName))
+            var validation = ValidateCompound(compoundName);
+            if (!validation.Valid)
             {
-                var message = $"Compound '{compoundName}' not found in DWSIM database. " +
-                             "Check spelling or use GetAvailableCompounds() to see valid compound names.";
-                _logger.Warning("Compound validation failed: {CompoundName}", compoundName);
-                return LoadResult.FailureResult(message, new CompoundNotFoundException(compoundName));
+                return BuildValidationFailure(compoundName, validation);
             }
 
-            try
-            {
-                var normalizedName = GetCanonicalCompoundName(compoundName);
-                var existingCompounds = _context.GetCompounds();
-                if (existingCompounds.Any(c => string.Equals(c, normalizedName, StringComparison.OrdinalIgnoreCase)))
-                {
-                    _logger.Information("Compound already present in flowsheet: {CompoundName}", normalizedName);
-                    return LoadResult.SuccessResult(new List<AssemblyInfo>());
-                }
-
-                // Step 2: Add compound to flowsheet
-                var flowsheet = _context.GetFlowsheet();
-                var flowsheetType = flowsheet.GetType();
-                var addCompound = flowsheetType.GetMethod("AddCompound", new[] { typeof(string) });
-                if (addCompound == null)
-                {
-                    var message = "Flowsheet does not expose AddCompound";
-                    _logger.Warning(message);
-                    return LoadResult.FailureResult(message, new MissingMethodException(message));
-                }
-
-                addCompound.Invoke(flowsheet, new object[] { normalizedName });
-
-                // Step 3: Track compound in flowsheet context
-                _context.AddCompound(normalizedName);
-
-                // Step 4: Ensure existing streams have updated compound list
-                var addToStream = flowsheetType.GetMethod("AddCompoundsToMaterialStream");
-                if (addToStream != null)
-                {
-                    foreach (var streamId in _context.GetStreamIds())
-                    {
-                        var stream = _context.GetStream(streamId);
-                        if (stream != null)
-                        {
-                            addToStream.Invoke(flowsheet, new[] { stream });
-                        }
-                    }
-                }
-
-                // Step 5: Log success with structured logging
-                _logger.Information("Compound added successfully: {CompoundName}", normalizedName);
-
-                return LoadResult.SuccessResult(new List<AssemblyInfo>());
-            }
-            catch (InvalidOperationException ex)
-            {
-                var message = $"Failed to add compound '{compoundName}': Flowsheet not initialized";
-                _logger.Error(ex, message);
-                return LoadResult.FailureResult(message, ex);
-            }
-            catch (System.Reflection.TargetInvocationException ex)
-            {
-                var innerEx = ex.InnerException ?? ex;
-                var message = $"Unexpected error adding compound '{compoundName}': {innerEx.Message}";
-                _logger.Error(innerEx, message);
-                return LoadResult.FailureResult(message, innerEx);
-            }
-            catch (Exception ex)
-            {
-                var message = $"Unexpected error adding compound '{compoundName}': {ex.Message}";
-                _logger.Error(ex, message);
-                return LoadResult.FailureResult(message, ex);
-            }
+            return TryAddCompound(validation.CanonicalName);
         }
 
         /// <summary>
@@ -285,17 +252,9 @@ namespace DwsimWorker.Adapters
                 return false;
             }
 
-            bool isValid = KnownCompounds.Contains(compoundName);
-
-            if (isValid)
-            {
-                _logger.Debug("Compound name validated: {CompoundName}", compoundName);
-            }
-            else
-            {
-                _logger.Debug("Compound name not found in database: {CompoundName}", compoundName);
-            }
-
+            var trimmed = compoundName.Trim();
+            var isValid = TryResolveCanonicalName(trimmed, out var canonicalName, out _);
+            LogValidationOutcome(trimmed, isValid, canonicalName);
             return isValid;
         }
 
@@ -325,7 +284,32 @@ namespace DwsimWorker.Adapters
         public IReadOnlyList<string> GetAvailableCompounds()
         {
             _logger.Debug("Retrieving list of available compounds");
-            return KnownCompounds.OrderBy(c => c).ToList().AsReadOnly();
+            return SortedCompounds;
+        }
+
+        public CompoundValidationResult ValidateCompound(string compoundName)
+        {
+            var input = NormalizeInput(compoundName);
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return new CompoundValidationResult(input, false, string.Empty, false, Array.Empty<string>());
+            }
+
+            var valid = TryResolveCanonicalName(input, out var canonicalName, out var aliasUsed);
+            var suggestions = valid ? Array.Empty<string>() : GetSuggestions(input);
+            var resolvedCanonical = valid ? canonicalName : string.Empty;
+            return new CompoundValidationResult(input, valid, resolvedCanonical, aliasUsed, suggestions);
+        }
+
+        public CompoundListResult ListCompounds(string pattern, string category, int limit, int offset)
+        {
+            var resolvedLimit = NormalizeLimit(limit);
+            var resolvedOffset = NormalizeOffset(offset);
+            var compounds = GetCompoundsByCategory(category);
+            var filtered = ApplyPattern(compounds, pattern).ToList();
+            var total = filtered.Count;
+            var page = filtered.Skip(resolvedOffset).Take(resolvedLimit).Select(BuildCompoundInfo).ToList();
+            return new CompoundListResult(page.AsReadOnly(), total, resolvedLimit, resolvedOffset, pattern, category);
         }
 
         private static string GetCanonicalCompoundName(string compoundName)
@@ -333,6 +317,257 @@ namespace DwsimWorker.Adapters
             return KnownCompounds.FirstOrDefault(c =>
                        string.Equals(c, compoundName, StringComparison.OrdinalIgnoreCase))
                    ?? compoundName;
+        }
+
+        private LoadResult TryAddCompound(string canonicalName)
+        {
+            try
+            {
+                EnsureCompoundAdded(canonicalName);
+                return LoadResult.SuccessResult(new List<AssemblyInfo>());
+            }
+            catch (Exception ex)
+            {
+                return HandleAddCompoundException(canonicalName, ex);
+            }
+        }
+
+        private void EnsureCompoundAdded(string canonicalName)
+        {
+            if (IsCompoundAlreadyPresent(canonicalName))
+            {
+                _logger.Information("Compound already present in flowsheet: {CompoundName}", canonicalName);
+                return;
+            }
+
+            var flowsheet = _context.GetFlowsheet();
+            var addCompound = GetAddCompoundMethod(flowsheet);
+            if (addCompound == null)
+            {
+                throw new MissingMethodException("Flowsheet does not expose AddCompound");
+            }
+
+            addCompound.Invoke(flowsheet, new object[] { canonicalName });
+            _context.AddCompound(canonicalName);
+            UpdateStreamsWithCompounds(flowsheet);
+            _logger.Information("Compound added successfully: {CompoundName}", canonicalName);
+        }
+
+        private LoadResult HandleAddCompoundException(string compoundName, Exception ex)
+        {
+            if (ex is MissingMethodException)
+            {
+                return MissingAddCompoundResult();
+            }
+
+            if (ex is InvalidOperationException)
+            {
+                return BuildAddCompoundFailure(compoundName, "Flowsheet not initialized", ex);
+            }
+
+            if (ex is System.Reflection.TargetInvocationException tie)
+            {
+                var innerEx = tie.InnerException ?? tie;
+                return BuildAddCompoundFailure(compoundName, innerEx.Message, innerEx);
+            }
+
+            return BuildAddCompoundFailure(compoundName, ex.Message, ex);
+        }
+
+        private LoadResult BuildValidationFailure(string compoundName, CompoundValidationResult validation)
+        {
+            var message = BuildInvalidCompoundMessage(compoundName, validation.Suggestions);
+            _logger.Warning("Compound validation failed: {CompoundName}", compoundName);
+            return LoadResult.FailureResult(message, new CompoundNotFoundException(compoundName));
+        }
+
+        private static string BuildInvalidCompoundMessage(string compoundName, IReadOnlyList<string> suggestions)
+        {
+            var baseMessage = $"Compound '{compoundName}' not found in DWSIM database.";
+            if (suggestions == null || suggestions.Count == 0)
+            {
+                return baseMessage + " Check spelling or use GetAvailableCompounds() to see valid names.";
+            }
+
+            var suggestionList = string.Join(", ", suggestions);
+            return baseMessage + $" Did you mean: {suggestionList}?";
+        }
+
+        private bool IsCompoundAlreadyPresent(string canonicalName)
+        {
+            var existingCompounds = _context.GetCompounds();
+            return existingCompounds.Any(c => string.Equals(c, canonicalName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static System.Reflection.MethodInfo GetAddCompoundMethod(object flowsheet)
+        {
+            return flowsheet?.GetType().GetMethod("AddCompound", new[] { typeof(string) });
+        }
+
+        private LoadResult MissingAddCompoundResult()
+        {
+            var message = "Flowsheet does not expose AddCompound";
+            _logger.Warning(message);
+            return LoadResult.FailureResult(message, new MissingMethodException(message));
+        }
+
+        private void UpdateStreamsWithCompounds(object flowsheet)
+        {
+            var addToStream = flowsheet.GetType().GetMethod("AddCompoundsToMaterialStream");
+            if (addToStream == null)
+            {
+                return;
+            }
+
+            foreach (var streamId in _context.GetStreamIds())
+            {
+                var stream = _context.GetStream(streamId);
+                if (stream != null)
+                {
+                    addToStream.Invoke(flowsheet, new[] { stream });
+                }
+            }
+        }
+
+        private LoadResult BuildAddCompoundFailure(string compoundName, string details, Exception ex)
+        {
+            var message = $"Failed to add compound '{compoundName}': {details}";
+            _logger.Error(ex, message);
+            return LoadResult.FailureResult(message, ex);
+        }
+
+        private static string NormalizeInput(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+        }
+
+        private static int NormalizeLimit(int limit)
+        {
+            if (limit <= 0)
+            {
+                return DefaultListLimit;
+            }
+
+            return Math.Min(limit, MaxListLimit);
+        }
+
+        private static int NormalizeOffset(int offset)
+        {
+            return offset < 0 ? 0 : offset;
+        }
+
+        private static IEnumerable<string> ApplyPattern(IEnumerable<string> compounds, string pattern)
+        {
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                return compounds;
+            }
+
+            var trimmed = pattern.Trim();
+            return compounds.Where(name => name.IndexOf(trimmed, StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        private IReadOnlyList<string> GetCompoundsByCategory(string category)
+        {
+            if (string.IsNullOrWhiteSpace(category))
+            {
+                return SortedCompounds;
+            }
+
+            if (CompoundCategories.TryGetValue(category.Trim(), out var compounds))
+            {
+                return compounds;
+            }
+
+            _logger.Warning("Unknown compound category requested: {Category}", category);
+            return Array.Empty<string>();
+        }
+
+        private CompoundInfo BuildCompoundInfo(string name)
+        {
+            var category = GetCategoryForCompound(name);
+            var aliases = CompoundAliasMapper.GetAliasesFor(name);
+            return new CompoundInfo(name, category, aliases);
+        }
+
+        private static string GetCategoryForCompound(string name)
+        {
+            return CompoundCategoryLookup.TryGetValue(name, out var category) ? category : CategoryOther;
+        }
+
+        private static IReadOnlyList<string> GetSuggestions(string input)
+        {
+            return FuzzyMatcher.FindSimilar(input, KnownCompounds, DefaultSuggestionLimit, DefaultSuggestionDistance);
+        }
+
+        private void LogValidationOutcome(string input, bool isValid, string canonicalName)
+        {
+            if (isValid)
+            {
+                _logger.Debug("Compound name validated: {CompoundName}", canonicalName);
+                return;
+            }
+
+            _logger.Debug("Compound name not found in database: {CompoundName}", input);
+        }
+
+        private static bool TryResolveCanonicalName(string input, out string canonicalName, out bool aliasUsed)
+        {
+            aliasUsed = CompoundAliasMapper.TryResolveAlias(input, out canonicalName);
+            if (aliasUsed)
+            {
+                return true;
+            }
+
+            canonicalName = GetCanonicalCompoundName(input);
+            return KnownCompounds.Contains(canonicalName);
+        }
+
+        private static IReadOnlyDictionary<string, IReadOnlyList<string>> BuildCompoundCategories()
+        {
+            return new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                { CategoryAlkanes, ToSortedList(AlkaneCompounds) },
+                { CategoryAlkenes, ToSortedList(AlkeneCompounds) },
+                { CategoryAromatics, ToSortedList(AromaticCompounds) },
+                { CategoryInorganics, ToSortedList(InorganicCompounds) },
+                { CategoryAlcohols, ToSortedList(AlcoholCompounds) },
+                { CategoryOtherOrganics, ToSortedList(OtherOrganicCompounds.Concat(OtherHydrocarbons).ToArray()) }
+            };
+        }
+
+        private static HashSet<string> BuildKnownCompounds(IReadOnlyDictionary<string, IReadOnlyList<string>> categories)
+        {
+            var compounds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var list in categories.Values)
+            {
+                foreach (var compound in list)
+                {
+                    compounds.Add(compound);
+                }
+            }
+
+            return compounds;
+        }
+
+        private static IReadOnlyDictionary<string, string> BuildCategoryLookup(
+            IReadOnlyDictionary<string, IReadOnlyList<string>> categories)
+        {
+            var lookup = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in categories)
+            {
+                foreach (var compound in pair.Value)
+                {
+                    lookup[compound] = pair.Key;
+                }
+            }
+
+            return lookup;
+        }
+
+        private static IReadOnlyList<string> ToSortedList(IEnumerable<string> compounds)
+        {
+            return compounds.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList().AsReadOnly();
         }
     }
 }
