@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-observability/design.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-26T16:21:15.701Z",
+      "trigger": "initial",
+      "approvalId": "approval_1769444475640_zd85fq7en",
+      "approvalTitle": "Design: MCP Observability and Debugging Tools"
+    }
+  ]
+}
