@@ -60,7 +60,7 @@ namespace DwsimWorker.Engine
 
             try
             {
-                var properties = BuildStreamProperties(context, temperatureK, pressurePa, molarFlow, composition);
+                var properties = BuildStreamProperties(context, temperatureK, pressurePa, molarFlow, composition, isSource);
                 var result = adapter.CreateStream(name, properties, isSource);
                 if (!result.Success || string.IsNullOrWhiteSpace(result.ObjectId))
                 {
@@ -283,12 +283,32 @@ namespace DwsimWorker.Engine
             double temperatureK,
             double pressurePa,
             double molarFlow,
-            IDictionary<string, double> composition)
+            IDictionary<string, double> composition,
+            bool isSource)
         {
+            var compounds = context.GetCompounds();
+
+            // Auto-composition for outlet streams
+            if (!isSource && (composition == null || composition.Count == 0))
+            {
+                if (compounds.Count == 0)
+                {
+                    throw new ArgumentException("Cannot create outlet stream: No compounds registered in the flowsheet.", nameof(composition));
+                }
+
+                // Auto-fill with equal fractions
+                composition = new Dictionary<string, double>();
+                double equalFraction = 1.0 / compounds.Count;
+                foreach (var compound in compounds)
+                {
+                    composition[compound] = equalFraction;
+                }
+            }
+
+            // Source streams must have composition
             if (composition == null || composition.Count == 0)
                 throw new ArgumentException("Composition must be provided.", nameof(composition));
 
-            var compounds = context.GetCompounds();
             var moleFractions = new List<double>(compounds.Count);
             foreach (var compound in compounds)
             {
