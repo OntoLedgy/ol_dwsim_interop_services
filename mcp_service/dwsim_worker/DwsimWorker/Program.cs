@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
 using DwsimWorker.Engine;
+using DwsimWorker.Observability;
 
 namespace DwsimWorker
 {
@@ -20,6 +21,7 @@ namespace DwsimWorker
                 .MinimumLevel.Information()
                 .WriteTo.Console()
                 .WriteTo.File("logs/dwsim-worker-.txt", rollingInterval: RollingInterval.Day)
+                .Enrich.With<CorrelationEnricher>()
                 .Enrich.WithProperty("Application", "DwsimWorker")
                 .CreateLogger();
 

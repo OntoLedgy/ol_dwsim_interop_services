@@ -7,6 +7,21 @@ from typing import Optional
 
 import structlog
 
+from .correlation import get_current_context
+
+
+def _add_correlation_context(logger, method_name, event_dict):
+    context = get_current_context()
+    if context is None:
+        return event_dict
+
+    event_dict["requestId"] = context.request_id
+    if context.session_id:
+        event_dict["sessionId"] = context.session_id
+    if context.tool_name:
+        event_dict["toolName"] = context.tool_name
+    return event_dict
+
 
 def configure_logging(log_level: str, *, json_format: bool = True) -> None:
     """Configure stdlib logging and structlog."""
@@ -16,6 +31,7 @@ def configure_logging(log_level: str, *, json_format: bool = True) -> None:
     processors = [
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.add_log_level,
+        _add_correlation_context,
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
     ]

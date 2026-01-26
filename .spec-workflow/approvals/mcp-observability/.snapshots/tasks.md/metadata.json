@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-observability/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-26T16:32:52.064Z",
+      "trigger": "initial",
+      "approvalId": "approval_1769445171987_eeykccf7w",
+      "approvalTitle": "Tasks: MCP Observability and Debugging Tools"
+    }
+  ]
+}
