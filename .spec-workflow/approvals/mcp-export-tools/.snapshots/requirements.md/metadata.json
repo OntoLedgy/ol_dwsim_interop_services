@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-export-tools/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-23T14:39:59.015Z",
+      "trigger": "initial",
+      "approvalId": "approval_1769179198953_u9ff9jw3x",
+      "approvalTitle": "Requirements: MCP Export Tools and LLM Usability Improvements"
+    }
+  ]
+}
