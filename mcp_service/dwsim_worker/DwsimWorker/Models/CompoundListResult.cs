@@ -1,0 +1,51 @@
+using System;
+using System.Collections.Generic;
+
+namespace DwsimWorker.Models
+{
+    public sealed class CompoundListResult
+    {
+        public IReadOnlyList<CompoundInfo> Compounds { get; }
+        public int TotalCount { get; }
+        public int Limit { get; }
+        public int Offset { get; }
+        public string Pattern { get; }
+        public string Category { get; }
+
+        public CompoundListResult(
+            IReadOnlyList<CompoundInfo> compounds,
+            int totalCount,
+            int limit,
+            int offset,
+            string pattern,
+            string category)
+        {
+            if (compounds == null)
+            {
+                throw new ArgumentNullException(nameof(compounds));
+            }
+
+            if (totalCount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(totalCount), "Total count cannot be negative.");
+            }
+
+            if (limit < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(limit), "Limit cannot be negative.");
+            }
+
+            if (offset < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(offset), "Offset cannot be negative.");
+            }
+
+            Compounds = compounds;
+            TotalCount = totalCount;
+            Limit = limit;
+            Offset = offset;
+            Pattern = pattern ?? string.Empty;
+            Category = category ?? string.Empty;
+        }
+    }
+}
