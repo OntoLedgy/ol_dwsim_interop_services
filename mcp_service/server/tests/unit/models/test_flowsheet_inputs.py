@@ -8,7 +8,8 @@ from models.mcp_inputs import (
 )
 
 
-def test_add_stream_requires_flow():
+def test_add_stream_requires_flow_for_source():
+    """Source streams (is_source=True) require either molar_flow or mass_flow."""
     with pytest.raises(ValueError):
         AddStreamInput(
             session_id="s1",
@@ -16,7 +17,23 @@ def test_add_stream_requires_flow():
             temperature=298.15,
             pressure=101325.0,
             composition={"methane": 0.5, "ethane": 0.5},
+            is_source=True,  # Source streams require flow specification
         )
+
+
+def test_add_stream_outlet_allows_no_flow():
+    """Outlet streams (is_source=False) don't require flow - DWSIM calculates them."""
+    # This should NOT raise - outlets can omit flow
+    stream = AddStreamInput(
+        session_id="s1",
+        name="outlet",
+        temperature=298.15,
+        pressure=101325.0,
+        composition={"methane": 0.5, "ethane": 0.5},
+        is_source=False,
+    )
+    assert stream.molar_flow is None
+    assert stream.mass_flow is None
 
 
 def test_add_stream_composition_sum_validation():

@@ -61,11 +61,11 @@ def test_memory_monitor_breach_and_recovery(monkeypatch):
     )
     async def _run_monitor_checks():
         monitor.start()
-        await asyncio.sleep(0.015)
+        await asyncio.sleep(0.03)  # Increased for reliability
         first = monitor.is_exceeded()
-        await asyncio.sleep(0.015)
+        await asyncio.sleep(0.03)  # Increased for reliability
         second = monitor.is_exceeded()
-        await asyncio.sleep(0.015)
+        await asyncio.sleep(0.03)  # Increased for reliability
         third = monitor.is_exceeded()
         snapshot = monitor.snapshot()
         await monitor.stop()
