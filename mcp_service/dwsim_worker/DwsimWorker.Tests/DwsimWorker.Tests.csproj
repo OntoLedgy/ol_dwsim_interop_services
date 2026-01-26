@@ -44,13 +44,16 @@
     <Compile Include="Engine\SessionManagerTests.cs" />
     <Compile Include="Adapters\CompoundAdapterTests.cs" />
     <Compile Include="Adapters\StreamAdapterTests.cs" />
+    <Compile Include="Adapters\StreamAdapterAutoCompositionTests.cs" />
     <Compile Include="Adapters\PropertyPackageAdapterTests.cs" />
     <Compile Include="Adapters\UnitOpAdapterTests.cs" />
     <Compile Include="Adapters\ConnectionAdapterTests.cs" />
     <Compile Include="Adapters\CalculationAdapterTests.cs" />
+    <Compile Include="Adapters\ExportAdapterTests.cs" />
     <Compile Include="Models\CalculationModelsTests.cs" />
     <Compile Include="Utilities\PathResolverTests.cs" />
     <Compile Include="Utilities\MassBalanceValidatorTests.cs" />
+    <Compile Include="Utilities\CompoundUtilitiesTests.cs" />
     <Compile Include="DtoSerializationTests.cs" />
     <Compile Include="ThermodynamicsAdapterTests.cs" />
     <Compile Include="Contracts\SimulationResultDtoTests.cs" />
