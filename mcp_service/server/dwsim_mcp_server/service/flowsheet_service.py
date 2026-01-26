@@ -15,16 +15,28 @@ from models.mcp_inputs import (
     ConnectOutput,
     DeleteObjectInput,
     DeleteObjectOutput,
+    ExportCsvInput,
+    ExportCsvOutput,
+    ExportJsonInput,
+    ExportJsonOutput,
     FlashStreamInput,
     FlashStreamOutput,
+    GenerateReportInput,
+    GenerateReportOutput,
+    ListCompoundsInput,
+    ListCompoundsOutput,
     ListObjectsInput,
     ListObjectsOutput,
+    SaveCaseInput,
+    SaveCaseOutput,
     SetBinaryInteractionParameterInput,
     SetBinaryInteractionParameterOutput,
     SetObjectParameterInput,
     SetObjectParameterOutput,
     SetPropertyPackageInput,
     SetPropertyPackageOutput,
+    ValidateCompoundsInput,
+    ValidateCompoundsOutput,
 )
 
 from dwsim_mcp_server.ipc.limited_session_client import LimitedSessionClient
@@ -85,6 +97,38 @@ class FlowsheetClientProtocol(Protocol):
         compound2: str,
         value: float,
     ) -> bool: ...
+
+    def export_csv(
+        self,
+        session_id: str,
+        *,
+        file_path: str,
+        object_ids: Optional[list[str]],
+    ) -> Dict[str, Any]: ...
+
+    def export_json(self, session_id: str, *, format: str) -> Dict[str, Any]: ...
+
+    def generate_report(
+        self,
+        session_id: str,
+        *,
+        template: str,
+        file_path: str,
+    ) -> Dict[str, Any]: ...
+
+    def save_case(self, session_id: str, *, file_path: str) -> Dict[str, Any]: ...
+
+    def validate_compounds(self, session_id: str, *, compound_names: list[str]) -> Dict[str, Any]: ...
+
+    def list_compounds(
+        self,
+        session_id: str,
+        *,
+        pattern: Optional[str],
+        category: Optional[str],
+        limit: int,
+        offset: int,
+    ) -> Dict[str, Any]: ...
 
 
 class FlowsheetService:
@@ -231,6 +275,126 @@ class FlowsheetService:
         )
         return result
 
+    async def export_csv(self, payload: ExportCsvInput) -> ExportCsvOutput:
+        """Export flowsheet data to CSV."""
+
+        def _op() -> Dict[str, Any]:
+            return self._client.export_csv(
+                payload.session_id,
+                file_path=payload.file_path,
+                object_ids=payload.object_ids,
+            )
+
+        raw_result = await self._session_client.run_session_operation(payload.session_id, _op)
+        result = _normalize_export_csv_result(raw_result, payload.file_path)
+        self._logger.info(
+            "export_csv_completed",
+            session_id=payload.session_id,
+            file_path=payload.file_path,
+            object_count=0 if payload.object_ids is None else len(payload.object_ids),
+            row_count=result.row_count,
+            success=bool(result.success),
+        )
+        return result
+
+    async def export_json(self, payload: ExportJsonInput) -> ExportJsonOutput:
+        """Export flowsheet data to JSON."""
+
+        def _op() -> Dict[str, Any]:
+            return self._client.export_json(payload.session_id, format=payload.format)
+
+        raw_result = await self._session_client.run_session_operation(payload.session_id, _op)
+        result = _normalize_export_json_result(raw_result)
+        self._logger.info(
+            "export_json_completed",
+            session_id=payload.session_id,
+            format=payload.format,
+            key_count=len(result.data),
+        )
+        return result
+
+    async def generate_report(self, payload: GenerateReportInput) -> GenerateReportOutput:
+        """Generate a report from the flowsheet."""
+
+        def _op() -> Dict[str, Any]:
+            return self._client.generate_report(
+                payload.session_id,
+                template=payload.template,
+                file_path=payload.file_path,
+            )
+
+        raw_result = await self._session_client.run_session_operation(payload.session_id, _op)
+        result = _normalize_report_result(raw_result, payload.file_path)
+        self._logger.info(
+            "report_generated",
+            session_id=payload.session_id,
+            template=payload.template,
+            file_path=payload.file_path,
+            success=bool(result.success),
+        )
+        return result
+
+    async def save_case(self, payload: SaveCaseInput) -> SaveCaseOutput:
+        """Save the current flowsheet case."""
+
+        def _op() -> Dict[str, Any]:
+            return self._client.save_case(payload.session_id, file_path=payload.file_path)
+
+        raw_result = await self._session_client.run_session_operation(payload.session_id, _op)
+        result = _normalize_save_case_result(raw_result, payload.file_path)
+        self._logger.info(
+            "case_saved",
+            session_id=payload.session_id,
+            file_path=payload.file_path,
+            success=bool(result.success),
+        )
+        return result
+
+    async def validate_compounds(self, payload: ValidateCompoundsInput) -> ValidateCompoundsOutput:
+        """Validate compound names against available compounds."""
+
+        def _op() -> Dict[str, Any]:
+            return self._client.validate_compounds(
+                payload.session_id,
+                compound_names=payload.compound_names,
+            )
+
+        raw_result = await self._session_client.run_session_operation(payload.session_id, _op)
+        result = _normalize_validate_compounds_result(raw_result)
+        valid_count = sum(1 for entry in result.results if entry.valid)
+        self._logger.info(
+            "compounds_validated",
+            session_id=payload.session_id,
+            requested_count=len(payload.compound_names),
+            valid_count=valid_count,
+        )
+        return result
+
+    async def list_compounds(self, payload: ListCompoundsInput) -> ListCompoundsOutput:
+        """List available compounds with optional filters."""
+
+        def _op() -> Dict[str, Any]:
+            return self._client.list_compounds(
+                payload.session_id,
+                pattern=payload.pattern,
+                category=payload.category,
+                limit=payload.limit,
+                offset=payload.offset,
+            )
+
+        raw_result = await self._session_client.run_session_operation(payload.session_id, _op)
+        result = _normalize_list_compounds_result(raw_result)
+        self._logger.info(
+            "compounds_listed",
+            session_id=payload.session_id,
+            pattern=payload.pattern,
+            category=payload.category,
+            returned_count=len(result.compounds),
+            total_count=result.total_count,
+            has_more=result.has_more,
+        )
+        return result
+
     async def set_object_parameter(self, payload: SetObjectParameterInput) -> SetObjectParameterOutput:
         """Update a parameter on a flowsheet object."""
 
@@ -341,3 +505,83 @@ def _normalize_delete_result(raw_result: Dict[str, Any], object_id: str) -> Dele
         "removed_connections": raw_result.get("removed_connections", []),
     }
     return DeleteObjectOutput.model_validate(payload)
+
+
+def _normalize_export_csv_result(raw_result: Any, file_path: str) -> ExportCsvOutput:
+    """Normalize export_csv output."""
+    if isinstance(raw_result, ExportCsvOutput):
+        return raw_result
+    if isinstance(raw_result, dict):
+        return ExportCsvOutput.model_validate(raw_result)
+    if isinstance(raw_result, tuple) and len(raw_result) == 2:
+        success, row_count = raw_result
+        return ExportCsvOutput(success=bool(success), file_path=file_path, row_count=int(row_count))
+    if isinstance(raw_result, bool):
+        return ExportCsvOutput(success=raw_result, file_path=file_path, row_count=0)
+    return ExportCsvOutput(success=False, file_path=file_path, row_count=0)
+
+
+def _normalize_export_json_result(raw_result: Any) -> ExportJsonOutput:
+    """Normalize export_json output."""
+    if isinstance(raw_result, ExportJsonOutput):
+        return raw_result
+    if isinstance(raw_result, dict):
+        if "data" in raw_result:
+            return ExportJsonOutput.model_validate(raw_result)
+        return ExportJsonOutput(data=raw_result)
+    return ExportJsonOutput(data={"value": raw_result})
+
+
+def _normalize_report_result(raw_result: Any, file_path: str) -> GenerateReportOutput:
+    """Normalize generate_report output."""
+    if isinstance(raw_result, GenerateReportOutput):
+        return raw_result
+    if isinstance(raw_result, dict):
+        return GenerateReportOutput.model_validate(raw_result)
+    if isinstance(raw_result, bool):
+        return GenerateReportOutput(success=raw_result, file_path=file_path)
+    return GenerateReportOutput(success=False, file_path=file_path)
+
+
+def _normalize_save_case_result(raw_result: Any, file_path: str) -> SaveCaseOutput:
+    """Normalize save_case output."""
+    if isinstance(raw_result, SaveCaseOutput):
+        return raw_result
+    if isinstance(raw_result, dict):
+        return SaveCaseOutput.model_validate(raw_result)
+    if isinstance(raw_result, bool):
+        return SaveCaseOutput(success=raw_result, file_path=file_path)
+    return SaveCaseOutput(success=False, file_path=file_path)
+
+
+def _normalize_validate_compounds_result(raw_result: Any) -> ValidateCompoundsOutput:
+    """Normalize validate_compounds output."""
+    if isinstance(raw_result, ValidateCompoundsOutput):
+        return raw_result
+    if isinstance(raw_result, dict):
+        return ValidateCompoundsOutput.model_validate(raw_result)
+    if isinstance(raw_result, list):
+        return ValidateCompoundsOutput(results=raw_result)
+    return ValidateCompoundsOutput(results=[])
+
+
+def _normalize_list_compounds_result(raw_result: Any) -> ListCompoundsOutput:
+    """Normalize list_compounds output."""
+    if isinstance(raw_result, ListCompoundsOutput):
+        return raw_result
+    if isinstance(raw_result, dict):
+        return ListCompoundsOutput.model_validate(raw_result)
+    if isinstance(raw_result, tuple) and len(raw_result) == 3:
+        compounds, total_count, has_more = raw_result
+        return ListCompoundsOutput(
+            compounds=compounds,
+            total_count=int(total_count),
+            has_more=bool(has_more),
+        )
+    if isinstance(raw_result, list):
+        return ListCompoundsOutput(
+            compounds=raw_result,
+            total_count=len(raw_result),
+            has_more=False,
+        )
+    return ListCompoundsOutput(compounds=[], total_count=0, has_more=False)

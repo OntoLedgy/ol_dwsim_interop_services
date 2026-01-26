@@ -40,7 +40,11 @@ def build_flowsheet_tools() -> list[types.Tool]:
         types.Tool(
             name="add_compound",
             title="Add Compound",
-            description="Add a compound from the DWSIM databank to the session (idempotent). Common compounds: Methane, Ethane, Propane, n-Butane, n-Hexane, n-Decane, Water, Nitrogen, Carbon dioxide, Hydrogen.",
+            description=(
+                "Add a compound from the DWSIM databank to the session (idempotent). "
+                "Supports aliases like CO2, H2O, and isobutane; common inputs include "
+                "Methane, n-Butane, Water, and Carbon Dioxide."
+            ),
             inputSchema=AddCompoundInput.model_json_schema(),
             outputSchema=AddCompoundOutput.model_json_schema(),
         ),
@@ -54,7 +58,12 @@ def build_flowsheet_tools() -> list[types.Tool]:
         types.Tool(
             name="add_stream",
             title="Add Stream",
-            description="Create a material stream. For FEED streams: set is_source=true with T(K), P(Pa), molar_flow(mol/s), composition. For OUTLET streams: set is_source=false with placeholder values (DWSIM calculates actual values). Always flash feed streams after creation.",
+            description=(
+                "Create a material stream. For FEED streams: set is_source=true with T(K), "
+                "P(Pa), molar_flow(mol/s), composition; for OUTLET streams: set is_source=false "
+                "and omit composition to auto-fill equal fractions (DWSIM computes real values). "
+                "Always flash feed streams after creation."
+            ),
             inputSchema=AddStreamInput.model_json_schema(),
             outputSchema=AddStreamOutput.model_json_schema(),
         ),

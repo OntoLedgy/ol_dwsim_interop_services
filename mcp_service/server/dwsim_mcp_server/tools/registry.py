@@ -8,6 +8,8 @@ from mcp.server import Server
 
 from dwsim_mcp_server.observability import get_logger
 from dwsim_mcp_server.tools.analysis import build_analysis_tools, handle_analysis_tool
+from dwsim_mcp_server.tools.compound import build_compound_tools, handle_compound_tool
+from dwsim_mcp_server.tools.export import build_export_tools, handle_export_tool
 from dwsim_mcp_server.tools.flowsheet import build_flowsheet_tools, handle_flowsheet_tool
 from dwsim_mcp_server.tools.sensitivity import (
     build_sensitivity_tools,
@@ -26,12 +28,16 @@ def register_tools(server: Server, dependencies: Any) -> None:
     simulation_tools = build_simulation_tools()
     analysis_tools = build_analysis_tools()
     sensitivity_tools = build_sensitivity_tools()
+    export_tools = build_export_tools()
+    compound_tools = build_compound_tools()
 
     session_tool_names: Set[str] = {tool.name for tool in session_tools}
     flowsheet_tool_names: Set[str] = {tool.name for tool in flowsheet_tools}
     simulation_tool_names: Set[str] = {tool.name for tool in simulation_tools}
     analysis_tool_names: Set[str] = {tool.name for tool in analysis_tools}
     sensitivity_tool_names: Set[str] = {tool.name for tool in sensitivity_tools}
+    export_tool_names: Set[str] = {tool.name for tool in export_tools}
+    compound_tool_names: Set[str] = {tool.name for tool in compound_tools}
     tool_by_name: Dict[str, Any] = {
         tool.name: tool
         for tool in (
@@ -40,6 +46,8 @@ def register_tools(server: Server, dependencies: Any) -> None:
             *simulation_tools,
             *analysis_tools,
             *sensitivity_tools,
+            *export_tools,
+            *compound_tools,
         )
     }
 
@@ -59,6 +67,10 @@ def register_tools(server: Server, dependencies: Any) -> None:
             return await handle_analysis_tool(tool_name, arguments, dependencies)
         if tool_name in sensitivity_tool_names:
             return await handle_sensitivity_tool(tool_name, arguments, dependencies)
+        if tool_name in export_tool_names:
+            return await handle_export_tool(tool_name, arguments, dependencies)
+        if tool_name in compound_tool_names:
+            return await handle_compound_tool(tool_name, arguments, dependencies)
         return await handle_session_tool(tool_name, arguments, dependencies)
 
     logger.info("tools_registered", tool_count=len(tool_by_name))
