@@ -7,6 +7,7 @@ using DwsimWorker.Engine;
 using DwsimWorker.Models;
 using DwsimWorker.Converters;
 using DwsimWorker.Exceptions;
+using DwsimWorker.Observability;
 
 namespace DwsimWorker.Adapters
 {
@@ -107,93 +108,107 @@ namespace DwsimWorker.Adapters
         /// </example>
         public PropertySetResult CreateStream(string name, StreamProperties properties, bool isSource = false)
         {
-            if (string.IsNullOrWhiteSpace(name))
+            var attributes = new Dictionary<string, object>
             {
-                var message = "Stream name cannot be null or empty";
-                _logger.Warning(message);
-                return PropertySetResult.FailureResult(message, new ArgumentException(message, nameof(name)));
-            }
-
-            if (properties == null)
-            {
-                var message = "Stream properties cannot be null";
-                _logger.Warning(message);
-                return PropertySetResult.FailureResult(message, new ArgumentNullException(nameof(properties)));
-            }
-
-            _logger.Debug("Attempting to create stream: {StreamName}", name);
-
+                ["operation"] = nameof(CreateStream)
+            };
+            var scope = TracingAdapter.StartSpan("StreamAdapter.CreateStream", attributes);
             try
             {
-                var hasComposition = properties.Composition?.MoleFractions?.Count >= MinimumCount;
-                if (!isSource && !hasComposition)
+                if (string.IsNullOrWhiteSpace(name))
                 {
-                    if (!TryAutoGenerateComposition(properties, out var updatedProperties))
+                    var message = "Stream name cannot be null or empty";
+                    _logger.Warning(message);
+                    return PropertySetResult.FailureResult(message, new ArgumentException(message, nameof(name)));
+                }
+
+                if (properties == null)
+                {
+                    var message = "Stream properties cannot be null";
+                    _logger.Warning(message);
+                    return PropertySetResult.FailureResult(message, new ArgumentNullException(nameof(properties)));
+                }
+
+                _logger.Debug("Attempting to create stream: {StreamName}", name);
+
+                try
+                {
+                    var hasComposition = properties.Composition?.MoleFractions?.Count >= MinimumCount;
+                    if (!isSource && !hasComposition)
                     {
-                        _logger.Warning(NoCompoundsMessage);
-                        return PropertySetResult.FailureResult(
-                            NoCompoundsMessage,
-                            new InvalidOperationException(NoCompoundsMessage));
+                        if (!TryAutoGenerateComposition(properties, out var updatedProperties))
+                        {
+                            _logger.Warning(NoCompoundsMessage);
+                            return PropertySetResult.FailureResult(
+                                NoCompoundsMessage,
+                                new InvalidOperationException(NoCompoundsMessage));
+                        }
+
+                        properties = updatedProperties;
+                        _logger.Information(
+                            "Auto-generated composition for outlet stream {StreamName} with {CompoundCount} compounds",
+                            name,
+                            properties.Composition.MoleFractions.Count);
                     }
 
-                    properties = updatedProperties;
-                    _logger.Information(
-                        "Auto-generated composition for outlet stream {StreamName} with {CompoundCount} compounds",
-                        name,
-                        properties.Composition.MoleFractions.Count);
-                }
+                    // Step 1: Validate properties
+                    if (!properties.IsValid(out string errorMessage))
+                    {
+                        _logger.Warning("Stream property validation failed: {ErrorMessage}", errorMessage);
+                        return PropertySetResult.FailureResult(
+                            $"Invalid stream properties: {errorMessage}",
+                            new InvalidPropertyValueException("StreamProperties", properties.ToString(), errorMessage));
+                    }
 
-                // Step 1: Validate properties
-                if (!properties.IsValid(out string errorMessage))
+                    // Step 2: Generate unique stream ID based on existing streams in context
+                    // This ensures IDs are unique even when new StreamAdapter instances are created
+                    var existingStreamCount = _context.GetStreamIds().Count;
+                    var streamId = $"S{existingStreamCount + 1}";
+
+                    // Step 3: Create DWSIM MaterialStream object
+                    var flowsheet = _context.GetFlowsheet();
+                    var materialStream = CreateMaterialStream(flowsheet, name, streamId);
+                    _context.AddStream(materialStream, streamId);
+                    TracingAdapter.SetSpanAttribute("stream_id", streamId);
+
+                    // NOTE: flowsheet.AddObject() (called in CreateMaterialStream) already registers the
+                    // GraphicObject in the correct location for GetSolvingList() to find it.
+                    // No additional registration is needed.
+
+                    // Step 3a: Set IsSource property based on caller specification
+                    // CRITICAL: Only feed streams should have IsSource=True. Outlet streams from unit operations
+                    // must have IsSource=False so DWSIM knows they need to be calculated.
+                    // - IsSource=true: Feed stream with known conditions (DWSIM will NOT calculate)
+                    // - IsSource=false: Outlet stream that needs calculation (DWSIM will calculate)
+                    TrySetIsSourceProperty(materialStream, isSource);
+
+                    // Step 4: Apply flowsheet settings
+                    TrySetStreamPropertyPackage(materialStream);
+                    TryAddCompoundsToStream(flowsheet, materialStream);
+                    ApplyPropertiesToStreamObject(materialStream, properties, isSource);
+
+                    // Step 5: Store properties in cache
+                    _context.CacheStreamProperties(streamId, properties);
+
+                    // Step 6: Log success with structured logging
+                    _logger.Information("Stream created successfully: {StreamId} (Name: {StreamName})",
+                        streamId, name);
+                    _logger.Debug("Stream properties: Temperature={Temperature}, Pressure={Pressure}, Flow={Flow}",
+                        properties.Temperature.Measurement, properties.Pressure.Measurement, properties.MolarFlow.Measurement);
+
+                    return PropertySetResult.SuccessResultForCreate(streamId);
+                }
+                catch (Exception ex)
                 {
-                    _logger.Warning("Stream property validation failed: {ErrorMessage}", errorMessage);
-                    return PropertySetResult.FailureResult(
-                        $"Invalid stream properties: {errorMessage}",
-                        new InvalidPropertyValueException("StreamProperties", properties.ToString(), errorMessage));
+                    TracingAdapter.RecordException(ex);
+                    var message = $"Unexpected error creating stream '{name}': {ex.Message}";
+                    _logger.Error(ex, message);
+                    return PropertySetResult.FailureResult(message, ex);
                 }
-
-                // Step 2: Generate unique stream ID based on existing streams in context
-                // This ensures IDs are unique even when new StreamAdapter instances are created
-                var existingStreamCount = _context.GetStreamIds().Count;
-                var streamId = $"S{existingStreamCount + 1}";
-
-                // Step 3: Create DWSIM MaterialStream object
-                var flowsheet = _context.GetFlowsheet();
-                var materialStream = CreateMaterialStream(flowsheet, name, streamId);
-                _context.AddStream(materialStream, streamId);
-
-                // NOTE: flowsheet.AddObject() (called in CreateMaterialStream) already registers the
-                // GraphicObject in the correct location for GetSolvingList() to find it.
-                // No additional registration is needed.
-
-                // Step 3a: Set IsSource property based on caller specification
-                // CRITICAL: Only feed streams should have IsSource=True. Outlet streams from unit operations
-                // must have IsSource=False so DWSIM knows they need to be calculated.
-                // - IsSource=true: Feed stream with known conditions (DWSIM will NOT calculate)
-                // - IsSource=false: Outlet stream that needs calculation (DWSIM will calculate)
-                TrySetIsSourceProperty(materialStream, isSource);
-
-                // Step 4: Apply flowsheet settings
-                TrySetStreamPropertyPackage(materialStream);
-                TryAddCompoundsToStream(flowsheet, materialStream);
-                ApplyPropertiesToStreamObject(materialStream, properties, isSource);
-
-                // Step 5: Store properties in cache
-                _context.CacheStreamProperties(streamId, properties);
-
-                // Step 6: Log success with structured logging
-                _logger.Information("Stream created successfully: {StreamId} (Name: {StreamName})",
-                    streamId, name);
-                _logger.Debug("Stream properties: Temperature={Temperature}, Pressure={Pressure}, Flow={Flow}",
-                    properties.Temperature.Measurement, properties.Pressure.Measurement, properties.MolarFlow.Measurement);
-
-                return PropertySetResult.SuccessResultForCreate(streamId);
             }
-            catch (Exception ex)
+            finally
             {
-                var message = $"Unexpected error creating stream '{name}': {ex.Message}";
-                _logger.Error(ex, message);
-                return PropertySetResult.FailureResult(message, ex);
+                scope.Dispose();
             }
         }
 
@@ -667,89 +682,103 @@ namespace DwsimWorker.Adapters
         /// </remarks>
         public StreamResult GetCalculatedProperties(string streamId, string streamName = null)
         {
-            if (string.IsNullOrWhiteSpace(streamId))
-                throw new ArgumentNullException(nameof(streamId));
-
-            _logger.Debug("Getting calculated properties from stream {StreamId}", streamId);
-
+            var attributes = new Dictionary<string, object>
+            {
+                ["operation"] = nameof(GetCalculatedProperties),
+                ["stream_id"] = streamId
+            };
+            var scope = TracingAdapter.StartSpan("StreamAdapter.GetCalculatedProperties", attributes);
             try
             {
-                // Validate stream exists
-                var stream = _context.GetStream(streamId);
-                if (stream == null)
+                if (string.IsNullOrWhiteSpace(streamId))
+                    throw new ArgumentNullException(nameof(streamId));
+
+                _logger.Debug("Getting calculated properties from stream {StreamId}", streamId);
+
+                try
                 {
-                    throw new StreamNotFoundException(streamId);
-                }
+                    // Validate stream exists
+                    var stream = _context.GetStream(streamId);
+                    if (stream == null)
+                    {
+                        throw new StreamNotFoundException(streamId);
+                    }
 
-                var phases = GetAllPhaseProperties(streamId, stream);
-                if (phases.Count > 0)
-                {
-                    var overallPhase = phases.TryGetValue("Overall", out var overall) ? overall : null;
-                    var temperature = overallPhase?.Composition != null
-                        ? TryGetPhaseScalar(stream, 0, "temperature")
-                        : null;
-                    var pressure = overallPhase?.Composition != null
-                        ? TryGetPhaseScalar(stream, 0, "pressure")
-                        : null;
-                    var molarFlow = overallPhase?.Composition != null
-                        ? TryGetPhaseScalar(stream, 0, "molarflow")
-                        : null;
-                    var massFlow = overallPhase?.Composition != null
-                        ? TryGetPhaseScalar(stream, 0, "massflow")
-                        : null;
+                    var phases = GetAllPhaseProperties(streamId, stream);
+                    if (phases.Count > 0)
+                    {
+                        var overallPhase = phases.TryGetValue("Overall", out var overall) ? overall : null;
+                        var temperature = overallPhase?.Composition != null
+                            ? TryGetPhaseScalar(stream, 0, "temperature")
+                            : null;
+                        var pressure = overallPhase?.Composition != null
+                            ? TryGetPhaseScalar(stream, 0, "pressure")
+                            : null;
+                        var molarFlow = overallPhase?.Composition != null
+                            ? TryGetPhaseScalar(stream, 0, "molarflow")
+                            : null;
+                        var massFlow = overallPhase?.Composition != null
+                            ? TryGetPhaseScalar(stream, 0, "massflow")
+                            : null;
 
-                    var overallComposition = overallPhase?.Composition ?? GetFallbackComposition(streamId);
-                    var vaporFraction = GetPhaseFraction(phases, "Vapor");
-                    var liquidFraction = GetLiquidFraction(phases, vaporFraction);
+                        var overallComposition = overallPhase?.Composition ?? GetFallbackComposition(streamId);
+                        var vaporFraction = GetPhaseFraction(phases, "Vapor");
+                        var liquidFraction = GetLiquidFraction(phases, vaporFraction);
 
-                    var result = new StreamResult(
+                        var result = new StreamResult(
+                            streamId: streamId,
+                            streamName: streamName ?? streamId,
+                            temperatureK: temperature ?? GetFallbackTemperature(streamId),
+                            pressurePa: pressure ?? GetFallbackPressure(streamId),
+                            molarFlowMolPerSec: molarFlow ?? GetFallbackMolarFlow(streamId),
+                            massFlowKgPerSec: massFlow ?? GetFallbackMassFlow(streamId),
+                            overallComposition: overallComposition,
+                            vaporFraction: vaporFraction,
+                            liquidFraction: liquidFraction,
+                            phases: phases.ToDictionary(entry => entry.Key, entry => entry.Value));
+
+                        _logger.Information("Calculated properties retrieved for stream {StreamId}", streamId);
+                        return result;
+                    }
+
+                    // Get cached properties (fallback when DWSIM phase data is not available)
+                    if (!_context.TryGetStreamProperties(streamId, out var properties))
+                    {
+                        throw new InvalidOperationException($"No properties available for stream '{streamId}'");
+                    }
+
+                    var fallbackPhase = BuildFallbackPhaseProperties(streamId, "Overall");
+                    var fallbackPhases = new Dictionary<string, PhaseProperties>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        { "Overall", fallbackPhase }
+                    };
+
+                    // Create StreamResult from cached data
+                    var fallbackResult = new StreamResult(
                         streamId: streamId,
                         streamName: streamName ?? streamId,
-                        temperatureK: temperature ?? GetFallbackTemperature(streamId),
-                        pressurePa: pressure ?? GetFallbackPressure(streamId),
-                        molarFlowMolPerSec: molarFlow ?? GetFallbackMolarFlow(streamId),
-                        massFlowKgPerSec: massFlow ?? GetFallbackMassFlow(streamId),
-                        overallComposition: overallComposition,
-                        vaporFraction: vaporFraction,
-                        liquidFraction: liquidFraction,
-                        phases: phases.ToDictionary(entry => entry.Key, entry => entry.Value));
+                        temperatureK: properties.Temperature.Measurement.Value,
+                        pressurePa: properties.Pressure.Measurement.Value,
+                        molarFlowMolPerSec: properties.MolarFlow.Measurement.Value,
+                        massFlowKgPerSec: properties.MolarFlow.Measurement.Value * 18.0 / 1000.0,
+                        overallComposition: properties.Composition,
+                        vaporFraction: 0.0,
+                        liquidFraction: 1.0,
+                        phases: fallbackPhases);
 
                     _logger.Information("Calculated properties retrieved for stream {StreamId}", streamId);
-                    return result;
+                    return fallbackResult;
                 }
-
-                // Get cached properties (fallback when DWSIM phase data is not available)
-                if (!_context.TryGetStreamProperties(streamId, out var properties))
+                catch (Exception ex)
                 {
-                    throw new InvalidOperationException($"No properties available for stream '{streamId}'");
+                    TracingAdapter.RecordException(ex);
+                    _logger.Error(ex, "Failed to get calculated properties for stream {StreamId}", streamId);
+                    throw;
                 }
-
-                var fallbackPhase = BuildFallbackPhaseProperties(streamId, "Overall");
-                var fallbackPhases = new Dictionary<string, PhaseProperties>(StringComparer.OrdinalIgnoreCase)
-                {
-                    { "Overall", fallbackPhase }
-                };
-
-                // Create StreamResult from cached data
-                var fallbackResult = new StreamResult(
-                    streamId: streamId,
-                    streamName: streamName ?? streamId,
-                    temperatureK: properties.Temperature.Measurement.Value,
-                    pressurePa: properties.Pressure.Measurement.Value,
-                    molarFlowMolPerSec: properties.MolarFlow.Measurement.Value,
-                    massFlowKgPerSec: properties.MolarFlow.Measurement.Value * 18.0 / 1000.0,
-                    overallComposition: properties.Composition,
-                    vaporFraction: 0.0,
-                    liquidFraction: 1.0,
-                    phases: fallbackPhases);
-
-                _logger.Information("Calculated properties retrieved for stream {StreamId}", streamId);
-                return fallbackResult;
             }
-            catch (Exception ex)
+            finally
             {
-                _logger.Error(ex, "Failed to get calculated properties for stream {StreamId}", streamId);
-                throw;
+                scope.Dispose();
             }
         }
 

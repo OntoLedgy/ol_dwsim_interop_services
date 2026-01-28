@@ -5,6 +5,7 @@ using Serilog;
 using DwsimWorker.Engine;
 using DwsimWorker.Models;
 using DwsimWorker.Exceptions;
+using DwsimWorker.Observability;
 
 namespace DwsimWorker.Adapters
 {
@@ -91,63 +92,77 @@ namespace DwsimWorker.Adapters
         /// </example>
         public PropertySetResult AddThreePhaseSeparator(string name, UnitOpConfig config)
         {
-            if (string.IsNullOrWhiteSpace(name))
+            var attributes = new Dictionary<string, object>
             {
-                var message = "Unit operation name cannot be null or empty";
-                _logger.Warning(message);
-                return PropertySetResult.FailureResult(message, new ArgumentException(message, nameof(name)));
-            }
-
-            _logger.Debug("Attempting to add three-phase separator: {UnitName}", name);
-
+                ["operation"] = nameof(AddThreePhaseSeparator)
+            };
+            var scope = TracingAdapter.StartSpan("UnitOpAdapter.AddThreePhaseSeparator", attributes);
             try
             {
-                // Step 1: Generate unique unit ID
-                _unitCounter++;
-                var unitId = $"U{_unitCounter}";
-
-                // Step 2: Create DWSIM unit operation object
-                var flowsheet = _context.GetFlowsheet();
-                var unitOperation = CreateThreePhaseSeparator(flowsheet, name, unitId);
-                _context.AddUnit(unitOperation, unitId);
-
-                // NOTE: flowsheet.AddObject() (called in CreateThreePhaseSeparator) already registers the
-                // GraphicObject in the correct location for GetSolvingList() to find it.
-                // No additional registration is needed.
-
-                // Step 3: Initialize parameters from config
-                var parameters = new Dictionary<string, object>();
-                if (config != null && config.Parameters.Count > 0)
+                if (string.IsNullOrWhiteSpace(name))
                 {
-                    foreach (var param in config.Parameters)
+                    var message = "Unit operation name cannot be null or empty";
+                    _logger.Warning(message);
+                    return PropertySetResult.FailureResult(message, new ArgumentException(message, nameof(name)));
+                }
+
+                _logger.Debug("Attempting to add three-phase separator: {UnitName}", name);
+
+                try
+                {
+                    // Step 1: Generate unique unit ID
+                    _unitCounter++;
+                    var unitId = $"U{_unitCounter}";
+
+                    // Step 2: Create DWSIM unit operation object
+                    var flowsheet = _context.GetFlowsheet();
+                    var unitOperation = CreateThreePhaseSeparator(flowsheet, name, unitId);
+                    _context.AddUnit(unitOperation, unitId);
+                    TracingAdapter.SetSpanAttribute("unit_id", unitId);
+
+                    // NOTE: flowsheet.AddObject() (called in CreateThreePhaseSeparator) already registers the
+                    // GraphicObject in the correct location for GetSolvingList() to find it.
+                    // No additional registration is needed.
+
+                    // Step 3: Initialize parameters from config
+                    var parameters = new Dictionary<string, object>();
+                    if (config != null && config.Parameters.Count > 0)
                     {
-                        parameters[param.Key] = param.Value;
+                        foreach (var param in config.Parameters)
+                        {
+                            parameters[param.Key] = param.Value;
+                        }
                     }
-                }
 
-                // Set default parameters if not specified
-                if (!parameters.ContainsKey("PressureDrop"))
+                    // Set default parameters if not specified
+                    if (!parameters.ContainsKey("PressureDrop"))
+                    {
+                        parameters["PressureDrop"] = 0.0;  // Default: no pressure drop
+                    }
+
+                    _unitParametersCache[unitId] = parameters;
+                    TrySetUnitPropertyPackage(unitOperation);
+                    ApplyUnitParameters(unitOperation, parameters);
+
+                    // Step 4: Log success with structured logging
+                    _logger.Information("Three-phase separator added successfully: {UnitId} (Name: {UnitName})",
+                        unitId, name);
+                    _logger.Debug("Separator parameters: {Parameters}",
+                        string.Join(", ", parameters.Select(p => $"{p.Key}={p.Value}")));
+
+                    return PropertySetResult.SuccessResultForCreate(unitId);
+                }
+                catch (Exception ex)
                 {
-                    parameters["PressureDrop"] = 0.0;  // Default: no pressure drop
+                    TracingAdapter.RecordException(ex);
+                    var message = $"Unexpected error adding three-phase separator '{name}': {ex.Message}";
+                    _logger.Error(ex, message);
+                    return PropertySetResult.FailureResult(message, ex);
                 }
-
-                _unitParametersCache[unitId] = parameters;
-                TrySetUnitPropertyPackage(unitOperation);
-                ApplyUnitParameters(unitOperation, parameters);
-
-                // Step 4: Log success with structured logging
-                _logger.Information("Three-phase separator added successfully: {UnitId} (Name: {UnitName})",
-                    unitId, name);
-                _logger.Debug("Separator parameters: {Parameters}",
-                    string.Join(", ", parameters.Select(p => $"{p.Key}={p.Value}")));
-
-                return PropertySetResult.SuccessResultForCreate(unitId);
             }
-            catch (Exception ex)
+            finally
             {
-                var message = $"Unexpected error adding three-phase separator '{name}': {ex.Message}";
-                _logger.Error(ex, message);
-                return PropertySetResult.FailureResult(message, ex);
+                scope.Dispose();
             }
         }
 

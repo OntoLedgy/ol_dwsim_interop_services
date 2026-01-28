@@ -7,6 +7,7 @@ using DwsimWorker.Engine;
 using DwsimWorker.Models;
 using DwsimWorker.Exceptions;
 using DwsimWorker.Utilities;
+using DwsimWorker.Observability;
 
 namespace DwsimWorker.Adapters
 {
@@ -53,7 +54,24 @@ namespace DwsimWorker.Adapters
         /// <returns>A CalculationResult containing the complete calculation results.</returns>
         public CalculationResult RunCalculation()
         {
-            return RunCalculation(TimeSpan.Zero);
+            var attributes = new Dictionary<string, object>
+            {
+                ["operation"] = nameof(RunCalculation)
+            };
+            var scope = TracingAdapter.StartSpan("CalculationAdapter.RunCalculation", attributes);
+            try
+            {
+                return RunCalculation(TimeSpan.Zero);
+            }
+            catch (Exception ex)
+            {
+                TracingAdapter.RecordException(ex);
+                throw;
+            }
+            finally
+            {
+                scope.Dispose();
+            }
         }
 
         /// <summary>
@@ -201,8 +219,9 @@ namespace DwsimWorker.Adapters
                 _context.CacheCalculationResult(successResult);
                 return successResult;
             }
-            catch (CalculationTimeoutException)
+            catch (CalculationTimeoutException ex)
             {
+                TracingAdapter.RecordException(ex);
                 _context.UpdateConvergenceStatus(
                     ConvergenceStatus.Error($"Calculation timed out after {timeout}."));
                 // Re-throw timeout exceptions
@@ -210,6 +229,7 @@ namespace DwsimWorker.Adapters
             }
             catch (Exception ex)
             {
+                TracingAdapter.RecordException(ex);
                 sw.Stop();
                 var timing = CalculationTiming.FromTimestamps(startTime, DateTime.UtcNow);
 

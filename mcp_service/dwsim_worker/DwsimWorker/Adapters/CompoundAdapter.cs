@@ -6,6 +6,7 @@ using DwsimWorker.Engine;
 using DwsimWorker.Exceptions;
 using DwsimWorker.Models;
 using DwsimWorker.Utilities;
+using DwsimWorker.Observability;
 
 namespace DwsimWorker.Adapters
 {
@@ -144,22 +145,35 @@ namespace DwsimWorker.Adapters
         /// </example>
         public LoadResult AddCompound(string compoundName)
         {
-            if (string.IsNullOrWhiteSpace(compoundName))
+            var attributes = new Dictionary<string, object>
             {
-                var message = "Compound name cannot be null or empty";
-                _logger.Warning(message);
-                return LoadResult.FailureResult(message, new ArgumentException(message, nameof(compoundName)));
-            }
-
-            _logger.Debug("Attempting to add compound: {CompoundName}", compoundName);
-
-            var validation = ValidateCompound(compoundName);
-            if (!validation.Valid)
+                ["operation"] = nameof(AddCompound),
+                ["compound_name"] = compoundName
+            };
+            var scope = TracingAdapter.StartSpan("CompoundAdapter.AddCompound", attributes);
+            try
             {
-                return BuildValidationFailure(compoundName, validation);
-            }
+                if (string.IsNullOrWhiteSpace(compoundName))
+                {
+                    var message = "Compound name cannot be null or empty";
+                    _logger.Warning(message);
+                    return LoadResult.FailureResult(message, new ArgumentException(message, nameof(compoundName)));
+                }
 
-            return TryAddCompound(validation.CanonicalName);
+                _logger.Debug("Attempting to add compound: {CompoundName}", compoundName);
+
+                var validation = ValidateCompound(compoundName);
+                if (!validation.Valid)
+                {
+                    return BuildValidationFailure(compoundName, validation);
+                }
+
+                return TryAddCompound(validation.CanonicalName);
+            }
+            finally
+            {
+                scope.Dispose();
+            }
         }
 
         /// <summary>
@@ -328,6 +342,7 @@ namespace DwsimWorker.Adapters
             }
             catch (Exception ex)
             {
+                TracingAdapter.RecordException(ex);
                 return HandleAddCompoundException(canonicalName, ex);
             }
         }

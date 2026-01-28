@@ -53,7 +53,7 @@
 
 ## Phase 2: OpenTelemetry Distributed Tracing
 
-- [ ] 2.1 Create Python tracing module
+- [x] 2.1 Create Python tracing module
   - File: `mcp_service/server/dwsim_mcp_server/observability/tracing.py`
   - Implement configure_tracing() with exporter selection (jaeger, zipkin, otlp, console, none)
   - Create get_tracer() returning configured Tracer
@@ -65,7 +65,7 @@
   - _Requirements: REQ-OBS-2_
   - _Prompt: Implement the task for spec mcp-observability, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer with OpenTelemetry expertise | Task: Create tracing module with configurable exporters, traced_operation context manager, and @trace_tool decorator following REQ-OBS-2 | Restrictions: Support graceful degradation when tracing disabled, use opentelemetry-api and opentelemetry-sdk, ensure sampling rate is configurable | _Leverage: correlation.py for context, ObservabilitySettings from design | _Requirements: REQ-OBS-2 (distributed tracing) | Success: Tracing configurable via env vars, spans created with correct attributes, decorator works on async functions | After completing: Mark task [-] as in_progress before starting, use log-implementation tool with artifacts after completion, then mark [x] as complete_
 
-- [ ] 2.2 Create C# TracingAdapter
+- [x] 2.2 Create C# TracingAdapter
   - File: `mcp_service/dwsim_worker/DwsimWorker/Observability/TracingAdapter.cs`
   - Implement static Configure() for OpenTelemetry setup
   - Create StartSpan() returning IDisposable span scope
@@ -76,7 +76,7 @@
   - _Requirements: REQ-OBS-2_
   - _Prompt: Implement the task for spec mcp-observability, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer with OpenTelemetry expertise | Task: Create TracingAdapter with static methods for span management, supporting trace context propagation from Python layer following REQ-OBS-2 | Restrictions: Use OpenTelemetry.Api NuGet package, handle disabled tracing gracefully, ensure spans link to parent context | _Leverage: CorrelationContext for parent trace ID, OpenTelemetry .NET SDK | _Requirements: REQ-OBS-2 (C# tracing layer) | Success: Spans created with correct parent context, exceptions recorded properly, configuration via appsettings or env vars | After completing: Mark task [-] as in_progress before starting, use log-implementation tool with artifacts after completion, then mark [x] as complete_
 
-- [ ] 2.3 Add tracing to FlowsheetService
+- [x] 2.3 Add tracing to FlowsheetService
   - File: `mcp_service/server/dwsim_mcp_server/service/flowsheet_service.py` (modify existing)
   - Wrap key methods with @trace_tool or traced_operation()
   - Add span attributes for session_id, object_count, operation_type
@@ -85,7 +85,7 @@
   - _Requirements: REQ-OBS-2_
   - _Prompt: Implement the task for spec mcp-observability, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer | Task: Add tracing instrumentation to FlowsheetService methods using traced_operation() context manager, adding semantic attributes following REQ-OBS-2 | Restrictions: Minimal code changes, preserve existing behavior, add tracing at method boundaries not inside loops | _Leverage: tracing.py decorators, existing FlowsheetService methods | _Requirements: REQ-OBS-2 (trace flowsheet operations) | Success: Key operations create spans, attributes include session_id and operation details, no performance regression | After completing: Mark task [-] as in_progress before starting, use log-implementation tool with artifacts after completion, then mark [x] as complete_
 
-- [ ] 2.4 Add tracing to C# adapters
+- [x] 2.4 Add tracing to C# adapters
   - Files: `mcp_service/dwsim_worker/DwsimWorker/Adapters/*.cs` (modify existing)
   - Add TracingAdapter.StartSpan() calls to key adapter methods
   - Record exceptions in spans for error tracking
