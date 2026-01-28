@@ -151,6 +151,7 @@
     <Compile Include="Observability\CorrelationContext.cs" />
     <Compile Include="Observability\CorrelationEnricher.cs" />
     <Compile Include="Observability\TracingAdapter.cs" />
+    <Compile Include="Observability\DiagnosticsCollector.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

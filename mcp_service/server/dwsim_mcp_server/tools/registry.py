@@ -10,6 +10,10 @@ from dwsim_mcp_server.observability import get_logger
 from dwsim_mcp_server.observability.metrics import measure_duration
 from dwsim_mcp_server.tools.analysis import build_analysis_tools, handle_analysis_tool
 from dwsim_mcp_server.tools.compound import build_compound_tools, handle_compound_tool
+from dwsim_mcp_server.tools.diagnostics import (
+    build_diagnostics_tools,
+    handle_diagnostics_tool,
+)
 from dwsim_mcp_server.tools.export import build_export_tools, handle_export_tool
 from dwsim_mcp_server.tools.flowsheet import build_flowsheet_tools, handle_flowsheet_tool
 from dwsim_mcp_server.tools.sensitivity import (
@@ -31,6 +35,7 @@ def register_tools(server: Server, dependencies: Any) -> None:
     sensitivity_tools = build_sensitivity_tools()
     export_tools = build_export_tools()
     compound_tools = build_compound_tools()
+    diagnostics_tools = build_diagnostics_tools()
 
     session_tool_names: Set[str] = {tool.name for tool in session_tools}
     flowsheet_tool_names: Set[str] = {tool.name for tool in flowsheet_tools}
@@ -39,6 +44,7 @@ def register_tools(server: Server, dependencies: Any) -> None:
     sensitivity_tool_names: Set[str] = {tool.name for tool in sensitivity_tools}
     export_tool_names: Set[str] = {tool.name for tool in export_tools}
     compound_tool_names: Set[str] = {tool.name for tool in compound_tools}
+    diagnostics_tool_names: Set[str] = {tool.name for tool in diagnostics_tools}
     tool_by_name: Dict[str, Any] = {
         tool.name: tool
         for tool in (
@@ -49,6 +55,7 @@ def register_tools(server: Server, dependencies: Any) -> None:
             *sensitivity_tools,
             *export_tools,
             *compound_tools,
+            *diagnostics_tools,
         )
     }
 
@@ -89,6 +96,10 @@ def register_tools(server: Server, dependencies: Any) -> None:
                     result = await handle_export_tool(tool_name, arguments, dependencies)
                 elif tool_name in compound_tool_names:
                     result = await handle_compound_tool(
+                        tool_name, arguments, dependencies
+                    )
+                elif tool_name in diagnostics_tool_names:
+                    result = await handle_diagnostics_tool(
                         tool_name, arguments, dependencies
                     )
                 else:

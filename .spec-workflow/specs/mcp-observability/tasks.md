@@ -126,7 +126,7 @@
 
 ## Phase 4: Diagnostics Infrastructure
 
-- [ ] 4.1 Create Python DiagnosticsService
+- [x] 4.1 Create Python DiagnosticsService
   - File: `mcp_service/server/dwsim_mcp_server/service/diagnostics_service.py`
   - Implement DiagnosticsService class with get_server_diagnostics(), get_session_diagnostics() methods
   - Add record_error() for capturing diagnostic bundles
@@ -137,7 +137,7 @@
   - _Requirements: REQ-OBS-4, REQ-OBS-5_
   - _Prompt: Implement the task for spec mcp-observability, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer with diagnostics expertise | Task: Create DiagnosticsService collecting server and session diagnostics, with error bundle capture following REQ-OBS-4 and REQ-OBS-5 | Restrictions: Limit bundle storage (max 100, 24h retention), truncate stack traces for security, handle missing sessions gracefully | _Leverage: FlowsheetService for session data, MetricsCollector for stats, MemoryMonitor for memory info | _Requirements: REQ-OBS-4 (diagnostics tool), REQ-OBS-5 (error bundles) | Success: Server diagnostics include uptime/sessions/errors, session diagnostics show state/objects/errors, bundles auto-pruned | After completing: Mark task [-] as in_progress before starting, use log-implementation tool with artifacts after completion, then mark [x] as complete_
 
-- [ ] 4.2 Create C# DiagnosticsCollector
+- [x] 4.2 Create C# DiagnosticsCollector
   - File: `mcp_service/dwsim_worker/DwsimWorker/Observability/DiagnosticsCollector.cs`
   - Implement GetSessionDiagnostics() returning session state, object counts, memory usage
   - Add GetFlowsheetDiagnostics() for detailed flowsheet inspection
@@ -147,7 +147,7 @@
   - _Requirements: REQ-OBS-4, REQ-OBS-5_
   - _Prompt: Implement the task for spec mcp-observability, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer | Task: Create DiagnosticsCollector extracting session and flowsheet state with error history following REQ-OBS-4 and REQ-OBS-5 | Restrictions: Don't expose internal DWSIM types in DTOs, limit error history to 5 per session, handle disposed sessions safely | _Leverage: SessionManager for session access, FlowsheetContext for flowsheet state | _Requirements: REQ-OBS-4 (session diagnostics), REQ-OBS-5 (error tracking) | Success: Diagnostics include object counts, memory usage, error history, handles edge cases (closed sessions) | After completing: Mark task [-] as in_progress before starting, use log-implementation tool with artifacts after completion, then mark [x] as complete_
 
-- [ ] 4.3 Create Pydantic models for diagnostics
+- [x] 4.3 Create Pydantic models for diagnostics
   - File: `mcp_service/server/dwsim_mcp_server/models/diagnostics.py`
   - Implement ServerDiagnostics, SessionDiagnostics, ErrorSummary, DiagnosticBundle Pydantic models
   - Add validation and serialization for MCP responses
@@ -156,7 +156,7 @@
   - _Requirements: REQ-OBS-4_
   - _Prompt: Implement the task for spec mcp-observability, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer with Pydantic expertise | Task: Create Pydantic models for all diagnostic data structures following REQ-OBS-4 design document | Restrictions: Follow existing model patterns, use proper field types and validators, ensure JSON serializable | _Leverage: existing models in models/ directory | _Requirements: REQ-OBS-4 (structured diagnostic output) | Success: Models validate correctly, serialize to JSON, match design document schema | After completing: Mark task [-] as in_progress before starting, use log-implementation tool with artifacts after completion, then mark [x] as complete_
 
-- [ ] 4.4 Create get_diagnostics MCP tool
+- [x] 4.4 Create get_diagnostics MCP tool
   - File: `mcp_service/server/dwsim_mcp_server/tools/diagnostics.py`
   - Implement get_diagnostics MCP tool with optional session_id parameter
   - Return ServerDiagnostics when no session_id, SessionDiagnostics when provided
