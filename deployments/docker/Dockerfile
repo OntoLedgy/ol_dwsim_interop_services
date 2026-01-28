@@ -1,7 +1,7 @@
 FROM python:3.11-slim AS builder
 
 WORKDIR /artifacts
-COPY prebuilt/DwsimWorker.dll /artifacts/DwsimWorker.dll
+COPY mcp_service/server/prebuilt/DwsimWorker/ /artifacts/
 
 FROM python:3.11-slim AS runtime
 
@@ -33,7 +33,7 @@ RUN useradd --create-home --shell /bin/bash app \
     && mkdir -p /app /opt/dwsim \
     && chown -R app:app /app /opt/dwsim "$WINEPREFIX"
 
-COPY --from=builder /artifacts/DwsimWorker.dll /opt/dwsim/DwsimWorker.dll
+COPY --from=builder /artifacts/ /opt/dwsim/
 COPY mcp_service/server/ /app/
 
 WORKDIR /app
