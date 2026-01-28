@@ -7,6 +7,7 @@ from typing import Any, Dict, Set
 from mcp.server import Server
 
 from dwsim_mcp_server.observability import get_logger
+from dwsim_mcp_server.observability.metrics import measure_duration
 from dwsim_mcp_server.tools.analysis import build_analysis_tools, handle_analysis_tool
 from dwsim_mcp_server.tools.compound import build_compound_tools, handle_compound_tool
 from dwsim_mcp_server.tools.export import build_export_tools, handle_export_tool
@@ -57,20 +58,49 @@ def register_tools(server: Server, dependencies: Any) -> None:
 
     @server.call_tool()
     async def call_tool(tool_name: str, arguments: dict):
-        if tool_name in flowsheet_tool_names:
-            return await handle_flowsheet_tool(tool_name, arguments, dependencies)
-        if tool_name in session_tool_names:
-            return await handle_session_tool(tool_name, arguments, dependencies)
-        if tool_name in simulation_tool_names:
-            return await handle_simulation_tool(tool_name, arguments, dependencies)
-        if tool_name in analysis_tool_names:
-            return await handle_analysis_tool(tool_name, arguments, dependencies)
-        if tool_name in sensitivity_tool_names:
-            return await handle_sensitivity_tool(tool_name, arguments, dependencies)
-        if tool_name in export_tool_names:
-            return await handle_export_tool(tool_name, arguments, dependencies)
-        if tool_name in compound_tool_names:
-            return await handle_compound_tool(tool_name, arguments, dependencies)
-        return await handle_session_tool(tool_name, arguments, dependencies)
+        class _ToolCallError(Exception):
+            def __init__(self, result: Any) -> None:
+                super().__init__("Tool returned isError=True")
+                self.result = result
+
+        try:
+            with measure_duration(tool_name):
+                if tool_name in flowsheet_tool_names:
+                    result = await handle_flowsheet_tool(
+                        tool_name, arguments, dependencies
+                    )
+                elif tool_name in session_tool_names:
+                    result = await handle_session_tool(
+                        tool_name, arguments, dependencies
+                    )
+                elif tool_name in simulation_tool_names:
+                    result = await handle_simulation_tool(
+                        tool_name, arguments, dependencies
+                    )
+                elif tool_name in analysis_tool_names:
+                    result = await handle_analysis_tool(
+                        tool_name, arguments, dependencies
+                    )
+                elif tool_name in sensitivity_tool_names:
+                    result = await handle_sensitivity_tool(
+                        tool_name, arguments, dependencies
+                    )
+                elif tool_name in export_tool_names:
+                    result = await handle_export_tool(tool_name, arguments, dependencies)
+                elif tool_name in compound_tool_names:
+                    result = await handle_compound_tool(
+                        tool_name, arguments, dependencies
+                    )
+                else:
+                    result = await handle_session_tool(
+                        tool_name, arguments, dependencies
+                    )
+
+                if getattr(result, "isError", False):
+                    raise _ToolCallError(result)
+
+                return result
+        except _ToolCallError as exc:
+            return exc.result
 
     logger.info("tools_registered", tool_count=len(tool_by_name))

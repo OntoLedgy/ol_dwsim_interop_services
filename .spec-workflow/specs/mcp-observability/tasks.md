@@ -96,7 +96,7 @@
 
 ## Phase 3: Metrics Collection
 
-- [ ] 3.1 Create Python metrics module
+- [x] 3.1 Create Python metrics module
   - File: `mcp_service/server/dwsim_mcp_server/observability/metrics.py`
   - Implement MetricsCollector class with tool_call_total Counter, tool_call_duration_seconds Histogram, active_sessions Gauge
   - Add record_tool_call(), set_active_sessions(), record_memory_usage() methods
@@ -106,7 +106,7 @@
   - _Requirements: REQ-OBS-3_
   - _Prompt: Implement the task for spec mcp-observability, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer with Prometheus metrics expertise | Task: Create MetricsCollector using prometheus_client with Counter, Histogram, and Gauge metrics following REQ-OBS-3 | Restrictions: Use prometheus_client library, label cardinality should be bounded, ensure thread-safety | _Leverage: prometheus_client patterns | _Requirements: REQ-OBS-3 (metrics collection) | Success: Metrics recorded correctly, Prometheus format output works, labels include tool_name and status | After completing: Mark task [-] as in_progress before starting, use log-implementation tool with artifacts after completion, then mark [x] as complete_
 
-- [ ] 3.2 Add metrics endpoint to MCP server
+- [x] 3.2 Add metrics endpoint to MCP server
   - File: `mcp_service/server/dwsim_mcp_server/server.py` (modify existing if applicable, or create metrics endpoint)
   - Expose /metrics endpoint for Prometheus scraping
   - Configure port via DWSIM_METRICS_PORT env var
@@ -115,7 +115,7 @@
   - _Requirements: REQ-OBS-3_
   - _Prompt: Implement the task for spec mcp-observability, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer with HTTP server expertise | Task: Add HTTP endpoint serving Prometheus metrics format, configurable port via environment variable following REQ-OBS-3 | Restrictions: Don't block MCP server, use simple HTTP server or integrate with existing framework, handle disabled metrics gracefully | _Leverage: MetricsCollector.get_metrics_text() from task 3.1 | _Requirements: REQ-OBS-3 (Prometheus endpoint) | Success: /metrics returns valid Prometheus format, configurable port, doesn't interfere with MCP protocol | After completing: Mark task [-] as in_progress before starting, use log-implementation tool with artifacts after completion, then mark [x] as complete_
 
-- [ ] 3.3 Integrate metrics into tool handlers
+- [x] 3.3 Integrate metrics into tool handlers
   - File: `mcp_service/server/dwsim_mcp_server/tools/*.py` (modify existing)
   - Add MetricsCollector.record_tool_call() to all tool handlers
   - Track duration and success/failure status

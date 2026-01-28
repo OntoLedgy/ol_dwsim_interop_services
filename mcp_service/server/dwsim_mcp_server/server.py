@@ -13,6 +13,7 @@ from dwsim_mcp_server.config import ServerSettings
 from dwsim_mcp_server.ipc.flowsheet_client import FlowsheetClient
 from dwsim_mcp_server.ipc.limited_session_client import LimitedSessionClient
 from dwsim_mcp_server.observability import configure_logging, get_logger
+from dwsim_mcp_server.observability.metrics_server import start_metrics_server, stop_metrics_server
 from dwsim_mcp_server.service import FlowsheetService
 from dwsim_mcp_server.services import ThermodynamicsService
 from dwsim_mcp_server.services.sensitivity_service import SensitivityService
@@ -74,6 +75,7 @@ async def main() -> None:
     server = create_server(settings, dependencies)
     logger.info("server_starting", log_level=settings.log_level)
     await dependencies.start()
+    metrics_server = await start_metrics_server()
 
     try:
         async with stdio_server() as (read_stream, write_stream):
@@ -83,6 +85,7 @@ async def main() -> None:
                 server.create_initialization_options(),
             )
     finally:
+        await stop_metrics_server(metrics_server)
         await dependencies.close()
         logger.info("server_shutdown")
 
