@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "dwsim": {
+      "command": "uv",
+      "args": ["run", "dwsim-mcp"],
+      "cwd": "{{ cwd | default('.') }}",
+      "env": {
+{% for key, value in env.items() %}
+        "{{ key }}": "{{ value }}"{% if not loop.last %},{% endif %}
+{% endfor %}
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+version: "3.8"
+
+# Required environment variables live in .env (same directory as this file).
+# Start with mcp_service/server/dwsim_mcp_server/templates/env.example.j2 and set:
+# DWSIM_LOG_LEVEL, DWSIM_ENABLE_PYTHONNET, DWSIM_WORKER_ASSEMBLY_PATH,
+# DWSIM_CASE_STORAGE_ROOTS, DWSIM_MAX_RESOURCE_SIZE_KB, DWSIM_DOCS_PATH,
+# DWSIM_SAMPLE_CASES_PATH, DWSIM_MAX_SESSIONS, DWSIM_SESSION_TIMEOUT,
+# DWSIM_OPERATION_TIMEOUT, DWSIM_MEMORY_LIMIT_MB, DWSIM_MEMORY_POLL_INTERVAL_SECONDS,
+# DWSIM_MEMORY_RECOVERY_RATIO, DWSIM_LOG_FILE, DWSIM_LOG_FILE_MAX_BYTES,
+# DWSIM_LOG_FILE_BACKUP_COUNT, DWSIM_SEQ_URL, DWSIM_SEQ_API_KEY,
+# DWSIM_TRACING_ENABLED, DWSIM_TRACING_EXPORTER, DWSIM_TRACING_ENDPOINT,
+# DWSIM_TRACING_SAMPLE_RATE, DWSIM_METRICS_ENABLED, DWSIM_METRICS_PORT.
+
+services:
+  dwsim-mcp:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile
+    image: dwsim-mcp:local
+    env_file:
+      - .env
+    ports:
+      - "9090:9090"
+    volumes:
+      - cases-data:/app/cases
+      - logs-data:/app/logs
+      - ./entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    restart: unless-stopped
+
+volumes:
+  cases-data:
+  logs-data:

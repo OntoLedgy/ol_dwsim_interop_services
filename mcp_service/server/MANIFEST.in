@@ -1,0 +1,3 @@
+include README.md
+recursive-include prebuilt *
+recursive-include dwsim_mcp_server/templates *.j2
