@@ -208,7 +208,7 @@
   - _Requirements: REQ-OBS-1_
   - _Prompt: Implement the task for spec mcp-observability, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer with Python testing expertise | Task: Write comprehensive unit tests for correlation.py covering context generation, propagation, and cleanup following REQ-OBS-1 | Restrictions: Use pytest and pytest-asyncio, test edge cases (nested scopes, missing context), no external dependencies | _Leverage: pytest fixtures | _Requirements: REQ-OBS-1 | Success: Tests cover happy path and edge cases, async context isolation verified, cleanup tested | After completing: Mark task [-] as in_progress before starting, use log-implementation tool with artifacts after completion, then mark [x] as complete_
 
-- [ ] 6.2 Unit tests for C# CorrelationContext
+- [x] 6.2 Unit tests for C# CorrelationContext
   - File: `mcp_service/dwsim_worker/DwsimWorker.Tests/Observability/CorrelationContextTests.cs`
   - Test AsyncLocal propagation, scope disposal, Serilog enrichment
   - Purpose: Verify C# correlation infrastructure
@@ -234,7 +234,7 @@
   - _Requirements: REQ-OBS-4, REQ-OBS-5_
   - _Prompt: Implement the task for spec mcp-observability, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer | Task: Write unit tests for DiagnosticsService with mocked dependencies following REQ-OBS-4 and REQ-OBS-5 | Restrictions: Mock external services, test bundle retention/pruning, test session not found error | _Leverage: pytest fixtures, unittest.mock | _Requirements: REQ-OBS-4, REQ-OBS-5 | Success: All methods tested, error scenarios covered, bundle lifecycle tested | After completing: Mark task [-] as in_progress before starting, use log-implementation tool with artifacts after completion, then mark [x] as complete_
 
-- [ ] 6.5 Integration tests for cross-layer correlation
+- [x] 6.5 Integration tests for cross-layer correlation
   - File: `mcp_service/server/tests/integration/test_observability_integration.py`
   - Test requestId appears in both Python and C# logs
   - Test end-to-end trace from tool call to DWSIM

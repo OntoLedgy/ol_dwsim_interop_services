@@ -54,6 +54,7 @@
     <Compile Include="Utilities\PathResolverTests.cs" />
     <Compile Include="Utilities\MassBalanceValidatorTests.cs" />
     <Compile Include="Utilities\CompoundUtilitiesTests.cs" />
+    <Compile Include="Observability\CorrelationContextTests.cs" />
     <Compile Include="DtoSerializationTests.cs" />
     <Compile Include="ThermodynamicsAdapterTests.cs" />
     <Compile Include="Contracts\SimulationResultDtoTests.cs" />
