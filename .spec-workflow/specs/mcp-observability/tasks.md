@@ -169,7 +169,7 @@
 
 ## Phase 5: Log Export and Configuration
 
-- [ ] 5.1 Add Seq sink support
+- [x] 5.1 Add Seq sink support
   - File: `mcp_service/server/dwsim_mcp_server/observability/logging.py` (modify existing)
   - Add Seq HTTP sink configuration
   - Support DWSIM_SEQ_URL and DWSIM_SEQ_API_KEY env vars
@@ -178,7 +178,7 @@
   - _Requirements: REQ-OBS-6_
   - _Prompt: Implement the task for spec mcp-observability, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer with logging expertise | Task: Add Seq HTTP sink to structlog configuration, configurable via environment variables following REQ-OBS-6 | Restrictions: Handle Seq unavailability gracefully (log warning, continue), use async HTTP to avoid blocking, buffer on failure | _Leverage: existing logging.py configuration | _Requirements: REQ-OBS-6 (Seq export) | Success: Logs appear in Seq when configured, graceful degradation when unavailable, API key optional | After completing: Mark task [-] as in_progress before starting, use log-implementation tool with artifacts after completion, then mark [x] as complete_
 
-- [ ] 5.2 Add file sink with rotation
+- [x] 5.2 Add file sink with rotation
   - File: `mcp_service/server/dwsim_mcp_server/observability/logging.py` (modify existing)
   - Add rotating file handler for JSON logs
   - Support DWSIM_LOG_FILE env var with configurable retention
@@ -187,7 +187,7 @@
   - _Requirements: REQ-OBS-6_
   - _Prompt: Implement the task for spec mcp-observability, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer | Task: Add rotating file handler to structlog with configurable path and retention following REQ-OBS-6 | Restrictions: Use stdlib RotatingFileHandler, JSON format for files, handle permission errors gracefully | _Leverage: existing logging.py | _Requirements: REQ-OBS-6 (file export) | Success: Logs written to file when configured, rotation works, handles disk full gracefully | After completing: Mark task [-] as in_progress before starting, use log-implementation tool with artifacts after completion, then mark [x] as complete_
 
-- [ ] 5.3 Create ObservabilitySettings Pydantic model
+- [x] 5.3 Create ObservabilitySettings Pydantic model
   - File: `mcp_service/server/dwsim_mcp_server/observability/settings.py`
   - Implement ObservabilitySettings with all configuration options
   - Support environment variable loading with DWSIM_ prefix
