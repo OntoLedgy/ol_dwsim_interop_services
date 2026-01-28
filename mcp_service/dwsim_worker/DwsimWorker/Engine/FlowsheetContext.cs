@@ -613,7 +613,7 @@ namespace DwsimWorker.Engine
             // Log all loaded assemblies for diagnostics
             var allAssemblies = AppDomain.CurrentDomain.GetAssemblies();
             _logger.Debug("Total loaded assemblies: {Count}", allAssemblies.Length);
-            var dwsimAssemblies = allAssemblies.Where(a => a.FullName.Contains("DWSIM", StringComparison.OrdinalIgnoreCase)).ToList();
+            var dwsimAssemblies = allAssemblies.Where(a => a.FullName.IndexOf("DWSIM", StringComparison.OrdinalIgnoreCase) >= 0).ToList();
             _logger.Debug("DWSIM assemblies found: {Count}", dwsimAssemblies.Count);
             foreach (var asm in dwsimAssemblies)
             {
@@ -911,7 +911,7 @@ namespace DwsimWorker.Engine
                 // Look for the ChEDL database loader
                 foreach (var assembly in assemblies)
                 {
-                    if (!assembly.FullName.Contains("DWSIM", StringComparison.OrdinalIgnoreCase))
+                    if (assembly.FullName.IndexOf("DWSIM", StringComparison.OrdinalIgnoreCase) < 0)
                         continue;
 
                     // Try to find Databases class
@@ -949,8 +949,8 @@ namespace DwsimWorker.Engine
                 // Look for LoadCompounds or similar methods
                 var allMethods = flowsheetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 var compoundMethods = allMethods.Where(m =>
-                    m.Name.Contains("Compound", StringComparison.OrdinalIgnoreCase) ||
-                    m.Name.Contains("Database", StringComparison.OrdinalIgnoreCase)).ToList();
+                    m.Name.IndexOf("Compound", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    m.Name.IndexOf("Database", StringComparison.OrdinalIgnoreCase) >= 0).ToList();
 
                 _logger.Debug("Found {Count} compound-related methods on flowsheet", compoundMethods.Count);
                 foreach (var method in compoundMethods)

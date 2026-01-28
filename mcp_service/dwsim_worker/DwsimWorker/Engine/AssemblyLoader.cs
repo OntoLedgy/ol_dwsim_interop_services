@@ -225,7 +225,7 @@ namespace DwsimWorker.Engine
                 _logger.Error(ex, "Assembly load failed (version conflict or corruption): {AssemblyPath}", assemblyPath);
 
                 // Check for version mismatch in exception message
-                var isVersionMismatch = ex.Message.Contains("version", StringComparison.OrdinalIgnoreCase);
+                var isVersionMismatch = ex.Message.IndexOf("version", StringComparison.OrdinalIgnoreCase) >= 0;
                 if (isVersionMismatch)
                 {
                     _logger.Warning("Possible version mismatch for {AssemblyName}. Check binding redirects in App.config", assemblyName);

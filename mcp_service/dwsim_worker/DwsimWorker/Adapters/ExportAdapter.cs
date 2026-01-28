@@ -396,7 +396,7 @@ namespace DwsimWorker.Adapters
             resolvedPath = null;
             if (string.IsNullOrWhiteSpace(filePath))
                 return (false, "File path cannot be null or empty.");
-            if (filePath.Contains("..", StringComparison.Ordinal))
+            if (filePath.IndexOf("..", StringComparison.Ordinal) >= 0)
                 return (false, "File path cannot contain directory traversal segments.");
             if (!filePath.EndsWith(allowedExtension, StringComparison.OrdinalIgnoreCase))
                 return (false, $"File path must end with {allowedExtension}.");
