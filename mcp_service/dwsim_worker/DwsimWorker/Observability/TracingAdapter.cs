@@ -77,7 +77,9 @@ namespace DwsimWorker.Observability
                 switch (exporter)
                 {
                     case "jaeger":
-                        builder.AddJaegerExporter(options =>
+                        // Jaeger supports OTLP natively. Use OTLP exporter with Jaeger's OTLP endpoint.
+                        // Default Jaeger OTLP endpoints: 4317 (gRPC) or 4318 (HTTP)
+                        builder.AddOtlpExporter(options =>
                         {
                             if (TryCreateEndpoint(endpoint, out var uri))
                             {

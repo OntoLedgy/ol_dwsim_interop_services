@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Serilog.Core;
 using Serilog.Events;
+using Serilog.Parsing;
 using Xunit;
 using DwsimWorker.Observability;
 

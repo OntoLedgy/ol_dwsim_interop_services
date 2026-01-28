@@ -70,12 +70,61 @@ def set_dwsim_path_from_shared_config():
 
 
 @pytest.fixture(scope="session")
-def pythonnet_clr():
+def pythonnet_clr(dwsim_worker_dll_path: Path):
     try:
         import clr  # type: ignore
     except ImportError:
         pytest.skip("pythonnet is not installed. Run: pip install pythonnet")
+
+    # Set up assembly resolver to handle version mismatches
+    # pythonnet doesn't respect binding redirects, so we need to manually redirect
+    _setup_assembly_resolver(clr, dwsim_worker_dll_path)
+
     return clr
+
+
+def _setup_assembly_resolver(clr, dwsim_worker_dll_path: Path):
+    """Set up assembly resolver to handle version conflicts in pythonnet.
+
+    Binding redirects in App.config don't work with pythonnet because Python
+    is the host process. This resolver intercepts assembly load requests and
+    redirects to the correct versions available in the build output.
+    """
+    from System import AppDomain, ResolveEventHandler  # type: ignore
+    from System.Reflection import Assembly  # type: ignore
+
+    bin_dir = dwsim_worker_dll_path.parent
+
+    # Map of assembly names to version redirects
+    # Key: assembly name, Value: path to the correct assembly
+    assembly_redirects = {}
+
+    # Find System.Runtime.CompilerServices.Unsafe in the build output
+    unsafe_dll = bin_dir / "System.Runtime.CompilerServices.Unsafe.dll"
+    if unsafe_dll.exists():
+        assembly_redirects["System.Runtime.CompilerServices.Unsafe"] = str(unsafe_dll)
+
+    # Find System.Diagnostics.DiagnosticSource in the build output
+    diag_dll = bin_dir / "System.Diagnostics.DiagnosticSource.dll"
+    if diag_dll.exists():
+        assembly_redirects["System.Diagnostics.DiagnosticSource"] = str(diag_dll)
+
+    def _resolve_assembly(sender, args):
+        """Resolve assembly requests by redirecting to available versions."""
+        try:
+            # Parse assembly name (format: "Name, Version=x.x.x.x, Culture=..., PublicKeyToken=...")
+            full_name = args.Name
+            simple_name = full_name.split(",")[0].strip()
+
+            if simple_name in assembly_redirects:
+                dll_path = assembly_redirects[simple_name]
+                return Assembly.LoadFrom(dll_path)
+        except Exception:
+            pass
+        return None
+
+    # Register the resolver
+    AppDomain.CurrentDomain.AssemblyResolve += ResolveEventHandler(_resolve_assembly)
 
 
 @pytest.fixture(scope="session")
