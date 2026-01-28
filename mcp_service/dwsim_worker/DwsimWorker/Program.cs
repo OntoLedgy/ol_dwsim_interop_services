@@ -25,9 +25,23 @@ namespace DwsimWorker
                 .Enrich.WithProperty("Application", "DwsimWorker")
                 .CreateLogger();
 
+            // Configure OpenTelemetry tracing
+            var tracingEnabled = Environment.GetEnvironmentVariable("DWSIM_TRACING_ENABLED");
+            var tracingExporter = Environment.GetEnvironmentVariable("DWSIM_TRACING_EXPORTER") ?? "none";
+            var tracingEndpoint = Environment.GetEnvironmentVariable("DWSIM_TRACING_ENDPOINT");
+            var tracingSampleRate = Environment.GetEnvironmentVariable("DWSIM_TRACING_SAMPLE_RATE") ?? "1.0";
+
+            TracingAdapter.Configure("DwsimWorker", tracingEndpoint ?? "http://localhost:4317");
+
             try
             {
                 Log.Information("DWSIM Worker starting...");
+                Log.Information(
+                    "Observability configured: TracingEnabled={TracingEnabled}, Exporter={Exporter}, Endpoint={Endpoint}, SampleRate={SampleRate}",
+                    tracingEnabled ?? "false",
+                    tracingExporter,
+                    tracingEndpoint ?? "(default)",
+                    tracingSampleRate);
 
                 // ===== ASSEMBLY LOADING =====
                 Log.Information("Loading DWSIM assemblies...");

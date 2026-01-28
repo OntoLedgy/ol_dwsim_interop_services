@@ -245,7 +245,7 @@
 
 ## Phase 7: Documentation and Final Integration
 
-- [ ] 7.1 Update server initialization with observability
+- [x] 7.1 Update server initialization with observability
   - File: `mcp_service/server/dwsim_mcp_server/server.py` (modify existing)
   - Initialize ObservabilitySettings at startup
   - Configure logging, tracing, and metrics based on settings
@@ -255,7 +255,7 @@
   - _Requirements: All REQ-OBS_
   - _Prompt: Implement the task for spec mcp-observability, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer | Task: Integrate all observability components into server startup, initializing based on ObservabilitySettings following all REQ-OBS requirements | Restrictions: Graceful degradation if components fail to initialize, log configuration summary at startup | _Leverage: ObservabilitySettings, all observability modules | _Requirements: All REQ-OBS | Success: Server starts with observability configured, logs show config summary, graceful handling of disabled features | After completing: Mark task [-] as in_progress before starting, use log-implementation tool with artifacts after completion, then mark [x] as complete_
 
-- [ ] 7.2 Add observability to C# worker initialization
+- [x] 7.2 Add observability to C# worker initialization
   - File: `mcp_service/dwsim_worker/DwsimWorker/Program.cs` (modify existing)
   - Initialize TracingAdapter based on configuration
   - Add DiagnosticsCollector to dependency injection (if applicable)
@@ -265,7 +265,7 @@
   - _Requirements: REQ-OBS-2, REQ-OBS-4_
   - _Prompt: Implement the task for spec mcp-observability, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer | Task: Integrate tracing and diagnostics into worker initialization, configurable via appsettings or env vars following REQ-OBS-2 and REQ-OBS-4 | Restrictions: Preserve existing initialization, handle disabled tracing gracefully, log configuration | _Leverage: TracingAdapter, DiagnosticsCollector | _Requirements: REQ-OBS-2, REQ-OBS-4 | Success: Tracing configured at startup, diagnostics available, configuration logged | After completing: Mark task [-] as in_progress before starting, use log-implementation tool with artifacts after completion, then mark [x] as complete_
 
-- [ ] 7.3 Create observability documentation
+- [x] 7.3 Create observability documentation
   - File: `docs/observability.md`
   - Document all configuration options with examples
   - Include setup guides for Jaeger, Seq, Prometheus
