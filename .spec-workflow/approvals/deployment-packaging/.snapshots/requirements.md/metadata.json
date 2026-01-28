@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/deployment-packaging/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-28T16:17:03.900Z",
+      "trigger": "initial",
+      "approvalId": "approval_1769617023824_4tx3l4hby",
+      "approvalTitle": "Requirements: Deployment Packaging and Distribution"
+    }
+  ]
+}

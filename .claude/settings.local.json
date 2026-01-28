@@ -33,7 +33,8 @@
       "Bash(powershell \"taskkill /F /PID 37392\")",
       "Bash(powershell \"Get-Content ''C:\\\\Users\\\\KHANM~1.ONT\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--S-C--dwsim-interop-services\\\\tasks\\\\b127b9f.output'' -Tail 80\")",
       "Bash(git commit:*)",
-      "Bash(..venvScriptspython.exe -m pytest tests/integration/test_observability_integration.py -v)"
+      "Bash(..venvScriptspython.exe -m pytest tests/integration/test_observability_integration.py -v)",
+      "Skill(claude-delegator:setup)"
     ]
   }
 }

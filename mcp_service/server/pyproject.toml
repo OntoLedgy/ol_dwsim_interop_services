@@ -1,16 +1,3 @@
-[tool.poetry]
-name = "dwsim-mcp-server"
-version = "0.1.0"
-description = "Model Context Protocol server for DWSIM chemical process simulation"
-authors = ["OntoLedgy AI <development@ontoledgy.ai>"]
-license = "GPLv3"
-readme = "README.md"
-packages = [{include = "dwsim_mcp_server"}]
-include = [
-    {path = "prebuilt", format = ["sdist", "wheel"]},
-    {path = "dwsim_mcp_server/templates", format = ["sdist", "wheel"]},
-]
-
 [project]
 name = "dwsim-mcp-server"
 version = "0.1.0"
@@ -57,12 +44,18 @@ dev = [
 [project.scripts]
 dwsim-mcp = "dwsim_mcp_server.cli.main:app"
 
-[tool.poetry.scripts]
-dwsim-mcp = "dwsim_mcp_server.cli.main:app"
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["dwsim_mcp_server"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "dwsim_mcp_server/",
+    "prebuilt/",
+]
 
 [tool.black]
 line-length = 100

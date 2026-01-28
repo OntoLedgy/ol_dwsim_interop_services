@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/deployment-packaging/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-28T16:28:48.301Z",
+      "trigger": "initial",
+      "approvalId": "approval_1769617728233_gdtcyfiv0",
+      "approvalTitle": "Tasks: Deployment Packaging and Distribution"
+    }
+  ]
+}

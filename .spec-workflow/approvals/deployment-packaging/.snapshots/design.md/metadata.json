@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/deployment-packaging/design.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-28T16:21:15.380Z",
+      "trigger": "initial",
+      "approvalId": "approval_1769617275326_p3u0lomaz",
+      "approvalTitle": "Design: Deployment Packaging and Distribution"
+    }
+  ]
+}
