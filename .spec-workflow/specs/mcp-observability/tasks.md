@@ -199,7 +199,7 @@
 
 ## Phase 6: Testing
 
-- [ ] 6.1 Unit tests for Python correlation context
+- [x] 6.1 Unit tests for Python correlation context
   - File: `mcp_service/server/tests/unit/observability/test_correlation.py`
   - Test context generation, propagation, scope cleanup
   - Test async context isolation
@@ -216,7 +216,7 @@
   - _Requirements: REQ-OBS-1_
   - _Prompt: Implement the task for spec mcp-observability, first run spec-workflow-guide to get the workflow guide then implement the task: Role: C# Developer with testing expertise | Task: Write unit tests for CorrelationContext and CorrelationEnricher covering AsyncLocal behavior and Serilog enrichment following REQ-OBS-1 | Restrictions: Use xUnit, test thread isolation, mock Serilog where needed | _Leverage: existing test patterns in DwsimWorker.Tests | _Requirements: REQ-OBS-1 | Success: AsyncLocal propagation verified, enricher adds correct properties, scope disposal tested | After completing: Mark task [-] as in_progress before starting, use log-implementation tool with artifacts after completion, then mark [x] as complete_
 
-- [ ] 6.3 Unit tests for metrics collector
+- [x] 6.3 Unit tests for metrics collector
   - File: `mcp_service/server/tests/unit/observability/test_metrics.py`
   - Test counter increments, histogram observations, gauge settings
   - Test Prometheus exposition format output
@@ -225,7 +225,7 @@
   - _Requirements: REQ-OBS-3_
   - _Prompt: Implement the task for spec mcp-observability, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer | Task: Write unit tests for MetricsCollector verifying counter, histogram, and gauge operations following REQ-OBS-3 | Restrictions: Reset metrics between tests, verify Prometheus format, test label combinations | _Leverage: prometheus_client test utilities | _Requirements: REQ-OBS-3 | Success: All metric types tested, Prometheus format validated, labels correct | After completing: Mark task [-] as in_progress before starting, use log-implementation tool with artifacts after completion, then mark [x] as complete_
 
-- [ ] 6.4 Unit tests for diagnostics service
+- [x] 6.4 Unit tests for diagnostics service
   - File: `mcp_service/server/tests/unit/service/test_diagnostics_service.py`
   - Test server diagnostics collection, session diagnostics, error bundle capture
   - Mock FlowsheetService and MetricsCollector
