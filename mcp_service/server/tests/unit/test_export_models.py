@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from models.mcp_inputs import (
+from dwsim_mcp_server.models.mcp_inputs import (
     CompoundInfo,
     CompoundValidationResult,
     ExportCsvInput,

@@ -7,8 +7,8 @@ from typing import Any, Dict
 from mcp import types
 from pydantic import ValidationError
 
-from models.errors.session_error import SessionError as SessionErrorModel
-from models.mcp_inputs.export_inputs import (
+from dwsim_mcp_server.models.errors.session_error import SessionError as SessionErrorModel
+from dwsim_mcp_server.models.mcp_inputs.export_inputs import (
     ExportCsvInput,
     ExportCsvOutput,
     ExportJsonInput,

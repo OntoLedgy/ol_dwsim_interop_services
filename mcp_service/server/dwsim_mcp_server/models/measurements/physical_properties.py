@@ -4,7 +4,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from models.measurements.measurements import Measurements
+from dwsim_mcp_server.models.measurements.measurements import Measurements
 
 
 class PhysicalProperties(BaseModel):

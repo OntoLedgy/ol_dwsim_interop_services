@@ -1,10 +1,10 @@
 import pytest
 
-from models.enums.physical_quantity_types import PhysicalQuantityTypes
-from models.measurements.measurements import Measurements
-from models.measurements.physical_properties import PhysicalProperties
-from models.measurements.ranges import Ranges
-from models.measurements.units_of_measure import UnitsOfMeasure
+from dwsim_mcp_server.models.enums.physical_quantity_types import PhysicalQuantityTypes
+from dwsim_mcp_server.models.measurements.measurements import Measurements
+from dwsim_mcp_server.models.measurements.physical_properties import PhysicalProperties
+from dwsim_mcp_server.models.measurements.ranges import Ranges
+from dwsim_mcp_server.models.measurements.units_of_measure import UnitsOfMeasure
 
 
 @pytest.mark.parametrize(

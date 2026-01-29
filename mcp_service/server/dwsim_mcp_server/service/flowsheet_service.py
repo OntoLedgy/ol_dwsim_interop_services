@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional, Protocol, Tuple
 
-from models.mcp_inputs import (
+from dwsim_mcp_server.models.mcp_inputs import (
     AddCompoundInput,
     AddCompoundOutput,
     AddStreamInput,

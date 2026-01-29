@@ -1,6 +1,6 @@
 import pytest
 
-from models.mcp_inputs import (
+from dwsim_mcp_server.models.mcp_inputs import (
     ObjectiveSpec,
     OptimizationRequest,
     OutputSpec,

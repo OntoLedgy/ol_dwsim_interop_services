@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Callable, Optional, TypeVar
 
-from models.errors.resource_limit_error import ResourceLimitError
+from dwsim_mcp_server.models.errors.resource_limit_error import ResourceLimitError
 
 from dwsim_mcp_server.config.resource_limit_settings import ResourceLimitSettings
 from dwsim_mcp_server.limits.memory_monitor import MemoryMonitor

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, Optional, Tuple, Type
 
-from models.cape_open.material_stream import MaterialStream
-from models.cape_open.thermo_property_package import ThermoPropertyPackage
-from models.cape_open.unit_operation import UnitOperation
+from dwsim_mcp_server.models.cape_open.material_stream import MaterialStream
+from dwsim_mcp_server.models.cape_open.thermo_property_package import ThermoPropertyPackage
+from dwsim_mcp_server.models.cape_open.unit_operation import UnitOperation
 
 
 def to_csharp_material_stream(source: MaterialStream | Dict[str, Any]):

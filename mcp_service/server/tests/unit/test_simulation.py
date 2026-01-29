@@ -7,7 +7,7 @@ from mcp import types
 from dwsim_mcp_server.ipc.exceptions import InteropError, SessionError
 from dwsim_mcp_server.limits.resource_limit_guard import ResourceLimitViolation
 from dwsim_mcp_server.tools.simulation import build_simulation_tools, handle_simulation_tool
-from models.errors.resource_limit_error import ResourceLimitError
+from dwsim_mcp_server.models.errors.resource_limit_error import ResourceLimitError
 
 
 class FakeSimulationClient:

@@ -2,8 +2,8 @@
 
 from pydantic import BaseModel, ValidationInfo, field_validator
 
-from models.enums.physical_quantity_types import PhysicalQuantityTypes
-from models.measurements.units_of_measure import UnitsOfMeasure
+from dwsim_mcp_server.models.enums.physical_quantity_types import PhysicalQuantityTypes
+from dwsim_mcp_server.models.measurements.units_of_measure import UnitsOfMeasure
 
 
 class Measurements(BaseModel):

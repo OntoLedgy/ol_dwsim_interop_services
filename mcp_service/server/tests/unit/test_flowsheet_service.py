@@ -2,7 +2,7 @@ import asyncio
 from types import SimpleNamespace
 
 from dwsim_mcp_server.service import FlowsheetService
-from models.mcp_inputs import (
+from dwsim_mcp_server.models.mcp_inputs import (
     AddCompoundInput,
     AddStreamInput,
     AddUnitInput,

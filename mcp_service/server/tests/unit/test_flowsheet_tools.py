@@ -5,7 +5,7 @@ import pytest
 from mcp import types
 
 from dwsim_mcp_server.tools.flowsheet import handle_flowsheet_tool
-from models.mcp_inputs import AddCompoundOutput
+from dwsim_mcp_server.models.mcp_inputs import AddCompoundOutput
 
 
 class FakeFlowsheetService:

@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from models.enums.flash_calculation_types import FlashCalculationTypes
-from models.enums.phase_types import PhaseTypes
-from models.enums.physical_quantity_types import PhysicalQuantityTypes
-from models.mcp_inputs import FlashPHInputs, FlashPSInputs, FlashTPInputs
-from models.measurements.measurements import Measurements
-from models.measurements.physical_properties import PhysicalProperties
-from models.measurements.units_of_measure import UnitsOfMeasure
-from models.responses import FlashResults, PhaseResults
+from dwsim_mcp_server.models.enums.flash_calculation_types import FlashCalculationTypes
+from dwsim_mcp_server.models.enums.phase_types import PhaseTypes
+from dwsim_mcp_server.models.enums.physical_quantity_types import PhysicalQuantityTypes
+from dwsim_mcp_server.models.mcp_inputs import FlashPHInputs, FlashPSInputs, FlashTPInputs
+from dwsim_mcp_server.models.measurements.measurements import Measurements
+from dwsim_mcp_server.models.measurements.physical_properties import PhysicalProperties
+from dwsim_mcp_server.models.measurements.units_of_measure import UnitsOfMeasure
+from dwsim_mcp_server.models.responses import FlashResults, PhaseResults
 
 from dwsim_mcp_server.ipc.clr_loader import load_dwsim_worker
 from dwsim_mcp_server.ipc.exceptions import SessionError, map_dotnet_exception

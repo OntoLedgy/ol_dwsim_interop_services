@@ -14,7 +14,7 @@ from dwsim_mcp_server.ipc.limited_session_client import LimitedSessionClient
 from dwsim_mcp_server.service import FlowsheetService
 from dwsim_mcp_server.services.sensitivity_service import SensitivityService
 from dwsim_mcp_server.tools.flowsheet import handle_flowsheet_tool
-from models.mcp_inputs import (
+from dwsim_mcp_server.models.mcp_inputs import (
     ObjectiveSpec,
     OptimizationRequest,
     OutputSpec,

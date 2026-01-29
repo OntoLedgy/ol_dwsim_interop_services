@@ -3,15 +3,15 @@ from types import SimpleNamespace
 
 import pytest
 
-from models.enums.physical_quantity_types import PhysicalQuantityTypes
-from models.enums.unit_symbols import (
+from dwsim_mcp_server.models.enums.physical_quantity_types import PhysicalQuantityTypes
+from dwsim_mcp_server.models.enums.unit_symbols import (
     MolarEnergyUnits,
     MolarEntropyUnits,
     PressureUnits,
     TemperatureUnits,
 )
-from models.measurements.measurements import Measurements
-from models.measurements.units_of_measure import UnitsOfMeasure
+from dwsim_mcp_server.models.measurements.measurements import Measurements
+from dwsim_mcp_server.models.measurements.units_of_measure import UnitsOfMeasure
 
 from dwsim_mcp_server.config import ServerSettings
 from dwsim_mcp_server.ipc.exceptions import AssemblyLoadError, InteropError, SessionError

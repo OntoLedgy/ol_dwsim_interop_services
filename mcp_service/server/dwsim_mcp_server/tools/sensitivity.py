@@ -7,13 +7,13 @@ from typing import Any, Dict
 from mcp import types
 from pydantic import ValidationError
 
-from models.errors.simulation_error import SimulationError as SimulationErrorModel
-from models.mcp_inputs import (
+from dwsim_mcp_server.models.errors.simulation_error import SimulationError as SimulationErrorModel
+from dwsim_mcp_server.models.mcp_inputs import (
     OptimizationRequest,
     ParameterSweepRequest,
     SensitivityAnalysisRequest,
 )
-from models.responses import OptimizationResult, SensitivityStudyResult, StudyStatus
+from dwsim_mcp_server.models.responses import OptimizationResult, SensitivityStudyResult, StudyStatus
 
 from dwsim_mcp_server.observability import get_logger
 

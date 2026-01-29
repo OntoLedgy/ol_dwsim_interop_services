@@ -1,10 +1,10 @@
 import pytest
 
-from models.requests.add_stream_request import AddStreamRequest
-from models.requests.add_unit_request import AddUnitRequest
-from models.requests.connect_request import ConnectRequest
-from models.requests.get_results_request import GetResultsRequest
-from models.requests.run_simulation_request import RunSimulationRequest
+from dwsim_mcp_server.models.requests.add_stream_request import AddStreamRequest
+from dwsim_mcp_server.models.requests.add_unit_request import AddUnitRequest
+from dwsim_mcp_server.models.requests.connect_request import ConnectRequest
+from dwsim_mcp_server.models.requests.get_results_request import GetResultsRequest
+from dwsim_mcp_server.models.requests.run_simulation_request import RunSimulationRequest
 
 
 def test_add_stream_request_composition_sum_validation():

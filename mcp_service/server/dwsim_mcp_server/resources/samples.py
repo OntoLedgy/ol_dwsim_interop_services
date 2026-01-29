@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 import aiofiles
 from mcp import types
 
-from models.resources.sample_case_info import SampleCaseInfo
+from dwsim_mcp_server.models.resources.sample_case_info import SampleCaseInfo
 from dwsim_mcp_server.resources.base import (
     BaseResourceProvider,
     ResourceNotFoundError,

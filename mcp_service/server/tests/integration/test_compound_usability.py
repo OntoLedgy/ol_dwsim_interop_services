@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from models.mcp_inputs.compound_validation import ListCompoundsInput, ValidateCompoundsInput
+from dwsim_mcp_server.models.mcp_inputs.compound_validation import ListCompoundsInput, ValidateCompoundsInput
 
 from dwsim_mcp_server.config import ServerSettings
 from dwsim_mcp_server.ipc.exceptions import AssemblyLoadError, InteropError, SessionError

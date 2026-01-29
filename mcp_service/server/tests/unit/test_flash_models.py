@@ -2,15 +2,15 @@ import json
 
 import pytest
 
-from models.enums.flash_calculation_types import FlashCalculationTypes
-from models.enums.phase_types import PhaseTypes
-from models.enums.physical_quantity_types import PhysicalQuantityTypes
-from models.enums.unit_symbols import MolarEnergyUnits, MolarEntropyUnits, PressureUnits, TemperatureUnits
-from models.measurements.measurements import Measurements
-from models.measurements.physical_properties import PhysicalProperties
-from models.measurements.units_of_measure import UnitsOfMeasure
-from models.mcp_inputs.flash_inputs import FlashPHInputs, FlashPSInputs, FlashTPInputs
-from models.responses.flash_results import FlashResults, PhaseResults
+from dwsim_mcp_server.models.enums.flash_calculation_types import FlashCalculationTypes
+from dwsim_mcp_server.models.enums.phase_types import PhaseTypes
+from dwsim_mcp_server.models.enums.physical_quantity_types import PhysicalQuantityTypes
+from dwsim_mcp_server.models.enums.unit_symbols import MolarEnergyUnits, MolarEntropyUnits, PressureUnits, TemperatureUnits
+from dwsim_mcp_server.models.measurements.measurements import Measurements
+from dwsim_mcp_server.models.measurements.physical_properties import PhysicalProperties
+from dwsim_mcp_server.models.measurements.units_of_measure import UnitsOfMeasure
+from dwsim_mcp_server.models.mcp_inputs.flash_inputs import FlashPHInputs, FlashPSInputs, FlashTPInputs
+from dwsim_mcp_server.models.responses.flash_results import FlashResults, PhaseResults
 
 
 def build_measurement(quantity_type, value, unit_name):

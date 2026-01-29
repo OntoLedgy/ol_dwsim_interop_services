@@ -4,9 +4,9 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from models.enums.flash_calculation_types import FlashCalculationTypes
-from models.enums.phase_types import PhaseTypes
-from models.measurements.physical_properties import PhysicalProperties
+from dwsim_mcp_server.models.enums.flash_calculation_types import FlashCalculationTypes
+from dwsim_mcp_server.models.enums.phase_types import PhaseTypes
+from dwsim_mcp_server.models.measurements.physical_properties import PhysicalProperties
 
 
 class PhaseResults(BaseModel):

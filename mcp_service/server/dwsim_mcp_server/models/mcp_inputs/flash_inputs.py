@@ -5,7 +5,7 @@ import math
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from models.measurements.measurements import Measurements
+from dwsim_mcp_server.models.measurements.measurements import Measurements
 
 COMPOSITION_TOLERANCE = 0.001
 

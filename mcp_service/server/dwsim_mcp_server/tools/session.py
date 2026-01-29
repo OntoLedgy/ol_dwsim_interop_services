@@ -7,15 +7,15 @@ from typing import Any, Dict, Iterable
 from mcp import types
 from pydantic import ValidationError
 
-from models.errors.resource_limit_error import ResourceLimitError
-from models.errors.session_error import SessionError as SessionErrorModel
-from models.requests import (
+from dwsim_mcp_server.models.errors.resource_limit_error import ResourceLimitError
+from dwsim_mcp_server.models.errors.session_error import SessionError as SessionErrorModel
+from dwsim_mcp_server.models.requests import (
     CloseSessionRequest,
     CreateSessionRequest,
     LoadCaseRequest,
     SaveCaseRequest,
 )
-from models.responses import CloseSessionResponse, LoadCaseResponse, SaveCaseResponse
+from dwsim_mcp_server.models.responses import CloseSessionResponse, LoadCaseResponse, SaveCaseResponse
 
 from dwsim_mcp_server.ipc.exceptions import InteropError, SessionError
 from dwsim_mcp_server.limits.resource_limit_guard import ResourceLimitViolation

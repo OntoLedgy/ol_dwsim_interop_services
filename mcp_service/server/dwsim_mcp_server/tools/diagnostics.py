@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional
 from mcp import types
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from models.errors.session_error import SessionError as SessionErrorModel
+from dwsim_mcp_server.models.errors.session_error import SessionError as SessionErrorModel
 
 from dwsim_mcp_server.models.diagnostics import ServerDiagnostics, SessionDiagnostics
 from dwsim_mcp_server.observability import get_logger

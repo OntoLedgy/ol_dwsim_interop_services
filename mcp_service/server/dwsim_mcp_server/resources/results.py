@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from mcp import types
 
-from models.resources.session_result_resource import SessionResultResource
+from dwsim_mcp_server.models.resources.session_result_resource import SessionResultResource
 from dwsim_mcp_server.resources.base import (
     BaseResourceProvider,
     ResourceInvalidStateError,

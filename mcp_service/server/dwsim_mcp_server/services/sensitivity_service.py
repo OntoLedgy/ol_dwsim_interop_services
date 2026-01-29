@@ -15,12 +15,12 @@ from typing import Dict, List, Optional
 
 from scipy.optimize import minimize
 
-from models.mcp_inputs import (
+from dwsim_mcp_server.models.mcp_inputs import (
     OptimizationRequest,
     ParameterSweepRequest,
     SensitivityAnalysisRequest,
 )
-from models.responses import OptimizationResult, ResultRow, SensitivityStudyResult, StudyStatus
+from dwsim_mcp_server.models.responses import OptimizationResult, ResultRow, SensitivityStudyResult, StudyStatus
 
 from dwsim_mcp_server.ipc.flowsheet_client import FlowsheetClient
 from dwsim_mcp_server.ipc.limited_session_client import LimitedSessionClient

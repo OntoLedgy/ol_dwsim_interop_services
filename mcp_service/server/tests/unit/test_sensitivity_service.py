@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import pytest
 
 from dwsim_mcp_server.services.sensitivity_service import SensitivityService, StudyState
-from models.mcp_inputs import (
+from dwsim_mcp_server.models.mcp_inputs import (
     OutputSpec,
     ParameterSweepRequest,
     RangeSpec,
@@ -11,7 +11,7 @@ from models.mcp_inputs import (
     SweepVariableSpec,
     VariableSpec,
 )
-from models.responses import ResultRow
+from dwsim_mcp_server.models.responses import ResultRow
 
 
 class FakeSessionClient:

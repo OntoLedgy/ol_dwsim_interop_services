@@ -5,7 +5,7 @@ import pytest
 from mcp import types
 
 from dwsim_mcp_server.tools.sensitivity import handle_sensitivity_tool
-from models.responses import OptimizationResult, ResultRow, SensitivityStudyResult, StudyStatus
+from dwsim_mcp_server.models.responses import OptimizationResult, ResultRow, SensitivityStudyResult, StudyStatus
 
 
 class FakeSensitivityService:

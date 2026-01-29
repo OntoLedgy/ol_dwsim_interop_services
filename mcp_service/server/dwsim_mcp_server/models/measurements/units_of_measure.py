@@ -4,8 +4,8 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from models.enums.physical_quantity_types import PhysicalQuantityTypes
-from models.measurements.ranges import Ranges
+from dwsim_mcp_server.models.enums.physical_quantity_types import PhysicalQuantityTypes
+from dwsim_mcp_server.models.measurements.ranges import Ranges
 
 
 class UnitsOfMeasure(BaseModel):

@@ -6,13 +6,13 @@ from mcp import types as mcp_types
 
 from dwsim_mcp_server.tools.compound import build_compound_tools, handle_compound_tool
 from dwsim_mcp_server.tools.export import build_export_tools, handle_export_tool
-from models.mcp_inputs.compound_validation import (
+from dwsim_mcp_server.models.mcp_inputs.compound_validation import (
     CompoundInfo,
     CompoundValidationResult,
     ListCompoundsOutput,
     ValidateCompoundsOutput,
 )
-from models.mcp_inputs.export_inputs import ExportCsvOutput, ExportJsonOutput
+from dwsim_mcp_server.models.mcp_inputs.export_inputs import ExportCsvOutput, ExportJsonOutput
 
 
 class TestExportTools:

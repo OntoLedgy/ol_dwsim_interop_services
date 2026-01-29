@@ -14,7 +14,7 @@ from dwsim_mcp_server.ipc.limited_session_client import LimitedSessionClient
 from dwsim_mcp_server.service import FlowsheetService
 from dwsim_mcp_server.tools.flowsheet import handle_flowsheet_tool
 from dwsim_mcp_server.tools.simulation import handle_simulation_tool
-from models.mcp_inputs import (
+from dwsim_mcp_server.models.mcp_inputs import (
     ExportCsvInput,
     ExportJsonInput,
     GenerateReportInput,
