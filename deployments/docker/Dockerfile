@@ -13,21 +13,35 @@ ENV DEBIAN_FRONTEND=noninteractive \
     WINEDEBUG=-all \
     WINEPREFIX=/opt/wineprefix
 
-RUN apt-get update \
+# Enable 32-bit architecture and install Wine
+RUN dpkg --add-architecture i386 \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         cabextract \
         curl \
-        wine64 \
-        wine32 \
-        winetricks \
+        gnupg2 \
+        wget \
+        xauth \
         xvfb \
+    && mkdir -pm755 /etc/apt/keyrings \
+    && wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key \
+    && wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/debian/dists/bookworm/winehq-bookworm.sources \
+    && apt-get update \
+    && apt-get install -y --install-recommends winehq-stable \
     && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p "$WINEPREFIX" \
+# Install winetricks
+RUN wget -O /usr/local/bin/winetricks https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks \
+    && chmod +x /usr/local/bin/winetricks
+
+# Initialize Wine and install .NET Framework 4.8
+ENV XDG_RUNTIME_DIR=/tmp/runtime-root
+RUN mkdir -p "$WINEPREFIX" "$XDG_RUNTIME_DIR" \
+    && chmod 700 "$XDG_RUNTIME_DIR" \
     && wineboot --init \
     && xvfb-run --auto-servernum winetricks -q dotnet48 \
-    && rm -rf /tmp/.wine* /tmp/winetricks*
+    && rm -rf /tmp/.wine* /tmp/winetricks* "$XDG_RUNTIME_DIR"
 
 RUN useradd --create-home --shell /bin/bash app \
     && mkdir -p /app /opt/dwsim \

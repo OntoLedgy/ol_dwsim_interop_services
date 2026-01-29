@@ -1,0 +1,61 @@
+# Git
+.git
+.gitignore
+
+# Python
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.venv/
+**/venv/
+**/.venv/
+*.egg-info/
+dist/
+build/
+
+# Testing
+**/.pytest_cache/
+**/.pytest_tmp/
+**/.pytest_tmp_run/
+**/htmlcov/
+**/coverage.*
+**/.coverage
+**/test-results/
+
+# IDE
+.vscode/
+.idea/
+**/*.suo
+**/*.user
+**/*.userosscache
+**/*.sln.docstates
+
+# C# build artifacts
+**/bin/
+**/obj/
+**/TestResults/
+**/*.pdb
+
+# DWSIM binaries (large, downloaded separately)
+**/dwsim_binaries/
+
+# Logs and temp
+*.log
+*.tmp
+*.swp
+
+# Environment files (keep .env.example)
+.env
+.env.local
+.env.*.local
+
+# Node (if any)
+node_modules/
+
+# Spec workflow
+.spec-workflow/
+
+# Local config
+**/*.local.json
+**/dwsim.config.json

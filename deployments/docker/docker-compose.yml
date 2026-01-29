@@ -1,5 +1,3 @@
-version: "3.8"
-
 # Required environment variables live in .env (same directory as this file).
 # Start with mcp_service/server/dwsim_mcp_server/templates/env.example.j2 and set:
 # DWSIM_LOG_LEVEL, DWSIM_ENABLE_PYTHONNET, DWSIM_WORKER_ASSEMBLY_PATH,
