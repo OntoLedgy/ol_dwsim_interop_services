@@ -229,14 +229,46 @@ if ($LASTEXITCODE -eq 0) {
 Write-Step "Configuring MSBuild path"
 $configPath = "$workerPath\DwsimWorker\dwsim.config.json"
 
-# Find MSBuild
+# Find MSBuild - check multiple common locations
 $msbuildPath = ""
-$vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-if (Test-Path $vsWhere) {
-    $vsPath = & $vsWhere -latest -property installationPath 2>$null
-    if ($vsPath) {
-        $msbuildPath = "$vsPath\MSBuild\Current\Bin\MSBuild.exe"
+$msbuildCandidates = @(
+    # VS 2022 Build Tools (most common for servers)
+    "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe",
+    # VS 2022 editions
+    "${env:ProgramFiles}\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe",
+    "${env:ProgramFiles}\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe",
+    "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe",
+    # VS 2019 Build Tools
+    "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe",
+    # VS 2019 editions
+    "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Professional\MSBuild\Current\Bin\MSBuild.exe",
+    "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe",
+    "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe"
+)
+
+foreach ($candidate in $msbuildCandidates) {
+    if (Test-Path $candidate) {
+        $msbuildPath = $candidate
+        Write-Host "Found MSBuild at: $msbuildPath"
+        break
     }
+}
+
+# Fallback: try vswhere if no candidate found
+if (-not $msbuildPath) {
+    $vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path $vsWhere) {
+        $foundPath = & $vsWhere -latest -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\MSBuild.exe" 2>$null | Select-Object -First 1
+        if ($foundPath -and (Test-Path $foundPath)) {
+            $msbuildPath = $foundPath
+            Write-Host "Found MSBuild via vswhere: $msbuildPath"
+        }
+    }
+}
+
+if (-not $msbuildPath) {
+    Write-Error "Could not find MSBuild.exe! Install Visual Studio Build Tools."
+    exit 1
 }
 
 # Update config file with MSBuild path (CLI already created it with dwsim_path)
