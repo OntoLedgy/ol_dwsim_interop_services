@@ -183,22 +183,45 @@ $serverPath = "$repoPath\mcp_service\server"
 $workerPath = "$repoPath\mcp_service\dwsim_worker"
 Set-Location $serverPath
 
-# Create virtual environment
+# Install uv (fast Python package manager)
+Write-Host "Installing uv package manager..."
+if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+    # Install uv via PowerShell
+    Invoke-WebRequest -Uri "https://astral.sh/uv/install.ps1" -OutFile "$env:TEMP\install-uv.ps1"
+    & powershell -ExecutionPolicy Bypass -File "$env:TEMP\install-uv.ps1"
+    Remove-Item "$env:TEMP\install-uv.ps1" -Force -ErrorAction SilentlyContinue
+
+    # Add uv to PATH for this session
+    $uvPath = "$env:USERPROFILE\.local\bin"
+    if (Test-Path $uvPath) {
+        $env:Path = "$uvPath;$env:Path"
+    }
+    # Also check cargo bin path
+    $cargoPath = "$env:USERPROFILE\.cargo\bin"
+    if (Test-Path $cargoPath) {
+        $env:Path = "$cargoPath;$env:Path"
+    }
+    Write-Success "uv installed"
+} else {
+    Write-Success "uv already installed: $(uv --version)"
+}
+
+# Create virtual environment and install dependencies using uv
+Write-Host "Creating virtual environment and installing dependencies with uv..."
 if (-not (Test-Path ".venv")) {
-    & $pythonExe -m venv .venv
+    & uv venv .venv
     Write-Success "Virtual environment created"
 } else {
     Write-Success "Virtual environment already exists"
 }
 
-# Activate and install dependencies
-$venvPython = "$serverPath\.venv\Scripts\python.exe"
-$venvPip = "$serverPath\.venv\Scripts\pip.exe"
-
-Write-Host "Installing Python dependencies..."
-& $venvPip install --upgrade pip
-& $venvPip install -e ".[dev,http]"
+# Install dependencies using uv (specify the venv python)
+& uv pip install --python ".venv\Scripts\python.exe" -e ".[dev,http]"
 Write-Success "Python dependencies installed"
+
+# Set paths for later use
+$venvPython = "$serverPath\.venv\Scripts\python.exe"
+$dwsimMcpCli = "$serverPath\.venv\Scripts\dwsim-mcp.exe"
 
 # ============================================
 # STEP 9: Download DWSIM binaries via CLI
@@ -212,7 +235,6 @@ $env:PYTHONPATH = "$repoPath;$serverPath"
 # This downloads to dwsim_worker/dwsim_binaries/x64/Debug and creates dwsim.config.json
 Write-Host "Running: dwsim-mcp setup --download"
 Write-Host "Source: https://github.com/OntoLedgy/dwsim/releases/download/v9.0.5-mcp/dwsim_binaries.zip"
-$dwsimMcpCli = "$serverPath\.venv\Scripts\dwsim-mcp.exe"
 & $dwsimMcpCli setup --download
 
 if ($LASTEXITCODE -eq 0) {
