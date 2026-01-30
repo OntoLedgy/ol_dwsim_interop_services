@@ -301,14 +301,16 @@ MCP Server Response:
 
 ### Target Platform(s)
 
-**Primary: Windows 11 / Windows Server 2022**
+**Primary: Windows 10/11 / Windows Server with Desktop Experience**
 - .NET Framework 4.8 runtime required (pre-installed on modern Windows)
 - Python 3.11+ installed separately
 - DWSIM assemblies bundled or referenced from installed DWSIM
+- **Windows Desktop Experience required**: DWSIM uses Eto.Forms/WinForms which requires GUI subsystem
 
-**Future: Cross-Platform (Stretch Goal)**
-- Linux/macOS via .NET Core + DWSIM.Core (if/when available)
-- Containerized deployment (Docker)
+**NOT SUPPORTED:**
+- Windows Server Core (lacks GUI subsystem required by DWSIM)
+- Linux/macOS (DWSIM depends on .NET Framework 4.8 and WinForms)
+- Docker/containerized deployment (no viable path due to WinForms dependencies)
 
 ### Distribution Method
 
@@ -322,7 +324,6 @@ MCP Server Response:
 **Future Options:**
 - **PyPI Package**: `dwsim-mcp-server` installable via `pip install dwsim-mcp-server`
 - **NuGet Package**: .NET worker distributed as standalone tool
-- **Docker Image**: Pre-configured containerized deployment
 - **Installer**: MSI or setup.exe for Windows (all-in-one)
 
 ### Installation Requirements
@@ -546,10 +547,10 @@ MCP Server Response:
 
 ### Current Limitations
 
-1. **Windows-Only Deployment**
-   - **Impact**: Cannot run on Linux/macOS natively
-   - **Reason**: DWSIM requires .NET Framework 4.8 (Windows-only)
-   - **Future Solution**: Port to .NET Core when DWSIM.Core matures
+1. **Windows Desktop-Only Deployment**
+   - **Impact**: Cannot run on Linux/macOS or Windows Server Core
+   - **Reason**: DWSIM requires .NET Framework 4.8 with Eto.Forms/WinForms (needs GUI subsystem)
+   - **Future Solution**: Port to .NET Core when DWSIM moves to cross-platform UI framework
 
 2. **No Session Persistence Across Restarts**
    - **Impact**: User loses session state if server crashes/restarts

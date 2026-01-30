@@ -1,14 +1,15 @@
-﻿# Installation
+# Installation
 
-This guide covers Windows, Docker, and development setup for dwsim-mcp-server.
+This guide covers Windows and development setup for dwsim-mcp-server.
+
+> **Note:** DWSIM requires Windows with Desktop Experience (full GUI). See [Windows Deployment Guide](windows-deployment.md) for detailed platform requirements and server setup.
 
 ## Prerequisites
 
 - Python 3.11+ (Python 3.11 or 3.12 recommended)
 - .NET Framework 4.8 Developer Pack/Targeting Pack (Windows)
-- Windows for full functionality (the DWSIM worker is Windows-only)
+- Windows 10/11 or Windows Server with Desktop Experience
 - DWSIM binaries available locally (downloaded by `dwsim-mcp setup --download` or from an existing install)
-- Docker Desktop (for Docker deployment)
 - NSSM (optional, for running as a Windows service)
 
 ## Quick Start
@@ -99,23 +100,6 @@ Administrative privileges are required for service actions.
 Re-run this command in an elevated terminal (Run as Administrator).
 ```
 
-## Docker Setup
-
-From the repository root:
-
-```powershell
-cd deployments\docker
-docker-compose up
-```
-
-Expected output (current build failure):
-
-```text
-E: Package 'wine32' has no installation candidate
-E: Package 'winetricks' has no installation candidate
-failed to solve: process "/bin/sh -c apt-get update ..." did not complete successfully: exit code: 100
-```
-
 ## Development Setup
 
 ```powershell
@@ -194,7 +178,6 @@ Expected output (full example):
 
 - `ModuleNotFoundError: No module named 'models'`: set `PYTHONPATH` to the repo root before running `dwsim-mcp`.
 - `dwsim-mcp doctor` reports missing DWSIM assemblies: re-run `dwsim-mcp setup --download` or `dwsim-mcp setup --dwsim-path ...`.
-- Docker build fails with `wine32` / `winetricks` not available: the current Debian base image does not provide these packages; use a base image that includes them or adjust the Dockerfile accordingly.
 - Service commands fail with admin error: open PowerShell as Administrator before running `dwsim-mcp service ...`.
 - .NET Framework 4.8 missing: install the .NET Framework 4.8 Developer Pack and re-run `dwsim-mcp doctor`.
 
