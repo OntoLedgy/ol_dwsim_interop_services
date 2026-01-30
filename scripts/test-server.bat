@@ -30,13 +30,10 @@ echo Response:
 type "%TEMP%\mcp_test.json"
 echo.
 
-REM Extract session ID from headers
-set SESSION_ID=
-for /f "tokens=2 delims=: " %%a in ('findstr /i "mcp-session-id" "%TEMP%\mcp_headers.txt" 2^>nul') do (
+REM Extract session ID from headers using PowerShell for reliable parsing
+for /f "usebackq delims=" %%a in (`powershell -Command "(Get-Content '%TEMP%\mcp_headers.txt' | Select-String 'mcp-session-id' | ForEach-Object { $_.Line -replace '.*mcp-session-id:\s*', '' }).Trim()"`) do (
     set "SESSION_ID=%%a"
 )
-REM Remove carriage return if present
-if defined SESSION_ID set "SESSION_ID=!SESSION_ID:~0,-1!"
 
 if defined SESSION_ID (
     echo Session ID: !SESSION_ID!
