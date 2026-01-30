@@ -357,48 +357,18 @@ if (-not (Test-Path $simPath)) {
 }
 
 # ============================================
-# STEP 13: Create Start Script
+# STEP 13: Copy Scripts
 # ============================================
-Write-Step "Creating start scripts"
+Write-Step "Copying scripts"
 
-# HTTP mode start script
-$startHttpScript = @"
-@echo off
-cd /d "$serverPath"
-call .venv\Scripts\activate.bat
-set PYTHONPATH=$repoPath;$serverPath
-set DWSIM_TRANSPORT_MODE=streamable-http
-set DWSIM_HTTP_PORT=8000
-echo Starting DWSIM MCP Server (HTTP mode on port 8000)...
-dwsim-mcp run
-"@
-Set-Content -Path "$InstallPath\start-http.bat" -Value $startHttpScript
+# Copy all scripts from repo (they auto-detect paths)
+$scriptsToInstall = @("start-http.bat", "start-stdio.bat", "diagnose.bat", "test-server.bat")
+foreach ($script in $scriptsToInstall) {
+    Copy-Item -Path "$repoPath\scripts\$script" -Destination "$InstallPath\$script" -Force
+    Write-Host "  Copied $script"
+}
 
-# Stdio mode start script
-$startStdioScript = @"
-@echo off
-cd /d "$serverPath"
-call .venv\Scripts\activate.bat
-set PYTHONPATH=$repoPath;$serverPath
-set DWSIM_TRANSPORT_MODE=stdio
-echo Starting DWSIM MCP Server (stdio mode)...
-dwsim-mcp run
-"@
-Set-Content -Path "$InstallPath\start-stdio.bat" -Value $startStdioScript
-
-# Diagnostic script (pre-deploy - checks dependencies)
-$diagScript = @"
-@echo off
-cd /d "$serverPath"
-call .venv\Scripts\activate.bat
-dwsim-mcp doctor
-"@
-Set-Content -Path "$InstallPath\diagnose.bat" -Value $diagScript
-
-# Copy test script from repo (it's generic, no path substitution needed)
-Copy-Item -Path "$repoPath\scripts\test-server.bat" -Destination "$InstallPath\test-server.bat" -Force
-
-Write-Success "Created start scripts in $InstallPath"
+Write-Success "Scripts installed to $InstallPath"
 
 # ============================================
 # STEP 14: Run Diagnostics
