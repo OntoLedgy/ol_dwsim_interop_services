@@ -1,4 +1,5 @@
 @echo off
+setlocal EnableDelayedExpansion
 REM Build script for DwsimWorker (.NET Framework 4.8)
 REM ================================================
 REM Configuration - MSBuild is auto-detected via find-msbuild.ps1
@@ -18,23 +19,31 @@ REM }
 REM ================================================
 
 REM Find MSBuild using PowerShell script
+REM Use a temp file to handle paths with special characters (parentheses, spaces)
 echo Locating MSBuild.exe...
-for /f "usebackq delims=" %%i in (`powershell.exe -ExecutionPolicy Bypass -File "%~dp0find-msbuild.ps1"`) do (
-    set MSBUILD_PATH=%%i
-)
+set "TEMP_FILE=%TEMP%\msbuild_path_%RANDOM%.txt"
+powershell.exe -ExecutionPolicy Bypass -File "%~dp0find-msbuild.ps1" > "!TEMP_FILE!" 2>&1
 
-if %ERRORLEVEL% NEQ 0 (
+if !ERRORLEVEL! NEQ 0 (
     echo.
     echo MSBuild detection failed. See error above.
+    if exist "!TEMP_FILE!" del "!TEMP_FILE!"
     exit /b 1
 )
+
+REM Read the path from temp file (last non-empty line)
+set "MSBUILD_PATH="
+for /f "usebackq delims=" %%i in ("!TEMP_FILE!") do (
+    set "MSBUILD_PATH=%%i"
+)
+if exist "!TEMP_FILE!" del "!TEMP_FILE!"
 
 REM ================================================
 REM Build Configuration
 REM ================================================
-set SOLUTION_FILE=DwsimWorker.sln
-set CONFIGURATION=Debug
-set BUILD_TARGETS=Restore,Build
+set "SOLUTION_FILE=DwsimWorker.sln"
+set "CONFIGURATION=Debug"
+set "BUILD_TARGETS=Restore,Build"
 
 REM ================================================
 REM Validate MSBuild path
@@ -50,8 +59,8 @@ if not defined MSBUILD_PATH (
     exit /b 1
 )
 
-if not exist "%MSBUILD_PATH%" (
-    echo ERROR: MSBuild not found at: %MSBUILD_PATH%
+if not exist "!MSBUILD_PATH!" (
+    echo ERROR: MSBuild not found at: !MSBUILD_PATH!
     echo Please edit this script and set the correct MSBUILD_PATH
     exit /b 1
 )
@@ -63,10 +72,10 @@ echo.
 echo Step 1: Setting up DWSIM binaries...
 echo ================================================
 call "%~dp0setup-dwsim-binaries.bat"
-if %ERRORLEVEL% NEQ 0 (
+if !ERRORLEVEL! NEQ 0 (
     echo.
     echo SETUP FAILED - Cannot proceed with build
-    exit /b %ERRORLEVEL%
+    exit /b !ERRORLEVEL!
 )
 
 REM ================================================
@@ -75,17 +84,18 @@ REM ================================================
 echo.
 echo Step 2: Building solution...
 echo ================================================
-echo Using MSBuild: %MSBUILD_PATH%
-echo Building: %SOLUTION_FILE% [%CONFIGURATION%]
+echo Using MSBuild: !MSBUILD_PATH!
+echo Building: !SOLUTION_FILE! [!CONFIGURATION!]
 echo.
 
-"%MSBUILD_PATH%" %SOLUTION_FILE% /p:Configuration=%CONFIGURATION% /t:%BUILD_TARGETS%
+"!MSBUILD_PATH!" !SOLUTION_FILE! /p:Configuration=!CONFIGURATION! /t:!BUILD_TARGETS!
 
-if %ERRORLEVEL% NEQ 0 (
+if !ERRORLEVEL! NEQ 0 (
     echo.
-    echo BUILD FAILED with error code %ERRORLEVEL%
-    exit /b %ERRORLEVEL%
+    echo BUILD FAILED with error code !ERRORLEVEL!
+    exit /b !ERRORLEVEL!
 )
 
 echo.
 echo BUILD SUCCEEDED
+endlocal

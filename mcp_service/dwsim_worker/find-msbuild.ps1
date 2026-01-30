@@ -17,11 +17,9 @@ if (Test-Path $ConfigFile) {
     try {
         $config = Get-Content $ConfigFile -Raw | ConvertFrom-Json
         if ($config.msbuild_path -and (Test-Path $config.msbuild_path)) {
-            Write-Host "Found MSBuild in config: $($config.msbuild_path)" -ForegroundColor Green
+            # Only output the path - no other text (batch file captures stdout)
             Write-Output $config.msbuild_path
             exit 0
-        } elseif ($config.msbuild_path) {
-            Write-Host "Warning: msbuild_path in config does not exist: $($config.msbuild_path)" -ForegroundColor Yellow
         }
     } catch {
         # Config exists but couldn't be parsed or doesn't have msbuild_path
