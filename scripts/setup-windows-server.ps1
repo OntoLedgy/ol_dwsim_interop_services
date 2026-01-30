@@ -366,8 +366,9 @@ $startHttpScript = @"
 @echo off
 cd /d "$serverPath"
 call .venv\Scripts\activate.bat
+set PYTHONPATH=$repoPath;$serverPath
 echo Starting DWSIM MCP Server (HTTP mode on port 8000)...
-python -m dwsim_mcp_server --transport streamable-http --port 8000
+dwsim-mcp run --transport streamable-http --port 8000
 "@
 Set-Content -Path "$InstallPath\start-http.bat" -Value $startHttpScript
 
@@ -376,8 +377,9 @@ $startStdioScript = @"
 @echo off
 cd /d "$serverPath"
 call .venv\Scripts\activate.bat
+set PYTHONPATH=$repoPath;$serverPath
 echo Starting DWSIM MCP Server (stdio mode)...
-python -m dwsim_mcp_server
+dwsim-mcp run
 "@
 Set-Content -Path "$InstallPath\start-stdio.bat" -Value $startStdioScript
 
@@ -427,7 +429,7 @@ Manual Commands:
 ----------------
   cd "$serverPath"
   .\.venv\Scripts\Activate.ps1
-  python -m dwsim_mcp_server --transport streamable-http --port 8000
+  dwsim-mcp run --transport streamable-http --port 8000
 
 Firewall (if needed):
 ---------------------
