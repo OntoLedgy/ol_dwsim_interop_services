@@ -249,7 +249,15 @@ if ($LASTEXITCODE -eq 0) {
 # STEP 10: Configure MSBuild path in config
 # ============================================
 Write-Step "Configuring MSBuild path"
+
+# Build scripts expect config at DwsimWorker/dwsim.config.json
+# CLI creates it at dwsim_worker/dwsim.config.json
+# We need to create/update at the build location
 $configPath = "$workerPath\DwsimWorker\dwsim.config.json"
+$cliConfigPath = "$workerPath\dwsim.config.json"
+
+# DWSIM binaries path (downloaded by CLI)
+$dwsimBinPath = "$workerPath\dwsim_binaries\x64\Debug"
 
 # Find MSBuild - check multiple common locations
 $msbuildPath = ""
@@ -293,15 +301,21 @@ if (-not $msbuildPath) {
     exit 1
 }
 
-# Update config file with MSBuild path (CLI already created it with dwsim_path)
-if (Test-Path $configPath) {
-    $config = Get-Content $configPath -Raw | ConvertFrom-Json
-    $config | Add-Member -NotePropertyName "msbuild_path" -NotePropertyValue ($msbuildPath -replace '\\', '/') -Force
-    $config | ConvertTo-Json -Depth 2 | Set-Content -Path $configPath
-    Write-Success "Updated config with MSBuild path"
-    Write-Host "  msbuild_path: $msbuildPath"
-} else {
-    Write-Warning "Config file not found at $configPath - CLI download may have failed"
+# Create config file for build scripts (at DwsimWorker/dwsim.config.json)
+# This is separate from CLI config - build scripts need it here
+$config = @{
+    dwsim_path = ($dwsimBinPath -replace '\\', '/')
+    msbuild_path = ($msbuildPath -replace '\\', '/')
+}
+$config | ConvertTo-Json -Depth 2 | Set-Content -Path $configPath
+Write-Success "Created config at $configPath"
+Write-Host "  dwsim_path: $dwsimBinPath"
+Write-Host "  msbuild_path: $msbuildPath"
+
+# Also copy to CLI location if it doesn't exist (for dwsim-mcp doctor)
+if (-not (Test-Path $cliConfigPath)) {
+    $config | ConvertTo-Json -Depth 2 | Set-Content -Path $cliConfigPath
+    Write-Host "  Also created at $cliConfigPath"
 }
 
 # ============================================
