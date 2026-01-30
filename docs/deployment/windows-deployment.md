@@ -2,6 +2,30 @@
 
 This guide covers deploying the DWSIM MCP Server on Windows systems.
 
+## Quick Start (TL;DR)
+
+For a fresh Windows Server 2022 with Desktop Experience:
+
+```powershell
+# Run as Administrator
+Set-ExecutionPolicy Bypass -Scope Process -Force
+
+# Install Chocolatey
+iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+# Install prerequisites
+choco install git python312 visualstudio2022buildtools -y
+
+# Clone and run automated setup
+git clone <repository-url> C:\DwsimMcp\repo
+C:\DwsimMcp\repo\scripts\setup-windows-server.ps1 -RepoUrl "<repository-url>" -InstallPath "C:\DwsimMcp"
+
+# Start the server
+C:\DwsimMcp\start-http.bat
+```
+
+For detailed instructions, continue reading below.
+
 ## Platform Requirements
 
 DWSIM requires Windows with Desktop Experience (full GUI) due to its dependency on Eto.Forms/WinForms. **Windows Server Core will NOT work.**
@@ -36,14 +60,98 @@ var platform = getPlatformMethod.Invoke(null, new object[] { "WinForms" });
 | Windows Server 2019 with Desktop Experience | Yes | Includes GUI components |
 | Windows Server 2019 Core | **NO** | Missing GUI subsystem |
 
+## Hardware Requirements
+
+### Recommended Specs for Initial Testing (1-2 Concurrent Users)
+
+For a small-scale deployment during initial testing, use the following minimum specifications:
+
+| Resource | Minimum | Recommended | Notes |
+|----------|---------|-------------|-------|
+| **vCPUs** | 2 | 4 | DWSIM simulations are CPU-intensive |
+| **RAM** | 8 GB | 16 GB | .NET runtime + DWSIM + Python overhead |
+| **Storage** | 40 GB SSD | 60 GB SSD | OS + DWSIM (~2GB) + simulations |
+| **Network** | 10 Mbps | 100 Mbps | HTTP transport for MCP communication |
+
+### Resource Breakdown
+
+- **Operating System**: Windows Server 2022 with Desktop Experience requires ~15-20 GB
+- **DWSIM Installation**: ~2 GB
+- **Python + Dependencies**: ~1 GB
+- **DwsimWorker + Binaries**: ~500 MB
+- **Simulation Files**: Variable (allow 10-20 GB for case files and temp data)
+
+### Cloud VM Size Recommendations
+
+| Cloud Provider | VM Size | vCPU | RAM | Cost Tier |
+|----------------|---------|------|-----|-----------|
+| **Azure** | Standard_D2s_v5 | 2 | 8 GB | Low |
+| **Azure** | Standard_D4s_v5 | 4 | 16 GB | Recommended |
+| **AWS** | t3.large | 2 | 8 GB | Low |
+| **AWS** | t3.xlarge | 4 | 16 GB | Recommended |
+| **GCP** | e2-standard-2 | 2 | 8 GB | Low |
+| **GCP** | e2-standard-4 | 4 | 16 GB | Recommended |
+
+### Scaling Considerations
+
+For production with more concurrent users, scale resources as follows:
+- Add 2 GB RAM per additional concurrent user
+- Add 1 vCPU per 2 additional concurrent users
+- Consider dedicated storage for simulation case files
+
 ## Prerequisites
 
 1. **Windows OS**: Windows 10/11 Pro or Windows Server with Desktop Experience
 2. **.NET Framework 4.8**: Pre-installed on Windows 10 1903+ and Server 2022
 3. **Python 3.11+**: Download from python.org or use winget
 4. **DWSIM 9.x**: Download from dwsim.org or build from source
+5. **Visual Studio Build Tools 2022**: With .NET desktop development workload
 
-## Installation Steps
+## Automated Installation (Recommended)
+
+For fresh Windows Server 2022 deployments, use the automated setup script:
+
+```powershell
+# 1. Open PowerShell as Administrator
+
+# 2. Allow script execution (one-time)
+Set-ExecutionPolicy Bypass -Scope Process -Force
+
+# 3. Download and run the setup script
+# Option A: If you have git already
+git clone <repository-url> C:\temp\dwsim_setup
+C:\temp\dwsim_setup\scripts\setup-windows-server.ps1 -RepoUrl "<repository-url>"
+
+# Option B: Download script directly and run
+Invoke-WebRequest -Uri "<raw-script-url>" -OutFile setup.ps1
+.\setup.ps1 -RepoUrl "<repository-url>"
+```
+
+**Script Parameters:**
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `-RepoUrl` | (required) | Git repository URL |
+| `-InstallPath` | `C:\DwsimMcp` | Base installation directory |
+| `-DwsimVersion` | `9.1` | DWSIM version to install |
+| `-SkipReboot` | `$false` | Skip reboot prompt |
+
+**What the script installs:**
+1. Chocolatey package manager
+2. Git
+3. Python 3.12
+4. Visual Studio Build Tools 2022 (with .NET workload)
+5. DWSIM 9.x
+6. Clones and builds the repository
+7. Creates Python virtual environment
+8. Configures environment files
+9. Creates start scripts
+
+After completion, start the server with:
+```powershell
+C:\DwsimMcp\start-http.bat
+```
+
+## Manual Installation Steps
 
 ### Step 1: Install Python
 
