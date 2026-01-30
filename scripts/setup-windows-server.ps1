@@ -212,7 +212,8 @@ $env:PYTHONPATH = "$repoPath;$serverPath"
 # This downloads to dwsim_worker/dwsim_binaries/x64/Debug and creates dwsim.config.json
 Write-Host "Running: dwsim-mcp setup --download"
 Write-Host "Source: https://github.com/OntoLedgy/dwsim/releases/download/v9.0.5-mcp/dwsim_binaries.zip"
-& $venvPython -m dwsim_mcp_server setup --download
+$dwsimMcpCli = "$serverPath\.venv\Scripts\dwsim-mcp.exe"
+& $dwsimMcpCli setup --download
 
 if ($LASTEXITCODE -eq 0) {
     Write-Success "DWSIM binaries downloaded successfully"
@@ -328,7 +329,7 @@ Write-Success "Created start scripts in $InstallPath"
 # ============================================
 Write-Step "Running diagnostics"
 Set-Location $serverPath
-& $venvPython -m dwsim_mcp_server doctor
+& $dwsimMcpCli doctor
 
 # ============================================
 # SUMMARY
