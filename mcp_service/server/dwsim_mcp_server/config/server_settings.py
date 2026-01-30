@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from enum import Enum
+from typing import Literal, Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -10,11 +11,33 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from dwsim_mcp_server.config.resource_limit_settings import ResourceLimitSettings
 
 
+class TransportMode(str, Enum):
+    """Available MCP transport modes."""
+
+    STDIO = "stdio"
+    STREAMABLE_HTTP = "streamable-http"
+
+
 class ServerSettings(BaseSettings):
     """Configuration values for MCP server bootstrap."""
 
     model_config = SettingsConfigDict(env_prefix="", case_sensitive=False)
 
+    transport_mode: TransportMode = Field(
+        TransportMode.STDIO,
+        validation_alias="DWSIM_TRANSPORT_MODE",
+        description="Transport mode: 'stdio' for CLI/direct connection, 'streamable-http' for Docker/HTTP deployment.",
+    )
+    http_host: str = Field(
+        "0.0.0.0",
+        validation_alias="DWSIM_HTTP_HOST",
+        description="Host address for HTTP transport (only used when transport_mode='streamable-http').",
+    )
+    http_port: int = Field(
+        8000,
+        validation_alias="DWSIM_HTTP_PORT",
+        description="Port for HTTP transport (only used when transport_mode='streamable-http').",
+    )
     log_level: str = Field(
         "INFO",
         validation_alias="DWSIM_LOG_LEVEL",

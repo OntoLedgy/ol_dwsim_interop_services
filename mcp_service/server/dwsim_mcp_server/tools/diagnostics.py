@@ -28,14 +28,6 @@ class GetDiagnosticsInput(BaseModel):
     )
 
 
-DIAGNOSTICS_OUTPUT_SCHEMA: Dict[str, Any] = {
-    "oneOf": [
-        ServerDiagnostics.model_json_schema(),
-        SessionDiagnostics.model_json_schema(),
-    ]
-}
-
-
 def build_diagnostics_tools() -> list[types.Tool]:
     """Return MCP tool definitions for diagnostics operations."""
     return [
@@ -47,7 +39,7 @@ def build_diagnostics_tools() -> list[types.Tool]:
                 "Provide session_id to get session diagnostics; omit to get server diagnostics."
             ),
             inputSchema=GetDiagnosticsInput.model_json_schema(),
-            outputSchema=DIAGNOSTICS_OUTPUT_SCHEMA,
+            # Note: outputSchema omitted due to MCP SDK limitations with oneOf schemas
         )
     ]
 

@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Protocol, Tuple, runtime_checkable
 from urllib.parse import unquote, urlparse
 
 from mcp import types
+from pydantic import AnyUrl
 
 from dwsim_mcp_server.observability import get_logger
 
@@ -178,7 +179,7 @@ class BaseResourceProvider(ABC):
             MCP Resource object.
         """
         return types.Resource(
-            uri=uri,
+            uri=AnyUrl(uri),
             name=name,
             description=description,
             mimeType=mime_type,
@@ -203,7 +204,7 @@ class BaseResourceProvider(ABC):
         return types.ReadResourceResult(
             contents=[
                 types.TextResourceContents(
-                    uri=uri,
+                    uri=AnyUrl(uri),
                     text=text,
                     mimeType=mime_type,
                 )
