@@ -894,6 +894,10 @@ namespace DwsimWorker.Adapters
 
             try
             {
+                // CRITICAL: Configure GlobalSettings for headless operation before calling Calculate
+                // This prevents Inspector and other UI-related code from causing errors
+                ConfigureGlobalSettingsForHeadlessMode();
+
                 // Get the stream object
                 var stream = _context.GetStream(streamId);
                 if (stream == null)
@@ -1953,6 +1957,75 @@ namespace DwsimWorker.Adapters
                 {
                     nameTagProperty.SetValue(graphicObject, streamId);  // Name is the SimulationObjects key
                 }
+            }
+        }
+
+        /// <summary>
+        /// Configures DWSIM GlobalSettings for headless/automation mode.
+        /// This must be called before any DWSIM calculation to prevent UI-related errors.
+        /// </summary>
+        private void ConfigureGlobalSettingsForHeadlessMode()
+        {
+            try
+            {
+                Type globalSettingsType = null;
+                var loadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+                foreach (var asm in loadedAssemblies)
+                {
+                    if (asm.GetName().Name == "DWSIM.GlobalSettings")
+                    {
+                        globalSettingsType = asm.GetType("DWSIM.GlobalSettings.Settings");
+                        if (globalSettingsType != null)
+                        {
+                            _logger.Debug("Found DWSIM.GlobalSettings.Settings type for headless mode configuration");
+                            break;
+                        }
+                    }
+                }
+
+                if (globalSettingsType != null)
+                {
+                    // Set AutomationMode to signal headless operation
+                    var automationMode = globalSettingsType.GetProperty("AutomationMode");
+                    if (automationMode != null)
+                    {
+                        automationMode.SetValue(null, true);
+                        _logger.Debug("Set GlobalSettings.AutomationMode = true");
+                    }
+
+                    // Disable Inspector to prevent collection-related errors in headless mode
+                    var inspectorEnabled = globalSettingsType.GetProperty("InspectorEnabled");
+                    if (inspectorEnabled != null)
+                    {
+                        inspectorEnabled.SetValue(null, false);
+                        _logger.Debug("Set GlobalSettings.InspectorEnabled = false");
+                    }
+
+                    // Set CalculatorActivated for solver
+                    var calculatorActivated = globalSettingsType.GetProperty("CalculatorActivated");
+                    if (calculatorActivated != null)
+                    {
+                        calculatorActivated.SetValue(null, true);
+                        _logger.Debug("Set GlobalSettings.CalculatorActivated = true");
+                    }
+
+                    // Set CalculatorBusy = false so calculations can proceed
+                    var calculatorBusy = globalSettingsType.GetProperty("CalculatorBusy");
+                    if (calculatorBusy != null)
+                    {
+                        calculatorBusy.SetValue(null, false);
+                        _logger.Debug("Set GlobalSettings.CalculatorBusy = false");
+                    }
+                }
+                else
+                {
+                    _logger.Warning("Could not find DWSIM.GlobalSettings.Settings type for headless mode configuration");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning(ex, "Failed to configure GlobalSettings for headless mode");
             }
         }
     }
