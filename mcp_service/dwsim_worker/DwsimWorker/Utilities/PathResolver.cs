@@ -186,7 +186,8 @@ namespace DwsimWorker.Utilities
                 // Handle relative paths - resolve relative to config file directory
                 if (!Path.IsPathRooted(dwsimPath))
                 {
-                    dwsimPath = Path.GetFullPath(Path.Combine(workerDir, dwsimPath));
+                    var configDir = Path.GetDirectoryName(configPath);
+                    dwsimPath = Path.GetFullPath(Path.Combine(configDir, dwsimPath));
                     Log.Debug("Resolved relative path to: {Path}", dwsimPath);
                 }
 

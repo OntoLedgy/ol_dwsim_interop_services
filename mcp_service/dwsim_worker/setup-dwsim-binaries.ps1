@@ -8,7 +8,8 @@
 
 $ErrorActionPreference = "Stop"
 
-$ConfigFile = "DwsimWorker\dwsim.config.json"
+# Canonical config file location (single source of truth)
+$ConfigFile = "dwsim.config.json"
 $TargetDir = "dwsim_binaries\x64\Debug"
 
 Write-Host ""
@@ -172,8 +173,7 @@ $absoluteDwsimPath = (Resolve-Path $TargetDir).Path.Replace('\', '/')
 $configFiles = @(
     # Only update deployed configs, not source App.config (will be overwritten on rebuild)
     "DwsimWorker\bin\Debug\DwsimWorker.dll.config",
-    "DwsimWorker\bin\Release\DwsimWorker.dll.config",
-    "DwsimWorker\dwsim.config.json"  # Used by C# tests via TestConfiguration
+    "DwsimWorker\bin\Release\DwsimWorker.dll.config"
 )
 
 foreach ($configFile in $configFiles) {
