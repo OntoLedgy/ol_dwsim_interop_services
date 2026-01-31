@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -1030,20 +1031,24 @@ namespace DwsimWorker.Engine
                     return;
                 }
 
+                // Get the DWSIM data path for database files
+                var dwsimDataPath = GetDwsimDataPath();
+                _logger.Debug("Using DWSIM data path for databases: {DataPath}", dwsimDataPath ?? "(none)");
+
                 // Load compounds from ChemSep database
-                LoadFromDatabase(thermodynamicsAssembly, "DWSIM.Thermodynamics.Databases.ChemSep", targetDictionary, "ChemSep");
+                LoadFromDatabase(thermodynamicsAssembly, "DWSIM.Thermodynamics.Databases.ChemSep", targetDictionary, "ChemSep", dwsimDataPath);
 
                 // Load compounds from CoolProp database
-                LoadFromDatabase(thermodynamicsAssembly, "DWSIM.Thermodynamics.Databases.CoolProp", targetDictionary, "CoolProp");
+                LoadFromDatabase(thermodynamicsAssembly, "DWSIM.Thermodynamics.Databases.CoolProp", targetDictionary, "CoolProp", dwsimDataPath);
 
                 // Load compounds from Biodiesel database
-                LoadFromDatabase(thermodynamicsAssembly, "DWSIM.Thermodynamics.Databases.Biodiesel", targetDictionary, "Biodiesel");
+                LoadFromDatabase(thermodynamicsAssembly, "DWSIM.Thermodynamics.Databases.Biodiesel", targetDictionary, "Biodiesel", dwsimDataPath);
 
                 // Load compounds from ChEDL_Thermo database
-                LoadFromDatabase(thermodynamicsAssembly, "DWSIM.Thermodynamics.Databases.ChEDL_Thermo", targetDictionary, "ChEDL_Thermo");
+                LoadFromDatabase(thermodynamicsAssembly, "DWSIM.Thermodynamics.Databases.ChEDL_Thermo", targetDictionary, "ChEDL_Thermo", dwsimDataPath);
 
                 // Load compounds from Electrolyte database
-                LoadFromDatabase(thermodynamicsAssembly, "DWSIM.Thermodynamics.Databases.Electrolyte", targetDictionary, "Electrolyte");
+                LoadFromDatabase(thermodynamicsAssembly, "DWSIM.Thermodynamics.Databases.Electrolyte", targetDictionary, "Electrolyte", dwsimDataPath);
 
                 _logger.Information("Compound database populated with {Count} compounds from DWSIM databases", targetDictionary.Count);
 
@@ -1087,10 +1092,58 @@ namespace DwsimWorker.Engine
         }
 
         /// <summary>
+        /// Gets the DWSIM data path where database files (like chemsep1.xml) are located.
+        /// </summary>
+        private string GetDwsimDataPath()
+        {
+            // Try to get path from config first
+            var assemblyPath = _config?.AssemblyConfig?.AssemblyPath;
+            if (!string.IsNullOrEmpty(assemblyPath) && Directory.Exists(assemblyPath))
+            {
+                _logger.Debug("Using assembly path from config: {Path}", assemblyPath);
+                return assemblyPath;
+            }
+
+            // Try to find from loaded DWSIM assemblies
+            var dwsimAssemblies = AppDomain.CurrentDomain.GetAssemblies()
+                .Where(a => a.FullName.Contains("DWSIM") && !a.IsDynamic)
+                .ToList();
+
+            foreach (var assembly in dwsimAssemblies)
+            {
+                try
+                {
+                    var location = assembly.Location;
+                    if (!string.IsNullOrEmpty(location))
+                    {
+                        var dir = Path.GetDirectoryName(location);
+                        if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+                        {
+                            // Check if chemsep1.xml exists in this directory
+                            var chemsepPath = Path.Combine(dir, "chemsep1.xml");
+                            if (File.Exists(chemsepPath))
+                            {
+                                _logger.Debug("Found chemsep1.xml at: {Path}", dir);
+                                return dir;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Debug(ex, "Could not get location for assembly: {Assembly}", assembly.FullName);
+                }
+            }
+
+            _logger.Warning("Could not determine DWSIM data path - database loading may fail");
+            return null;
+        }
+
+        /// <summary>
         /// Loads compounds from a specific DWSIM database type.
         /// Follows the pattern: new Database() -> Load() -> Transfer() -> Add to dictionary
         /// </summary>
-        private void LoadFromDatabase(Assembly assembly, string typeName, System.Collections.IDictionary targetDictionary, string databaseName)
+        private void LoadFromDatabase(Assembly assembly, string typeName, System.Collections.IDictionary targetDictionary, string databaseName, string dataPath = null)
         {
             try
             {
@@ -1164,7 +1217,10 @@ namespace DwsimWorker.Engine
                         }
                         else if (parameters[i].ParameterType == typeof(string))
                         {
-                            args[i] = ""; // Empty string for path parameters
+                            // Use the data path for string parameters (needed for ChemSep database)
+                            args[i] = dataPath ?? "";
+                            _logger.Debug("Using path '{Path}' for {DatabaseName}.Transfer() parameter '{ParamName}'",
+                                args[i], databaseName, parameters[i].Name);
                         }
                         else
                         {
