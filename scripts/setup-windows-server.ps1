@@ -314,9 +314,13 @@ if (Test-Path $configPath) {
 Write-Host "  dwsim_path: ./dwsim_binaries/x64/Debug (relative)"
 Write-Host "  msbuild_path: $msbuildPath"
 
-# Copy to DwsimWorker subfolder for C# tests
-Copy-Item -Path $configPath -Destination "$workerPath\DwsimWorker\dwsim.config.json" -Force
-Write-Host "  Also copied to DwsimWorker\dwsim.config.json"
+# Create config for DwsimWorker subfolder (with adjusted relative path)
+$dwsimWorkerConfig = @{
+    dwsim_path = "../dwsim_binaries/x64/Debug"
+    msbuild_path = ($msbuildPath -replace '\\', '/')
+}
+$dwsimWorkerConfig | ConvertTo-Json -Depth 2 | Set-Content -Path "$workerPath\DwsimWorker\dwsim.config.json"
+Write-Host "  Also created DwsimWorker\dwsim.config.json (with adjusted relative path)"
 
 # ============================================
 # STEP 11: Build DwsimWorker
