@@ -1,11 +1,33 @@
 # Bug Report: DWSIM MCP Flash Calculation Failure
 
-**Status:** Open
+**Status:** ✅ Fixed
 **Priority:** Critical
 **Reported:** 2026-01-31
+**Fixed:** 2026-01-31
 **Server:** 192.168.0.30:8000
 
-## Summary
+## Resolution
+
+**Root Cause:** The DWSIM Inspector component was throwing `IndexOutOfRangeException` when calling `DWSIM.Inspector.Host.CheckAndAdd` during headless flash calculations. The Inspector was not disabled in automation mode.
+
+**Fix Applied:** Added `ConfigureGlobalSettingsForHeadlessMode()` helper in `StreamAdapter.cs` that configures DWSIM's `GlobalSettings` before stream calculations:
+- `AutomationMode = true`
+- `InspectorEnabled = false` (prevents the Inspector array index error)
+- `CalculatorActivated = true`
+- `CalculatorBusy = false`
+
+**Commits:**
+- `ca4e3e5` - fix(flash): configure GlobalSettings for headless mode before stream Calculate
+- `fd312e6` - fix(thermo): validate compound names and fix stream composition in flash tests
+
+**Verification:** Golden test passed via MCP on 2026-01-31:
+- Three-phase separator simulation converged in 391ms
+- Mass balance error: 0%
+- All stream results computed correctly
+
+---
+
+## Original Summary
 
 The DWSIM MCP server's `flash_stream` tool fails with `IndexOutOfRangeException` for all flash calculations. This prevents any simulation from running successfully.
 
