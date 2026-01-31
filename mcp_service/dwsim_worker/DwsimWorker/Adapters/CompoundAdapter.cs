@@ -67,7 +67,7 @@ namespace DwsimWorker.Adapters
         {
             "Water", "H2O", "Oxygen", "O2", "Nitrogen", "N2",
             "Carbon Dioxide", "CO2", "Carbon Monoxide", "CO",
-            "Hydrogen", "H2", "Hydrogen Sulfide", "H2S",
+            "Hydrogen", "H2", "Hydrogen sulfide", "H2S",
             "Ammonia", "NH3", "Sulfur Dioxide", "SO2"
         };
 

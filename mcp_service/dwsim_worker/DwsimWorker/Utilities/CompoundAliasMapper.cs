@@ -15,7 +15,7 @@ namespace DwsimWorker.Utilities
                 { "co2", "Carbon Dioxide" },
                 { "n2", "Nitrogen" },
                 { "h2o", "Water" },
-                { "h2s", "Hydrogen Sulfide" },
+                { "h2s", "Hydrogen sulfide" },
                 { "nc4", "n-Butane" },
                 { "n-c4", "n-Butane" },
                 { "n-butane", "n-Butane" },
