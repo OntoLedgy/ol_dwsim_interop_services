@@ -4,6 +4,10 @@
       "type": "stdio",
       "command": "C:\\Users\\khanm\\AppData\\Roaming\\npm\\codex.cmd",
       "args": ["-m", "gpt-5.2-codex", "mcp-server"]
+    },
+    "dwsim": {
+      "type": "http",
+      "url": "http://192.168.0.30:8000/mcp/"
     }
   }
 }

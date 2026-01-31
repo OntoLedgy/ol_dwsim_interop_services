@@ -35,7 +35,13 @@
       "Bash(git commit:*)",
       "Bash(..venvScriptspython.exe -m pytest tests/integration/test_observability_integration.py -v)",
       "Skill(claude-delegator:setup)",
-      "mcp__context7__query-docs"
+      "mcp__context7__query-docs",
+      "Bash(grep:*)",
+      "Bash(curl:*)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "codex"
+  ]
 }
