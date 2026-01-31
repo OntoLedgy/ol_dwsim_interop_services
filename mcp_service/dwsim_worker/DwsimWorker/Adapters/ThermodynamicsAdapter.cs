@@ -103,6 +103,15 @@ namespace DwsimWorker.Adapters
                 return CreateFailureResult(calculationType, temperatureK, pressurePa);
             }
 
+            // Validate that all compounds are registered in the flowsheet
+            var invalidCompounds = compounds.Where(c => !contextCompounds.Contains(c, StringComparer.OrdinalIgnoreCase)).ToList();
+            if (invalidCompounds.Count > 0)
+            {
+                _logger.Warning("[ThermodynamicsAdapter] Flash failed: unregistered compounds [{InvalidCompounds}]. Registered: [{RegisteredCompounds}]",
+                    string.Join(",", invalidCompounds), string.Join(",", contextCompounds));
+                return CreateFailureResult(calculationType, temperatureK, pressurePa);
+            }
+
             // Generate a unique temporary stream ID
             var tempStreamId = $"_FLASH_TEMP_{Guid.NewGuid():N}";
 

@@ -231,7 +231,7 @@ def test_flash_ph_water_steam_transition(session_with_property_package):
             name="WATER_FEED",
             temperature=373.15,
             pressure=101325.0,
-            composition={"Water": 1.0},
+            composition={"Water": 1.0, "Methane": 0.0},
         )
 
         molar_enthalpy = await _get_molar_property_value(
