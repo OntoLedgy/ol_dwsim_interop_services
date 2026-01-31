@@ -45,9 +45,10 @@ try {
     # Convert forward slashes to backslashes for Windows
     $sourcePath = $sourcePath -replace '/', '\'
 
-    # Handle relative paths
+    # Handle relative paths - resolve relative to config file's directory
     if (-not [System.IO.Path]::IsPathRooted($sourcePath)) {
-        $sourcePath = Join-Path $PSScriptRoot $sourcePath | Resolve-Path
+        $configDir = Split-Path -Parent (Resolve-Path $ConfigFile)
+        $sourcePath = Join-Path $configDir $sourcePath | Resolve-Path
     }
 
 } catch {

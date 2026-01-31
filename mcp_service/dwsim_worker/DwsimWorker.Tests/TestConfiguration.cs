@@ -101,7 +101,24 @@ namespace DwsimWorker.Tests
                 }
 
                 var config = JsonConvert.DeserializeObject<DwsimConfig>(text);
-                return string.IsNullOrWhiteSpace(config?.DwsimPath) ? null : config.DwsimPath.Trim();
+                if (string.IsNullOrWhiteSpace(config?.DwsimPath))
+                {
+                    return null;
+                }
+
+                var dwsimPath = config.DwsimPath.Trim();
+
+                // Handle relative paths - resolve relative to config file directory
+                if (!Path.IsPathRooted(dwsimPath))
+                {
+                    var configDir = Path.GetDirectoryName(ConfigFilePath);
+                    if (!string.IsNullOrEmpty(configDir))
+                    {
+                        dwsimPath = Path.GetFullPath(Path.Combine(configDir, dwsimPath));
+                    }
+                }
+
+                return dwsimPath;
             }
             catch
             {

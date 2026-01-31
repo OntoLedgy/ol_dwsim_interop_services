@@ -250,14 +250,9 @@ if ($LASTEXITCODE -eq 0) {
 # ============================================
 Write-Step "Configuring MSBuild path"
 
-# Build scripts expect config at DwsimWorker/dwsim.config.json
-# CLI creates it at dwsim_worker/dwsim.config.json
-# We need to create/update at the build location
-$configPath = "$workerPath\DwsimWorker\dwsim.config.json"
-$cliConfigPath = "$workerPath\dwsim.config.json"
-
-# DWSIM binaries path (downloaded by CLI)
-$dwsimBinPath = "$workerPath\dwsim_binaries\x64\Debug"
+# The CLI's --download flag now creates dwsim.config.json with relative path
+# We only need to add msbuild_path if not already present
+$configPath = "$workerPath\dwsim.config.json"
 
 # Find MSBuild - check multiple common locations
 $msbuildPath = ""
@@ -301,22 +296,27 @@ if (-not $msbuildPath) {
     exit 1
 }
 
-# Create config file for build scripts (at DwsimWorker/dwsim.config.json)
-# This is separate from CLI config - build scripts need it here
-$config = @{
-    dwsim_path = ($dwsimBinPath -replace '\\', '/')
-    msbuild_path = ($msbuildPath -replace '\\', '/')
+# Read existing config (created by CLI) and add msbuild_path
+if (Test-Path $configPath) {
+    $config = Get-Content $configPath -Raw | ConvertFrom-Json
+    $config | Add-Member -NotePropertyName "msbuild_path" -NotePropertyValue ($msbuildPath -replace '\\', '/') -Force
+    $config | ConvertTo-Json -Depth 2 | Set-Content -Path $configPath
+    Write-Success "Updated config with msbuild_path at $configPath"
+} else {
+    # Create config with relative path (fallback if CLI didn't create it)
+    $config = @{
+        dwsim_path = "./dwsim_binaries/x64/Debug"
+        msbuild_path = ($msbuildPath -replace '\\', '/')
+    }
+    $config | ConvertTo-Json -Depth 2 | Set-Content -Path $configPath
+    Write-Success "Created config at $configPath"
 }
-$config | ConvertTo-Json -Depth 2 | Set-Content -Path $configPath
-Write-Success "Created config at $configPath"
-Write-Host "  dwsim_path: $dwsimBinPath"
+Write-Host "  dwsim_path: ./dwsim_binaries/x64/Debug (relative)"
 Write-Host "  msbuild_path: $msbuildPath"
 
-# Also copy to CLI location if it doesn't exist (for dwsim-mcp doctor)
-if (-not (Test-Path $cliConfigPath)) {
-    $config | ConvertTo-Json -Depth 2 | Set-Content -Path $cliConfigPath
-    Write-Host "  Also created at $cliConfigPath"
-}
+# Copy to DwsimWorker subfolder for C# tests
+Copy-Item -Path $configPath -Destination "$workerPath\DwsimWorker\dwsim.config.json" -Force
+Write-Host "  Also copied to DwsimWorker\dwsim.config.json"
 
 # ============================================
 # STEP 11: Build DwsimWorker

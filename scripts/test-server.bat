@@ -13,7 +13,7 @@ set CONTENT_TYPE=-H "Content-Type: application/json"
 set ACCEPT=-H "Accept: application/json, text/event-stream"
 
 echo [1/4] Testing server connectivity...
-curl.exe -s -o nul -w "HTTP Status: %%{http_code}" %MCP_ENDPOINT% %CONTENT_TYPE% %ACCEPT% > "%TEMP%\http_status.txt"
+curl.exe -s -o NUL -w "HTTP Status: %%{http_code}" %MCP_ENDPOINT% %CONTENT_TYPE% %ACCEPT% > "%TEMP%\http_status.txt"
 set /p HTTP_STATUS=<"%TEMP%\http_status.txt"
 echo %HTTP_STATUS%
 if %ERRORLEVEL% NEQ 0 (
@@ -44,7 +44,7 @@ if defined SESSION_ID (
 )
 echo.
 
-findstr /C:"serverInfo" "%TEMP%\mcp_test.json" > nul
+findstr /C:"serverInfo" "%TEMP%\mcp_test.json" > NUL
 if %ERRORLEVEL% NEQ 0 (
     echo [FAIL] MCP initialize failed
     exit /b 1
@@ -61,7 +61,7 @@ if defined SESSION_ID (
 echo Response:
 type "%TEMP%\mcp_tools.json"
 echo.
-findstr /C:"tools" "%TEMP%\mcp_tools.json" > nul
+findstr /C:"tools" "%TEMP%\mcp_tools.json" > NUL
 if %ERRORLEVEL% NEQ 0 (
     echo [FAIL] tools/list failed
     exit /b 1
@@ -78,8 +78,8 @@ if defined SESSION_ID echo Session ID: !SESSION_ID!
 echo.
 
 :cleanup
-del "%TEMP%\mcp_test.json" 2>nul
-del "%TEMP%\mcp_tools.json" 2>nul
-del "%TEMP%\mcp_headers.txt" 2>nul
-del "%TEMP%\http_status.txt" 2>nul
+del "%TEMP%\mcp_test.json" 2>NUL
+del "%TEMP%\mcp_tools.json" 2>NUL
+del "%TEMP%\mcp_headers.txt" 2>NUL
+del "%TEMP%\http_status.txt" 2>NUL
 endlocal

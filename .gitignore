@@ -103,6 +103,8 @@ temp/
 logs/
 *.dwxmz
 *.dwxml
+# DWSIM config files (machine-specific, created by setup)
+/mcp_service/dwsim_worker/dwsim.config.json
 /mcp_service/dwsim_worker/DwsimWorker/dwsim.config.json
 /mcp_service/dwsim_worker/dwsim_binaries/
 

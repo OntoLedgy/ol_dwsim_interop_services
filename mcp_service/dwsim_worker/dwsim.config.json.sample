@@ -1,4 +1,5 @@
 {
-  "dwsim_path": "d:/path/to/dwsim/DWSIM/bin/x64/Debug",
-  "msbuild_path": "D:/Apps/Microsoft Visual Studio/2022/Professional/MSBuild/Current/Bin/MSBuild.exe"
+  "dwsim_path": "./dwsim_binaries/x64/Debug",
+  "msbuild_path": null,
+  "_comment": "dwsim_path: Relative paths are resolved relative to this config file's directory. Use ./dwsim_binaries/x64/Debug for downloaded binaries (default). Use absolute path for custom DWSIM installations. msbuild_path: Optional, auto-detected if not specified."
 }

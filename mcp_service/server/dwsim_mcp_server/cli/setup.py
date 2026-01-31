@@ -38,6 +38,27 @@ class SetupManager:
     def __init__(self, console: Console | None = None) -> None:
         self._console = console or Console()
 
+    def read_config_dwsim_path(self) -> Path | None:
+        """Read dwsim_path from config file, resolving relative paths."""
+        config_path = self._config_path()
+        if not config_path.exists():
+            return None
+
+        try:
+            payload = json.loads(config_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return None
+
+        dwsim_path = payload.get("dwsim_path")
+        if not dwsim_path:
+            return None
+
+        path = Path(dwsim_path)
+        # Resolve relative paths relative to config file directory
+        if not path.is_absolute():
+            path = (config_path.parent / path).resolve()
+        return path
+
     def detect_dwsim_path(self) -> Path | None:
         """Detect the DWSIM installation directory."""
         for candidate in self._candidate_paths():
@@ -79,11 +100,30 @@ class SetupManager:
             if not (base_dir / filename).exists()
         ]
 
-    def create_config_file(self, dwsim_path: Path) -> Path:
-        """Create the DWSIM configuration JSON file."""
+    def create_config_file(
+        self, dwsim_path: Path, *, use_relative: bool = False
+    ) -> Path:
+        """Create the DWSIM configuration JSON file.
+
+        Args:
+            dwsim_path: Path to DWSIM binaries (absolute or relative).
+            use_relative: If True, store path relative to config file location.
+        """
         config_path = self._config_path()
         config_path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {"dwsim_path": str(dwsim_path)}
+
+        if use_relative:
+            # Store relative path from config directory to dwsim_path
+            try:
+                rel_path = dwsim_path.resolve().relative_to(config_path.parent.resolve())
+                path_str = "./" + str(rel_path).replace("\\", "/")
+            except ValueError:
+                # Cannot make relative, use absolute
+                path_str = str(dwsim_path)
+        else:
+            path_str = str(dwsim_path)
+
+        payload = {"dwsim_path": path_str}
         config_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         return config_path
 

@@ -150,10 +150,12 @@ def setup(
 
     manager = SetupManager(console=console)
     detected_path = None
+    use_relative = False
 
     if download:
         try:
             detected_path = manager.download_dwsim_binaries()
+            use_relative = True  # Downloaded binaries use relative path
             console.print("[green]DWSIM binaries downloaded.[/green]")
         except RuntimeError as exc:
             console.print(f"[red]{exc}[/red]")
@@ -181,7 +183,7 @@ def setup(
     if detected_path.is_file() and detected_path.name.lower() == "dwsim.exe":
         detected_path = detected_path.parent
 
-    config_path = manager.create_config_file(detected_path)
+    config_path = manager.create_config_file(detected_path, use_relative=use_relative)
     console.print("[green]DWSIM configuration created.[/green]")
     console.print(f"Config: {config_path}")
 

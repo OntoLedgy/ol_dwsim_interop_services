@@ -28,7 +28,7 @@
 
 param(
     [string]$InstallPath = "C:\DwsimMcp",
-    [string]$Username = $env:USERNAME
+    [string]$Username
 )
 
 $ErrorActionPreference = "Stop"
@@ -36,6 +36,19 @@ $ProgressPreference = "SilentlyContinue"
 
 function Write-Step { param($msg) Write-Host "`n=== $msg ===" -ForegroundColor Cyan }
 function Write-Success { param($msg) Write-Host "[OK] $msg" -ForegroundColor Green }
+
+# Require username to be specified explicitly when running as Administrator
+if (-not $Username) {
+    Write-Host "[ERROR] You must specify -Username when running as Administrator." -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Usage:" -ForegroundColor Yellow
+    Write-Host "  .\setup-prerequisites.ps1 -Username 'yourusername'" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "Example:" -ForegroundColor Yellow
+    Write-Host "  .\setup-prerequisites.ps1 -Username 'khanm'" -ForegroundColor Yellow
+    Write-Host ""
+    exit 1
+}
 
 Write-Host @"
 =========================================
@@ -103,6 +116,20 @@ if (-not $vsInstalled) {
     Write-Success "Visual Studio already installed"
 }
 
+# Grant read/execute access to VS Build Tools for all users (required for non-admin builds)
+Write-Host "Granting read/execute access to VS Build Tools for all users..."
+$vsBuildToolsPath = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+$vsInstallerPath = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
+
+if (Test-Path $vsBuildToolsPath) {
+    & icacls $vsBuildToolsPath /grant "Users:(OI)(CI)RX" /T /Q
+    Write-Success "VS Build Tools permissions updated for all users"
+}
+if (Test-Path $vsInstallerPath) {
+    & icacls $vsInstallerPath /grant "Users:(OI)(CI)RX" /T /Q
+    Write-Success "VS Installer permissions updated for all users"
+}
+
 # ============================================
 # STEP 5: Create Install Directory with User Permissions
 # ============================================
@@ -155,7 +182,6 @@ Directory created:
   $InstallPath (with full permissions for $Username)
 
 NEXT STEP (run as normal user):
-  cd $InstallPath
-  .\setup-user.ps1 -RepoUrl "https://github.com/your-org/dwsim_interop_services.git"
+  .\setup-user.ps1
 
 "@ -ForegroundColor Green

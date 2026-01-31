@@ -4,13 +4,14 @@ using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Newtonsoft.Json;
 using Serilog;
 
 namespace DwsimWorker.Utilities
 {
     /// <summary>
     /// Static utility class for resolving DWSIM assembly paths using multiple fallback strategies.
-    /// Supports environment variables, App.config settings, and default installation paths.
+    /// Supports environment variables, JSON config files, App.config settings, and default installation paths.
     /// </summary>
     public static class PathResolver
     {
@@ -35,10 +36,21 @@ namespace DwsimWorker.Utilities
         };
 
         /// <summary>
+        /// JSON config class for dwsim.config.json.
+        /// </summary>
+        private sealed class DwsimJsonConfig
+        {
+            [JsonProperty("dwsim_path")]
+            public string DwsimPath { get; set; }
+        }
+
+        /// <summary>
         /// Resolves the DWSIM assembly path using multiple fallback strategies:
         /// 1. DWSIM_PATH environment variable
-        /// 2. DwsimPath in App.config appSettings
-        /// 3. Default installation paths
+        /// 2. dwsim.config.json (supports relative paths)
+        /// 3. DwsimPath in App.config appSettings
+        /// 4. Relative dwsim_binaries folder (for downloaded binaries)
+        /// 5. Default installation paths
         /// </summary>
         /// <returns>The resolved DWSIM assembly path.</returns>
         /// <exception cref="DirectoryNotFoundException">
@@ -56,7 +68,15 @@ namespace DwsimWorker.Utilities
                 return envPath;
             }
 
-            // Strategy 2: App.config
+            // Strategy 2: JSON config file (supports relative paths)
+            var jsonConfigPath = GetJsonConfigPath();
+            if (!string.IsNullOrEmpty(jsonConfigPath) && ValidatePath(jsonConfigPath))
+            {
+                Log.Information("DWSIM path resolved from dwsim.config.json: {Path}", jsonConfigPath);
+                return jsonConfigPath;
+            }
+
+            // Strategy 3: App.config
             var configPath = GetConfigPath();
             if (!string.IsNullOrEmpty(configPath) && ValidatePath(configPath))
             {
@@ -64,7 +84,15 @@ namespace DwsimWorker.Utilities
                 return configPath;
             }
 
-            // Strategy 3: Default installation paths
+            // Strategy 4: Relative dwsim_binaries folder (for downloaded binaries)
+            var relativeBinPath = GetRelativeBinariesPath();
+            if (!string.IsNullOrEmpty(relativeBinPath) && ValidatePath(relativeBinPath))
+            {
+                Log.Information("DWSIM path resolved from relative binaries folder: {Path}", relativeBinPath);
+                return relativeBinPath;
+            }
+
+            // Strategy 5: Default installation paths
             var defaultPath = GetDefaultInstallPath();
             if (!string.IsNullOrEmpty(defaultPath) && ValidatePath(defaultPath))
             {
@@ -75,7 +103,9 @@ namespace DwsimWorker.Utilities
             // All strategies failed
             var attemptedPaths = new List<string>();
             if (!string.IsNullOrEmpty(envPath)) attemptedPaths.Add($"Environment: {envPath}");
-            if (!string.IsNullOrEmpty(configPath)) attemptedPaths.Add($"Config: {configPath}");
+            if (!string.IsNullOrEmpty(jsonConfigPath)) attemptedPaths.Add($"Config: {jsonConfigPath}");
+            if (!string.IsNullOrEmpty(configPath)) attemptedPaths.Add($"AppConfig: {configPath}");
+            if (!string.IsNullOrEmpty(relativeBinPath)) attemptedPaths.Add($"RelativeBin: {relativeBinPath}");
             attemptedPaths.AddRange(DefaultInstallPaths.Select(p => $"Default: {p}"));
 
             var errorMessage = $"DWSIM assemblies not found. Attempted paths:\n  {string.Join("\n  ", attemptedPaths)}\n" +
@@ -103,6 +133,112 @@ namespace DwsimWorker.Utilities
             }
 
             return path;
+        }
+
+        /// <summary>
+        /// Gets the DWSIM path from dwsim.config.json file.
+        /// Supports both absolute and relative paths.
+        /// </summary>
+        /// <returns>The resolved path from JSON config, or null if not found.</returns>
+        public static string GetJsonConfigPath()
+        {
+            try
+            {
+                // Look for dwsim.config.json in the worker directory (parent of bin/Debug)
+                var assemblyPath = Assembly.GetExecutingAssembly().Location;
+                if (string.IsNullOrWhiteSpace(assemblyPath))
+                {
+                    Log.Debug("Cannot determine assembly location for JSON config lookup");
+                    return null;
+                }
+
+                var assemblyDir = Path.GetDirectoryName(assemblyPath);
+                if (assemblyDir == null)
+                {
+                    return null;
+                }
+
+                // Navigate up from bin/Debug to DwsimWorker, then to dwsim_worker
+                var workerDir = Path.GetFullPath(Path.Combine(assemblyDir, "..", "..", ".."));
+                var configPath = Path.Combine(workerDir, "dwsim.config.json");
+
+                if (!File.Exists(configPath))
+                {
+                    Log.Debug("dwsim.config.json not found at {Path}", configPath);
+                    return null;
+                }
+
+                var text = File.ReadAllText(configPath);
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    return null;
+                }
+
+                var config = JsonConvert.DeserializeObject<DwsimJsonConfig>(text);
+                if (string.IsNullOrWhiteSpace(config?.DwsimPath))
+                {
+                    Log.Debug("dwsim_path not found or empty in JSON config");
+                    return null;
+                }
+
+                var dwsimPath = config.DwsimPath.Trim();
+
+                // Handle relative paths - resolve relative to config file directory
+                if (!Path.IsPathRooted(dwsimPath))
+                {
+                    dwsimPath = Path.GetFullPath(Path.Combine(workerDir, dwsimPath));
+                    Log.Debug("Resolved relative path to: {Path}", dwsimPath);
+                }
+
+                Log.Debug("Found dwsim_path in JSON config: {Path}", dwsimPath);
+                return dwsimPath;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Error reading dwsim.config.json");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets the DWSIM path from the relative dwsim_binaries folder.
+        /// This is used when binaries are downloaded to the standard location.
+        /// </summary>
+        /// <returns>The path to relative binaries, or null if not found.</returns>
+        public static string GetRelativeBinariesPath()
+        {
+            try
+            {
+                var assemblyPath = Assembly.GetExecutingAssembly().Location;
+                if (string.IsNullOrWhiteSpace(assemblyPath))
+                {
+                    return null;
+                }
+
+                var assemblyDir = Path.GetDirectoryName(assemblyPath);
+                if (assemblyDir == null)
+                {
+                    return null;
+                }
+
+                // Navigate up from bin/Debug to DwsimWorker, then to dwsim_worker, then to dwsim_binaries
+                var binariesPath = Path.GetFullPath(Path.Combine(
+                    assemblyDir, "..", "..", "..", "dwsim_binaries", "x64", "Debug"));
+
+                if (Directory.Exists(binariesPath))
+                {
+                    Log.Debug("Found relative binaries folder: {Path}", binariesPath);
+                    return binariesPath;
+                }
+
+                Log.Debug("Relative binaries folder not found at {Path}", binariesPath);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Error checking relative binaries path");
+                return null;
+            }
         }
 
         /// <summary>

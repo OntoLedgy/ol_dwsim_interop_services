@@ -184,12 +184,16 @@ class DoctorRunner:
                 remediation="Update dwsim.config.json or rerun dwsim-mcp setup.",
             )
 
+        # Resolve relative paths relative to config file directory
         path = Path(dwsim_path)
+        if not path.is_absolute():
+            path = (config_path.parent / path).resolve()
+
         if not path.exists():
             return DoctorCheck(
                 status="fail",
-                message=f"dwsim_path does not exist: {path}",
-                remediation="Update dwsim.config.json to point to a valid DWSIM install.",
+                message=f"dwsim_path does not exist: {path} (from config: {dwsim_path})",
+                remediation="Update dwsim.config.json to point to a valid DWSIM install, or run dwsim-mcp setup --download.",
             )
 
         return DoctorCheck(
@@ -224,7 +228,11 @@ class DoctorRunner:
                 remediation="Update dwsim.config.json or rerun dwsim-mcp setup.",
             )
 
+        # Resolve relative paths relative to config file directory
         base_dir = Path(dwsim_path)
+        if not base_dir.is_absolute():
+            base_dir = (config_path.parent / base_dir).resolve()
+
         if base_dir.is_file() and base_dir.name.lower() == "dwsim.exe":
             base_dir = base_dir.parent
 

@@ -12,19 +12,21 @@
     - Configures the server
 
 .PARAMETER RepoUrl
-    Git repository URL for dwsim_interop_services
+    Git repository URL (default: git@github.com:OntoLedgy/dwsim_interop_services)
 
 .PARAMETER InstallPath
     Base installation path (default: C:\DwsimMcp)
 
 .EXAMPLE
+    # Use defaults:
+    .\setup-user.ps1
+
+    # Or specify custom repo:
     .\setup-user.ps1 -RepoUrl "https://github.com/your-org/dwsim_interop_services.git"
 #>
 
 param(
-    [Parameter(Mandatory=$true)]
-    [string]$RepoUrl,
-
+    [string]$RepoUrl = "git@github.com:OntoLedgy/dwsim_interop_services",
     [string]$InstallPath = "C:\DwsimMcp"
 )
 
@@ -52,13 +54,34 @@ $missing = @()
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) { $missing += "Git" }
 if (-not (Get-Command python -ErrorAction SilentlyContinue)) { $missing += "Python" }
 
+# Try multiple methods to find MSBuild
+$msbuildPath = $null
+
+# Method 1: Try vswhere
 $vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-if (-not (Test-Path $vsWhere)) {
-    $missing += "Visual Studio Build Tools"
-} else {
+if (Test-Path $vsWhere) {
     $msbuildPath = & $vsWhere -latest -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\MSBuild.exe" 2>$null | Select-Object -First 1
-    if (-not $msbuildPath) { $missing += "MSBuild" }
 }
+
+# Method 2: Try known paths directly
+if (-not $msbuildPath) {
+    $knownPaths = @(
+        "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe",
+        "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\amd64\MSBuild.exe",
+        "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe",
+        "C:\Program Files (x86)\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe",
+        "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe",
+        "C:\Program Files (x86)\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"
+    )
+    foreach ($path in $knownPaths) {
+        if (Test-Path $path) {
+            $msbuildPath = $path
+            break
+        }
+    }
+}
+
+if (-not $msbuildPath) { $missing += "MSBuild" }
 
 if ($missing.Count -gt 0) {
     Write-Host "Missing prerequisites: $($missing -join ', ')" -ForegroundColor Red
@@ -164,21 +187,33 @@ if ($LASTEXITCODE -eq 0) {
 # ============================================
 Write-Step "Configuring build paths"
 
-$configPath = "$workerPath\DwsimWorker\dwsim.config.json"
-$dwsimBinPath = "$workerPath\dwsim_binaries\x64\Debug"
+# The CLI's --download flag now creates dwsim.config.json with relative path
+# We only need to add msbuild_path if not already present
+
+$configPath = "$workerPath\dwsim.config.json"
 
 # Find MSBuild
 $msbuildPath = & $vsWhere -latest -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\MSBuild.exe" 2>$null | Select-Object -First 1
 
-$config = @{
-    dwsim_path = ($dwsimBinPath -replace '\\', '/')
-    msbuild_path = ($msbuildPath -replace '\\', '/')
+# Read existing config (created by CLI) and add msbuild_path
+if (Test-Path $configPath) {
+    $config = Get-Content $configPath -Raw | ConvertFrom-Json
+    $config | Add-Member -NotePropertyName "msbuild_path" -NotePropertyValue ($msbuildPath -replace '\\', '/') -Force
+    $config | ConvertTo-Json -Depth 2 | Set-Content -Path $configPath
+    Write-Success "Updated config with msbuild_path at $configPath"
+} else {
+    # Create config with relative path (fallback if CLI didn't create it)
+    $config = @{
+        dwsim_path = "./dwsim_binaries/x64/Debug"
+        msbuild_path = ($msbuildPath -replace '\\', '/')
+    }
+    $config | ConvertTo-Json -Depth 2 | Set-Content -Path $configPath
+    Write-Success "Created config at $configPath"
 }
-$config | ConvertTo-Json -Depth 2 | Set-Content -Path $configPath
-Write-Success "Created config at $configPath"
 
-# Also create at root of dwsim_worker for CLI
-$config | ConvertTo-Json -Depth 2 | Set-Content -Path "$workerPath\dwsim.config.json"
+# Copy to DwsimWorker subfolder for C# tests
+Copy-Item -Path $configPath -Destination "$workerPath\DwsimWorker\dwsim.config.json" -Force
+Write-Host "  Also copied to DwsimWorker\dwsim.config.json"
 
 # ============================================
 # STEP 5: Build DwsimWorker
