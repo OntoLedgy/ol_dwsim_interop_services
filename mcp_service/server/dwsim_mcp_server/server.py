@@ -9,10 +9,16 @@ from dwsim_mcp_server.auth import AuthConfig, ClerkTokenVerifier
 from dwsim_mcp_server.config import ServerSettings
 from dwsim_mcp_server.config.server_settings import TransportMode
 from dwsim_mcp_server.context import app_lifespan
+from dwsim_mcp_server.ipc.flowsheet_client import FlowsheetClient
+from dwsim_mcp_server.ipc.limited_session_client import LimitedSessionClient
 from dwsim_mcp_server.observability import configure_logging, get_logger
 from dwsim_mcp_server.observability.settings import ObservabilitySettings
 from dwsim_mcp_server.observability.tracing import configure_tracing
 from dwsim_mcp_server.resources.registry import register_resources
+from dwsim_mcp_server.service import FlowsheetService
+from dwsim_mcp_server.service.diagnostics_service import DiagnosticsService
+from dwsim_mcp_server.services import ThermodynamicsService
+from dwsim_mcp_server.services.sensitivity_service import SensitivityService
 from dwsim_mcp_server.tools.registry import register_all_tools
 
 
@@ -35,6 +41,60 @@ def create_mcp_server(
     register_all_tools(server)
     register_resources(server)
     return server
+
+
+def create_server(settings: ServerSettings, dependencies) -> FastMCP:
+    auth_config = AuthConfig()
+    obs_settings = ObservabilitySettings.from_env()
+    return create_mcp_server(settings, auth_config, obs_settings)
+
+
+class ServerDependencies:
+    def __init__(self, settings: ServerSettings) -> None:
+        self.settings = settings
+        self.session_client = LimitedSessionClient(settings.resource_limits)
+        self.flowsheet_client = FlowsheetClient(self.session_client)
+        (
+            self.flowsheet_service,
+            self.thermodynamics_service,
+            self.sensitivity_service,
+            self.diagnostics_service,
+        ) = _build_services(settings, self.session_client, self.flowsheet_client)
+
+    async def start(self) -> None:
+        self.session_client.start_monitoring()
+
+    async def close(self) -> None:
+        await self.session_client.stop_monitoring()
+        self.session_client.dispose()
+
+
+def _build_services(
+    settings: ServerSettings,
+    session_client: LimitedSessionClient,
+    flowsheet_client: FlowsheetClient,
+) -> tuple[FlowsheetService, ThermodynamicsService, SensitivityService, DiagnosticsService]:
+    flowsheet_service = FlowsheetService(
+        session_client=session_client,
+        flowsheet_client=flowsheet_client,
+    )
+    thermodynamics_service = ThermodynamicsService(
+        session_client=session_client,
+    )
+    sensitivity_service = SensitivityService(
+        session_client=session_client,
+        flowsheet_client=flowsheet_client,
+        allowed_export_roots=settings.case_storage_roots
+        if hasattr(settings, "case_storage_roots")
+        else [],
+    )
+    diagnostics_service = DiagnosticsService(session_client=session_client)
+    return (
+        flowsheet_service,
+        thermodynamics_service,
+        sensitivity_service,
+        diagnostics_service,
+    )
 
 
 def _build_auth_settings(

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import threading
+import json
 from typing import Any, Dict, List
 
 from dwsim_mcp_server.ipc.clr_loader import load_dwsim_worker
-from dwsim_mcp_server.ipc.exceptions import map_dotnet_exception
+from dwsim_mcp_server.ipc.exceptions import SessionError, map_dotnet_exception
+from dwsim_mcp_server.ipc.session_client import _create_logger, _parse_guid
 from dwsim_mcp_server.ipc.session_client import SessionClient
 
 
@@ -224,3 +226,144 @@ class FlowsheetClient:
             return bool(self._ops.SetBinaryInteractionParameter(session_id, compound1, compound2, value))
         except Exception as exc:
             raise map_dotnet_exception(exc, kind="interop") from exc
+
+    def export_csv(
+        self,
+        session_id: str,
+        *,
+        file_path: str,
+        object_ids: List[str] | None,
+    ) -> Dict[str, Any]:
+        adapter = self._get_export_adapter(session_id)
+        try:
+            result = adapter.ExportToCsv(file_path, object_ids)
+        except Exception as exc:
+            raise map_dotnet_exception(exc, kind="interop") from exc
+        if not getattr(result, "Success", False):
+            message = getattr(result, "Message", "Export failed.")
+            raise SessionError(message)
+        data = getattr(result, "Data", None)
+        return {
+            "success": True,
+            "file_path": str(getattr(data, "FilePath", file_path)),
+            "row_count": int(getattr(data, "RowCount", 0)),
+        }
+
+    def export_json(self, session_id: str, *, format: str) -> Dict[str, Any]:
+        adapter = self._get_export_adapter(session_id)
+        try:
+            result = adapter.ExportToJson(format)
+        except Exception as exc:
+            raise map_dotnet_exception(exc, kind="interop") from exc
+        if not getattr(result, "Success", False):
+            message = getattr(result, "Message", "Export failed.")
+            raise SessionError(message)
+        raw_payload = getattr(result, "Data", "{}")
+        try:
+            payload = json.loads(str(raw_payload))
+        except json.JSONDecodeError:
+            payload = {"value": str(raw_payload)}
+        return {"data": payload}
+
+    def generate_report(self, session_id: str, *, template: str, file_path: str) -> Dict[str, Any]:
+        adapter = self._get_export_adapter(session_id)
+        try:
+            result = adapter.GenerateReport(template, file_path)
+        except Exception as exc:
+            raise map_dotnet_exception(exc, kind="interop") from exc
+        if not getattr(result, "Success", False):
+            message = getattr(result, "Message", "Report generation failed.")
+            raise SessionError(message)
+        data = getattr(result, "Data", None)
+        return {"success": True, "file_path": str(getattr(data, "FilePath", file_path))}
+
+    def save_case(self, session_id: str, *, file_path: str) -> Dict[str, Any]:
+        adapter = self._get_export_adapter(session_id)
+        try:
+            result = adapter.SaveCase(file_path)
+        except Exception as exc:
+            raise map_dotnet_exception(exc, kind="interop") from exc
+        if not getattr(result, "Success", False):
+            message = getattr(result, "Message", "Save case failed.")
+            raise SessionError(message)
+        data = getattr(result, "Data", None)
+        return {"success": True, "file_path": str(getattr(data, "FilePath", file_path))}
+
+    def validate_compounds(self, session_id: str, *, compound_names: list[str]) -> Dict[str, Any]:
+        self._ensure_initialized()
+        context = self._get_session_context(session_id)
+        try:
+            from DwsimWorker.Adapters import CompoundAdapter  # type: ignore
+        except Exception as exc:
+            raise map_dotnet_exception(exc, kind="interop") from exc
+
+        adapter = CompoundAdapter(_create_logger(), context)
+        results = []
+        for name in compound_names:
+            result = adapter.ValidateCompound(name)
+            canonical = str(getattr(result, "CanonicalName", "") or "")
+            results.append(
+                {
+                    "input_name": str(getattr(result, "InputName", name)),
+                    "valid": bool(getattr(result, "Valid", False)),
+                    "canonical_name": canonical or None,
+                    "alias_used": bool(getattr(result, "AliasUsed", False)),
+                    "suggestions": [str(item) for item in getattr(result, "Suggestions", [])],
+                }
+            )
+        return {"results": results}
+
+    def list_compounds(
+        self,
+        session_id: str,
+        *,
+        pattern: str | None,
+        category: str | None,
+        limit: int,
+        offset: int,
+    ) -> Dict[str, Any]:
+        self._ensure_initialized()
+        context = self._get_session_context(session_id)
+        try:
+            from DwsimWorker.Adapters import CompoundAdapter  # type: ignore
+        except Exception as exc:
+            raise map_dotnet_exception(exc, kind="interop") from exc
+
+        adapter = CompoundAdapter(_create_logger(), context)
+        result = adapter.ListCompounds(pattern, category, limit, offset)
+        compounds = []
+        for item in getattr(result, "Compounds", []) or []:
+            compounds.append(
+                {
+                    "name": str(getattr(item, "Name", "")),
+                    "category": str(getattr(item, "Category", "")),
+                    "aliases": [str(alias) for alias in getattr(item, "Aliases", [])],
+                    "formula": None,
+                }
+            )
+        total_count = int(getattr(result, "TotalCount", len(compounds)))
+        result_offset = int(getattr(result, "Offset", offset))
+        has_more = (result_offset + len(compounds)) < total_count
+        return {"compounds": compounds, "total_count": total_count, "has_more": has_more}
+
+    def _get_session_context(self, session_id: str):
+        try:
+            guid = _parse_guid(session_id)
+            result = self._session_client.session_manager.GetSession(guid)
+        except Exception as exc:
+            raise map_dotnet_exception(exc, kind="session") from exc
+
+        if not result.Success or result.Data is None:
+            message = result.Message or "Session not found."
+            raise SessionError(message)
+
+        return result.Data
+
+    def _get_export_adapter(self, session_id: str):
+        self._ensure_initialized()
+        context = self._get_session_context(session_id)
+        try:
+            from DwsimWorker.Adapters import ExportAdapter  # type: ignore
+        except Exception as exc:
+            raise map_dotnet_exception(exc, kind="interop") from exc
+        return ExportAdapter(_create_logger(), context)

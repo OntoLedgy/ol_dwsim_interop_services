@@ -16,6 +16,7 @@ from dwsim_mcp_server.models.mcp_inputs import (
 )
 
 from dwsim_mcp_server.observability import get_logger
+from dwsim_mcp_server.tools.legacy import LegacyContext
 
 
 class _ServiceUnavailable(Exception):
@@ -33,17 +34,21 @@ def register_sensitivity_tools(mcp) -> None:
         )
     )
     async def sensitivity_analysis(
-        session_id: str, variable_name: str, start_value: float, end_value: float, step_count: int, outputs: list[str], ctx: Context | None = None
+        session_id: str,
+        variable: dict[str, Any],
+        range: dict[str, Any],
+        steps: int,
+        outputs: list[dict[str, Any]],
+        ctx: Context | None = None,
     ):
         return await _execute_tool(
             "sensitivity_analysis",
             lambda: _sensitivity_analysis(
                 ctx,
                 session_id=session_id,
-                variable_name=variable_name,
-                start_value=start_value,
-                end_value=end_value,
-                step_count=step_count,
+                variable=variable,
+                range=range,
+                steps=steps,
                 outputs=outputs,
             ),
         )
@@ -56,7 +61,11 @@ def register_sensitivity_tools(mcp) -> None:
         )
     )
     async def parameter_sweep(
-        session_id: str, variables: list[dict[str, Any]], outputs: list[str], ctx: Context | None = None
+        session_id: str,
+        variables: list[dict[str, Any]],
+        outputs: list[dict[str, Any]],
+        max_combinations: int = 1000,
+        ctx: Context | None = None,
     ):
         return await _execute_tool(
             "parameter_sweep",
@@ -65,6 +74,7 @@ def register_sensitivity_tools(mcp) -> None:
                 session_id=session_id,
                 variables=variables,
                 outputs=outputs,
+                max_combinations=max_combinations,
             ),
         )
 
@@ -75,7 +85,12 @@ def register_sensitivity_tools(mcp) -> None:
         )
     )
     async def optimize(
-        session_id: str, objective: dict[str, Any], variables: list[dict[str, Any]], constraints: list[dict[str, Any]] | None = None, ctx: Context | None = None
+        session_id: str,
+        objective: dict[str, Any],
+        variables: list[dict[str, Any]],
+        constraints: list[dict[str, Any]] | None = None,
+        max_iterations: int = 100,
+        ctx: Context | None = None,
     ):
         return await _execute_tool(
             "optimize",
@@ -85,6 +100,7 @@ def register_sensitivity_tools(mcp) -> None:
                 objective=objective,
                 variables=variables,
                 constraints=constraints,
+                max_iterations=max_iterations,
             ),
         )
 
@@ -125,6 +141,61 @@ def register_sensitivity_tools(mcp) -> None:
         )
 
 
+def build_sensitivity_tools() -> list[types.Tool]:
+    return [
+        _tool("sensitivity_analysis", _sensitivity_description(), SensitivityAnalysisRequest),
+        _tool("parameter_sweep", _sweep_description(), ParameterSweepRequest),
+        _tool("optimize", _optimize_description(), OptimizationRequest),
+        _tool("get_study_status", _status_description(), _study_status_schema()),
+        _tool("cancel_study", _cancel_description(), _study_status_schema()),
+        _tool("export_study_results", _export_description(), _export_schema()),
+    ]
+
+
+async def handle_sensitivity_tool(
+    tool_name: str, arguments: Dict[str, Any], dependencies
+) -> Dict[str, Any] | types.CallToolResult:
+    ctx = LegacyContext(dependencies)
+    handlers = {
+        "sensitivity_analysis": lambda: _sensitivity_analysis(
+            ctx,
+            session_id=arguments.get("session_id"),
+            variable=arguments.get("variable"),
+            range=arguments.get("range"),
+            steps=arguments.get("steps"),
+            outputs=arguments.get("outputs"),
+        ),
+        "parameter_sweep": lambda: _parameter_sweep(
+            ctx,
+            session_id=arguments.get("session_id"),
+            variables=arguments.get("variables"),
+            max_combinations=arguments.get("max_combinations", 1000),
+            outputs=arguments.get("outputs"),
+        ),
+        "optimize": lambda: _optimize(
+            ctx,
+            session_id=arguments.get("session_id"),
+            objective=arguments.get("objective"),
+            variables=arguments.get("variables"),
+            constraints=arguments.get("constraints"),
+            max_iterations=arguments.get("max_iterations", 100),
+        ),
+        "get_study_status": lambda: _get_study_status(
+            ctx, study_id=arguments.get("study_id")
+        ),
+        "cancel_study": lambda: _cancel_study(ctx, study_id=arguments.get("study_id")),
+        "export_study_results": lambda: _export_study_results(
+            ctx,
+            study_id=arguments.get("study_id"),
+            file_path=arguments.get("file_path"),
+        ),
+    }
+    handler = handlers.get(tool_name)
+    if handler is None:
+        return _error_result(code="UNKNOWN_TOOL", message=f"Unknown tool: {tool_name}")
+    return await _execute_tool(tool_name, handler)
+
+
 async def _execute_tool(
     tool_name: str, handler: Callable[[], Awaitable[Dict[str, Any]]]
 ) -> Dict[str, Any] | types.CallToolResult:
@@ -159,23 +230,22 @@ async def _sensitivity_analysis(
     ctx: Context | None,
     *,
     session_id: str,
-    variable_name: str,
-    start_value: float,
-    end_value: float,
-    step_count: int,
-    outputs: list[str],
+    variable: dict[str, Any],
+    range: dict[str, Any],
+    steps: int,
+    outputs: list[dict[str, Any]],
 ) -> Dict[str, Any]:
+    service = _get_service(ctx)
     payload = SensitivityAnalysisRequest.model_validate(
         {
             "session_id": session_id,
-            "variable_name": variable_name,
-            "start_value": start_value,
-            "end_value": end_value,
-            "step_count": step_count,
+            "variable": variable,
+            "range": range,
+            "steps": steps,
             "outputs": outputs,
         }
     )
-    return (await _get_service(ctx).run_sensitivity_analysis(payload)).model_dump()
+    return (await service.run_sensitivity_analysis(payload)).model_dump()
 
 
 async def _parameter_sweep(
@@ -183,12 +253,19 @@ async def _parameter_sweep(
     *,
     session_id: str,
     variables: list[dict[str, Any]],
-    outputs: list[str],
+    max_combinations: int,
+    outputs: list[dict[str, Any]],
 ) -> Dict[str, Any]:
+    service = _get_service(ctx)
     payload = ParameterSweepRequest.model_validate(
-        {"session_id": session_id, "variables": variables, "outputs": outputs}
+        {
+            "session_id": session_id,
+            "variables": variables,
+            "max_combinations": max_combinations,
+            "outputs": outputs,
+        }
     )
-    return (await _get_service(ctx).run_parameter_sweep(payload)).model_dump()
+    return (await service.run_parameter_sweep(payload)).model_dump()
 
 
 async def _optimize(
@@ -198,16 +275,19 @@ async def _optimize(
     objective: dict[str, Any],
     variables: list[dict[str, Any]],
     constraints: list[dict[str, Any]] | None,
+    max_iterations: int,
 ) -> Dict[str, Any]:
+    service = _get_service(ctx)
     payload = OptimizationRequest.model_validate(
         {
             "session_id": session_id,
             "objective": objective,
             "variables": variables,
             "constraints": constraints,
+            "max_iterations": max_iterations,
         }
     )
-    return (await _get_service(ctx).run_optimization(payload)).model_dump()
+    return (await service.run_optimization(payload)).model_dump()
 
 
 async def _get_study_status(ctx: Context | None, *, study_id: str) -> Dict[str, Any]:
@@ -231,4 +311,89 @@ def _error_result(code: str, message: str) -> types.CallToolResult:
         content=[types.TextContent(type="text", text=message)],
         structuredContent=payload,
         isError=True,
+    )
+
+
+def _tool(name: str, description: str, model) -> types.Tool:
+    return types.Tool(
+        name=name,
+        description=description,
+        inputSchema=_schema(model),
+    )
+
+
+def _schema(model) -> Dict[str, Any]:
+    return model.model_json_schema()
+
+
+def _study_status_schema() -> type[Dict[str, Any]]:
+    class _StudyStatusPayload:
+        @staticmethod
+        def model_json_schema() -> Dict[str, Any]:
+            return {
+                "type": "object",
+                "properties": {"study_id": {"type": "string"}},
+                "required": ["study_id"],
+            }
+
+    return _StudyStatusPayload
+
+
+def _export_schema() -> type[Dict[str, Any]]:
+    class _ExportPayload:
+        @staticmethod
+        def model_json_schema() -> Dict[str, Any]:
+            return {
+                "type": "object",
+                "properties": {
+                    "study_id": {"type": "string"},
+                    "file_path": {"type": "string"},
+                },
+                "required": ["study_id", "file_path"],
+            }
+
+    return _ExportPayload
+
+
+def _sensitivity_description() -> str:
+    return (
+        "Run a single-variable sensitivity study by sweeping one parameter over a range "
+        "and collecting requested outputs at each step. Use this to understand how a "
+        "specific variable impacts key results."
+    )
+
+
+def _sweep_description() -> str:
+    return (
+        "Run a multi-variable parameter sweep by evaluating combinations across multiple "
+        "ranges. Use this to explore interactions between variables and their combined "
+        "impact on outputs."
+    )
+
+
+def _optimize_description() -> str:
+    return (
+        "Run an optimization to find variable values that minimize or maximize an "
+        "objective. Provide bounds and optional constraints to guide the solver."
+    )
+
+
+def _status_description() -> str:
+    return (
+        "Check progress for a running sensitivity or sweep study by study_id. Returns "
+        "completion counts and estimated remaining time."
+    )
+
+
+def _cancel_description() -> str:
+    return (
+        "Cancel a running study by study_id. Returns partial results collected so far "
+        "and marks the study as cancelled."
+    )
+
+
+def _export_description() -> str:
+    return (
+        "Export completed or partial study results to a file path (CSV or JSON). "
+        "Use this to persist results for external analysis."
     )

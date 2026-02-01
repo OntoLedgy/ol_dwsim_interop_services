@@ -21,6 +21,7 @@ from dwsim_mcp_server.models.responses import CloseSessionResponse, LoadCaseResp
 from dwsim_mcp_server.ipc.exceptions import InteropError, SessionError
 from dwsim_mcp_server.limits.resource_limit_guard import ResourceLimitViolation
 from dwsim_mcp_server.observability import get_logger
+from dwsim_mcp_server.tools.legacy import LegacyContext
 from dwsim_mcp_server.utils import resolve_case_path
 
 CREATE_SESSION_OUTPUT_SCHEMA: Dict[str, Any] = {
@@ -34,12 +35,21 @@ CREATE_SESSION_OUTPUT_SCHEMA: Dict[str, Any] = {
     "required": ["session_id"],
 }
 
+CREATE_SESSION_DESCRIPTION = (
+    "Create a new DWSIM session for flowsheet work. This MUST be called first before any other DWSIM tools. Returns a session_id used in all subsequent calls."
+)
+CLOSE_SESSION_DESCRIPTION = (
+    "Close an existing DWSIM session and release resources. Always call this when done to free memory."
+)
+SAVE_CASE_DESCRIPTION = "Save the current flowsheet case to a DWSIM file (.dwxmz)."
+LOAD_CASE_DESCRIPTION = "Load a flowsheet case from a DWSIM file (.dwxmz) into a session."
+
 
 def register_session_tools(mcp) -> None:
     """Register session tools with FastMCP."""
 
     @mcp.tool(
-        description="Create a new DWSIM session for flowsheet work. This MUST be called first before any other DWSIM tools. Returns a session_id used in all subsequent calls."
+        description=CREATE_SESSION_DESCRIPTION
     )
     async def create_session(
         name: Optional[str] = None,
@@ -52,7 +62,7 @@ def register_session_tools(mcp) -> None:
         )
 
     @mcp.tool(
-        description="Close an existing DWSIM session and release resources. Always call this when done to free memory."
+        description=CLOSE_SESSION_DESCRIPTION
     )
     async def close_session(session_id: str, ctx: Context | None = None):
         return await _execute_tool(
@@ -60,19 +70,56 @@ def register_session_tools(mcp) -> None:
             lambda: _close_session(ctx, session_id=session_id),
         )
 
-    @mcp.tool(description="Save the current flowsheet case to a DWSIM file (.dwxmz).")
+    @mcp.tool(description=SAVE_CASE_DESCRIPTION)
     async def save_case(session_id: str, file_path: str, ctx: Context | None = None):
         return await _execute_tool(
             "save_case",
             lambda: _save_case(ctx, session_id=session_id, file_path=file_path),
         )
 
-    @mcp.tool(description="Load a flowsheet case from a DWSIM file (.dwxmz) into a session.")
+    @mcp.tool(description=LOAD_CASE_DESCRIPTION)
     async def load_case(session_id: str, file_path: str, ctx: Context | None = None):
         return await _execute_tool(
             "load_case",
             lambda: _load_case(ctx, session_id=session_id, file_path=file_path),
         )
+
+
+def build_session_tools() -> list[types.Tool]:
+    return [
+        _tool("create_session", CREATE_SESSION_DESCRIPTION, CreateSessionRequest),
+        _tool("close_session", CLOSE_SESSION_DESCRIPTION, CloseSessionRequest),
+        _tool("save_case", SAVE_CASE_DESCRIPTION, SaveCaseRequest),
+        _tool("load_case", LOAD_CASE_DESCRIPTION, LoadCaseRequest),
+    ]
+
+
+async def handle_session_tool(
+    tool_name: str, arguments: Dict[str, Any], dependencies
+) -> Dict[str, Any] | types.CallToolResult:
+    ctx = LegacyContext(dependencies)
+    handlers = {
+        "create_session": lambda: _create_session(
+            ctx, name=arguments.get("name"), timeout=arguments.get("timeout")
+        ),
+        "close_session": lambda: _close_session(
+            ctx, session_id=arguments.get("session_id")
+        ),
+        "save_case": lambda: _save_case(
+            ctx,
+            session_id=arguments.get("session_id"),
+            file_path=arguments.get("file_path"),
+        ),
+        "load_case": lambda: _load_case(
+            ctx,
+            session_id=arguments.get("session_id"),
+            file_path=arguments.get("file_path"),
+        ),
+    }
+    handler = handlers.get(tool_name)
+    if handler is None:
+        return _error_result(code="UNKNOWN_TOOL", message=f"Unknown tool: {tool_name}")
+    return await _execute_tool(tool_name, handler)
 
 
 async def _execute_tool(
@@ -175,3 +222,15 @@ def _resource_limit_error(error: ResourceLimitError) -> types.CallToolResult:
         structuredContent=payload,
         isError=True,
     )
+
+
+def _tool(name: str, description: str, model) -> types.Tool:
+    return types.Tool(
+        name=name,
+        description=description,
+        inputSchema=_schema(model),
+    )
+
+
+def _schema(model) -> Dict[str, Any]:
+    return model.model_json_schema()

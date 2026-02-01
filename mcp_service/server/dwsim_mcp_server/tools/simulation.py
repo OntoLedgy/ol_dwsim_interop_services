@@ -16,6 +16,7 @@ from dwsim_mcp_server.models.responses import SimulationResultResponse, Simulati
 from dwsim_mcp_server.ipc.exceptions import InteropError, SessionError
 from dwsim_mcp_server.limits.resource_limit_guard import ResourceLimitViolation
 from dwsim_mcp_server.observability import get_logger
+from dwsim_mcp_server.tools.legacy import LegacyContext
 
 
 def register_simulation_tools(mcp) -> None:
@@ -57,6 +58,39 @@ def register_simulation_tools(mcp) -> None:
         )
 
 
+def build_simulation_tools() -> list[types.Tool]:
+    return [
+        _tool("run", _run_description(), RunSimulationRequest),
+        _tool("get_status", _status_description(), GetStatusRequest),
+        _tool("get_results", _results_description(), GetResultsRequest),
+    ]
+
+
+async def handle_simulation_tool(
+    tool_name: str, arguments: Dict[str, Any], dependencies
+) -> Dict[str, Any] | types.CallToolResult:
+    ctx = LegacyContext(dependencies)
+    handlers = {
+        "run": lambda: _run_simulation(
+            ctx,
+            session_id=arguments.get("session_id"),
+            timeout_seconds=arguments.get("timeout_seconds"),
+        ),
+        "get_status": lambda: _get_status(
+            ctx, session_id=arguments.get("session_id")
+        ),
+        "get_results": lambda: _get_results(
+            ctx,
+            session_id=arguments.get("session_id"),
+            object_id=arguments.get("object_id"),
+        ),
+    }
+    handler = handlers.get(tool_name)
+    if handler is None:
+        return _error_result(code="UNKNOWN_TOOL", message=f"Unknown tool: {tool_name}")
+    return await _execute_tool(tool_name, handler)
+
+
 async def _execute_tool(
     tool_name: str, handler: Callable[[], Awaitable[Dict[str, Any]]]
 ) -> Dict[str, Any] | types.CallToolResult:
@@ -88,9 +122,10 @@ async def _run_simulation(
     ctx: Context | None, *, session_id: str, timeout_seconds: int | None
 ) -> Dict[str, Any]:
     logger = get_logger(__name__)
-    payload = RunSimulationRequest.model_validate(
-        {"session_id": session_id, "timeout_seconds": timeout_seconds}
-    )
+    payload_data = {"session_id": session_id}
+    if timeout_seconds is not None:
+        payload_data["timeout_seconds"] = timeout_seconds
+    payload = RunSimulationRequest.model_validate(payload_data)
     session_client = _get_session_client(ctx)
     logger.info("simulation_run_requested", session_id=payload.session_id, timeout_seconds=payload.timeout_seconds)
     result = await session_client.run_calculation(payload.session_id, timeout_seconds=payload.timeout_seconds)
@@ -150,4 +185,38 @@ def _resource_limit_error(error: ResourceLimitError) -> types.CallToolResult:
         content=[types.TextContent(type="text", text=error.message)],
         structuredContent=payload,
         isError=True,
+    )
+
+
+def _tool(name: str, description: str, model) -> types.Tool:
+    return types.Tool(
+        name=name,
+        description=description,
+        inputSchema=_schema(model),
+    )
+
+
+def _schema(model) -> Dict[str, Any]:
+    return model.model_json_schema()
+
+
+def _run_description() -> str:
+    return (
+        "Execute the DWSIM solver for a session. PREREQUISITES: 1) All compounds added, "
+        "2) Property package set, 3) BIPs configured, 4) Feed stream created and flashed, "
+        "5) Outlet streams created, 6) Unit operation added, 7) All streams connected. "
+        "Returns convergence status, stream properties, and mass balance diagnostics."
+    )
+
+
+def _status_description() -> str:
+    return (
+        "Retrieve the latest simulation status for a session: idle, running, converged, or failed."
+    )
+
+
+def _results_description() -> str:
+    return (
+        "Retrieve detailed simulation results including all stream properties, phase compositions, "
+        "thermodynamic properties (enthalpy, entropy, density, viscosity), and mass balance error."
     )

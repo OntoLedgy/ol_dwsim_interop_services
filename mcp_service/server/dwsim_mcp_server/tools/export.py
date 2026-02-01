@@ -17,22 +17,36 @@ from dwsim_mcp_server.models.mcp_inputs.export_inputs import (
 )
 
 from dwsim_mcp_server.observability import get_logger
+from dwsim_mcp_server.tools.legacy import LegacyContext
 
 
 class _ServiceUnavailable(Exception):
     pass
 
 
+EXPORT_CSV_DESCRIPTION = (
+    "Export flowsheet streams/units to a CSV for spreadsheets or debugging. "
+    "Provide file_path ending in .csv and optionally object_ids to filter "
+    "(e.g., ['Feed', 'Separator']). Returns the saved path and row count."
+)
+EXPORT_JSON_DESCRIPTION = (
+    "Export flowsheet state to JSON for programmatic inspection or caching. "
+    "Use format='summary' for a top-level overview or format='full' for complete data."
+)
+GENERATE_REPORT_DESCRIPTION = (
+    "Generate a Markdown report file for sharing or QA notes. "
+    "Provide file_path ending in .md and choose template='summary' or 'detailed'."
+)
+SAVE_CASE_DESCRIPTION = (
+    "Save the flowsheet to a DWSIM case file for later reload. "
+    "Provide file_path ending in .dwxmz (compressed) or .dwxml (uncompressed)."
+)
+
+
 def register_export_tools(mcp) -> None:
     """Register export tools with FastMCP."""
 
-    @mcp.tool(
-        description=(
-            "Export flowsheet streams/units to a CSV for spreadsheets or debugging. "
-            "Provide file_path ending in .csv and optionally object_ids to filter "
-            "(e.g., ['Feed', 'Separator']). Returns the saved path and row count."
-        )
-    )
+    @mcp.tool(description=EXPORT_CSV_DESCRIPTION)
     async def export_csv(
         session_id: str, file_path: str, object_ids: list[str] | None = None, ctx: Context | None = None
     ):
@@ -46,24 +60,14 @@ def register_export_tools(mcp) -> None:
             ),
         )
 
-    @mcp.tool(
-        description=(
-            "Export flowsheet state to JSON for programmatic inspection or caching. "
-            "Use format='summary' for a top-level overview or format='full' for complete data."
-        )
-    )
+    @mcp.tool(description=EXPORT_JSON_DESCRIPTION)
     async def export_json(session_id: str, format: str = "summary", ctx: Context | None = None):
         return await _execute_tool(
             "export_json",
             lambda: _export_json(ctx, session_id=session_id, format=format),
         )
 
-    @mcp.tool(
-        description=(
-            "Generate a Markdown report file for sharing or QA notes. "
-            "Provide file_path ending in .md and choose template='summary' or 'detailed'."
-        )
-    )
+    @mcp.tool(description=GENERATE_REPORT_DESCRIPTION)
     async def generate_report(session_id: str, file_path: str, template: str = "summary", ctx: Context | None = None):
         return await _execute_tool(
             "generate_report",
@@ -75,17 +79,55 @@ def register_export_tools(mcp) -> None:
             ),
         )
 
-    @mcp.tool(
-        description=(
-            "Save the flowsheet to a DWSIM case file for later reload. "
-            "Provide file_path ending in .dwxmz (compressed) or .dwxml (uncompressed)."
-        )
-    )
+    @mcp.tool(description=SAVE_CASE_DESCRIPTION)
     async def save_case(session_id: str, file_path: str, ctx: Context | None = None):
         return await _execute_tool(
             "save_case",
             lambda: _save_case(ctx, session_id=session_id, file_path=file_path),
         )
+
+
+def build_export_tools() -> list[types.Tool]:
+    return [
+        _tool("export_csv", EXPORT_CSV_DESCRIPTION, ExportCsvInput),
+        _tool("export_json", EXPORT_JSON_DESCRIPTION, ExportJsonInput),
+        _tool("generate_report", GENERATE_REPORT_DESCRIPTION, GenerateReportInput),
+        _tool("save_case", SAVE_CASE_DESCRIPTION, SaveCaseInput),
+    ]
+
+
+async def handle_export_tool(
+    tool_name: str, arguments: Dict[str, Any], dependencies
+) -> Dict[str, Any] | types.CallToolResult:
+    ctx = LegacyContext(dependencies)
+    handlers = {
+        "export_csv": lambda: _export_csv(
+            ctx,
+            session_id=arguments.get("session_id"),
+            file_path=arguments.get("file_path"),
+            object_ids=arguments.get("object_ids"),
+        ),
+        "export_json": lambda: _export_json(
+            ctx,
+            session_id=arguments.get("session_id"),
+            format=arguments.get("format", "summary"),
+        ),
+        "generate_report": lambda: _generate_report(
+            ctx,
+            session_id=arguments.get("session_id"),
+            file_path=arguments.get("file_path"),
+            template=arguments.get("template", "summary"),
+        ),
+        "save_case": lambda: _save_case(
+            ctx,
+            session_id=arguments.get("session_id"),
+            file_path=arguments.get("file_path"),
+        ),
+    }
+    handler = handlers.get(tool_name)
+    if handler is None:
+        return _error_result(code="UNKNOWN_TOOL", message=f"Unknown tool: {tool_name}")
+    return await _execute_tool(tool_name, handler)
 
 
 async def _execute_tool(
@@ -149,3 +191,15 @@ def _error_result(code: str, message: str) -> types.CallToolResult:
         structuredContent=payload,
         isError=True,
     )
+
+
+def _tool(name: str, description: str, model) -> types.Tool:
+    return types.Tool(
+        name=name,
+        description=description,
+        inputSchema=_schema(model),
+    )
+
+
+def _schema(model) -> Dict[str, Any]:
+    return model.model_json_schema()

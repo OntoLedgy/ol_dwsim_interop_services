@@ -15,6 +15,7 @@ from dwsim_mcp_server.models.mcp_inputs import FlashPHInputs, FlashPSInputs, Fla
 from dwsim_mcp_server.ipc.exceptions import InteropError, SessionError
 from dwsim_mcp_server.limits.resource_limit_guard import ResourceLimitViolation
 from dwsim_mcp_server.observability import get_logger
+from dwsim_mcp_server.tools.legacy import LegacyContext
 
 
 class _ServiceUnavailable(Exception):
@@ -83,6 +84,50 @@ def register_analysis_tools(mcp) -> None:
                 units=units,
             ),
         )
+
+
+def build_analysis_tools() -> list[types.Tool]:
+    return [
+        _tool("flash_tp", _flash_tp_description(), FlashTPInputs),
+        _tool("flash_ph", _flash_ph_description(), FlashPHInputs),
+        _tool("flash_ps", _flash_ps_description(), FlashPSInputs),
+    ]
+
+
+async def handle_analysis_tool(
+    tool_name: str, arguments: Dict[str, Any], dependencies
+) -> Dict[str, Any] | types.CallToolResult:
+    ctx = LegacyContext(dependencies)
+    handlers = {
+        "flash_tp": lambda: _flash_tp(
+            ctx,
+            session_id=arguments.get("session_id"),
+            temperature=arguments.get("temperature"),
+            pressure=arguments.get("pressure"),
+            compounds=arguments.get("compounds"),
+            units=arguments.get("units"),
+        ),
+        "flash_ph": lambda: _flash_ph(
+            ctx,
+            session_id=arguments.get("session_id"),
+            pressure=arguments.get("pressure"),
+            enthalpy=arguments.get("enthalpy"),
+            compounds=arguments.get("compounds"),
+            units=arguments.get("units"),
+        ),
+        "flash_ps": lambda: _flash_ps(
+            ctx,
+            session_id=arguments.get("session_id"),
+            pressure=arguments.get("pressure"),
+            entropy=arguments.get("entropy"),
+            compounds=arguments.get("compounds"),
+            units=arguments.get("units"),
+        ),
+    }
+    handler = handlers.get(tool_name)
+    if handler is None:
+        return _error_result(code="UNKNOWN_TOOL", message=f"Unknown tool: {tool_name}")
+    return await _execute_tool(tool_name, handler)
 
 
 async def _execute_tool(
@@ -195,4 +240,40 @@ def _resource_limit_error(error: ResourceLimitError) -> types.CallToolResult:
         content=[types.TextContent(type="text", text=error.message)],
         structuredContent=payload,
         isError=True,
+    )
+
+
+def _tool(name: str, description: str, model) -> types.Tool:
+    return types.Tool(
+        name=name,
+        description=description,
+        inputSchema=_schema(model),
+    )
+
+
+def _schema(model) -> Dict[str, Any]:
+    return model.model_json_schema()
+
+
+def _flash_tp_description() -> str:
+    return (
+        "Perform a temperature-pressure flash calculation for a mixture. "
+        "Requires a session with a property package configured. Provide compound names and mole "
+        "fractions (must sum to 1.0), plus temperature and pressure measurements with units."
+    )
+
+
+def _flash_ph_description() -> str:
+    return (
+        "Perform a pressure-enthalpy flash calculation for a mixture. "
+        "Requires a session with a property package configured. Provide compound names and mole "
+        "fractions (must sum to 1.0), plus pressure and molar enthalpy measurements with units."
+    )
+
+
+def _flash_ps_description() -> str:
+    return (
+        "Perform a pressure-entropy flash calculation for a mixture. "
+        "Requires a session with a property package configured. Provide compound names and mole "
+        "fractions (must sum to 1.0), plus pressure and molar entropy measurements with units."
     )

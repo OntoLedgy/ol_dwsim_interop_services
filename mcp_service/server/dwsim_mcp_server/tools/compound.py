@@ -17,10 +17,23 @@ from dwsim_mcp_server.models.mcp_inputs.compound_validation import (
 )
 
 from dwsim_mcp_server.observability import get_logger
+from dwsim_mcp_server.tools.legacy import LegacyContext
 
 
 class _ServiceUnavailable(Exception):
     pass
+
+
+VALIDATE_COMPOUNDS_DESCRIPTION = (
+    "Validate compound names against the DWSIM databank before adding them. "
+    "Returns canonical names, alias resolution (CO2, H2O, isobutane), and "
+    "fuzzy-matched suggestions for typos (e.g., 'methne' → Methane)."
+)
+LIST_AVAILABLE_DESCRIPTION = (
+    "List compounds available in the DWSIM databank to discover valid names. "
+    "Use pattern for case-insensitive search (e.g., 'butan') and category for "
+    "type filtering (e.g., Hydrocarbon); supports limit/offset pagination."
+)
 
 
 def register_compound_tools(mcp) -> None:
@@ -33,10 +46,14 @@ def register_compound_tools(mcp) -> None:
             "fuzzy-matched suggestions for typos (e.g., 'methne' → Methane)."
         )
     )
-    async def validate_compounds(session_id: str, compounds: list[str], ctx: Context | None = None):
+    async def validate_compounds(
+        session_id: str, compound_names: list[str], ctx: Context | None = None
+    ):
         return await _execute_tool(
             "validate_compounds",
-            lambda: _validate_compounds(ctx, session_id=session_id, compounds=compounds),
+            lambda: _validate_compounds(
+                ctx, session_id=session_id, compound_names=compound_names
+            ),
         )
 
     @mcp.tool(
@@ -58,6 +75,46 @@ def register_compound_tools(mcp) -> None:
                 offset=offset,
             ),
         )
+
+
+def build_compound_tools() -> list[types.Tool]:
+    return [
+        _tool(
+            "validate_compounds",
+            VALIDATE_COMPOUNDS_DESCRIPTION,
+            ValidateCompoundsInput,
+        ),
+        _tool(
+            "list_available_compounds",
+            LIST_AVAILABLE_DESCRIPTION,
+            ListCompoundsInput,
+        ),
+    ]
+
+
+async def handle_compound_tool(
+    tool_name: str, arguments: Dict[str, Any], dependencies
+) -> Dict[str, Any] | types.CallToolResult:
+    ctx = LegacyContext(dependencies)
+    handlers = {
+        "validate_compounds": lambda: _validate_compounds(
+            ctx,
+            session_id=arguments.get("session_id"),
+            compound_names=arguments.get("compound_names"),
+        ),
+        "list_available_compounds": lambda: _list_compounds(
+            ctx,
+            session_id=arguments.get("session_id"),
+            pattern=arguments.get("pattern"),
+            category=arguments.get("category"),
+            limit=arguments.get("limit"),
+            offset=arguments.get("offset"),
+        ),
+    }
+    handler = handlers.get(tool_name)
+    if handler is None:
+        return _error_result(code="UNKNOWN_TOOL", message=f"Unknown tool: {tool_name}")
+    return await _execute_tool(tool_name, handler)
 
 
 async def _execute_tool(
@@ -87,11 +144,11 @@ def _get_service(ctx: Context | None):
 
 
 async def _validate_compounds(
-    ctx: Context | None, *, session_id: str, compounds: list[str]
+    ctx: Context | None, *, session_id: str, compound_names: list[str]
 ) -> Dict[str, Any]:
     service = _get_service(ctx)
     payload = ValidateCompoundsInput.model_validate(
-        {"session_id": session_id, "compounds": compounds}
+        {"session_id": session_id, "compound_names": compound_names}
     )
     return (await service.validate_compounds(payload)).model_dump()
 
@@ -125,3 +182,17 @@ def _error_result(code: str, message: str) -> types.CallToolResult:
         structuredContent=payload,
         isError=True,
     )
+
+
+def _tool(name: str, description: str, model) -> types.Tool:
+    return types.Tool(
+        name=name,
+        description=description,
+        inputSchema=_schema(model),
+    )
+
+
+def _schema(model) -> Dict[str, Any]:
+    return model.model_json_schema()
+
+

@@ -156,7 +156,7 @@
 
 ## Phase 5: Testing and Documentation
 
-- [ ] 5.1. Create OAuth integration tests
+- [x] 5.1. Create OAuth integration tests
   - File: `mcp_service/server/tests/integration/test_oauth_flow.py`
   - Test OAuth discovery endpoint (/.well-known/oauth-protected-resource)
   - Test unauthenticated request rejection when auth enabled
@@ -166,21 +166,21 @@
   - _Requirements: REQ-2, REQ-3, REQ-4_
   - _Prompt: Implement the task for spec fastmcp-oauth-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer specializing in integration testing and OAuth flows | Task: Create integration tests for OAuth flow covering discovery endpoint, unauthenticated rejection, authenticated acceptance with mocked tokens, and stdio bypass | Restrictions: Use pytest and httpx AsyncClient, mock token verification for predictable tests, do not make real Clerk API calls | Success: All OAuth scenarios tested, tests run in CI without external dependencies | After completing: Mark task as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark as complete when done_
 
-- [ ] 5.2. Run existing integration tests
+- [x] 5.2. Run existing integration tests
   - Verify all existing tests pass with new FastMCP server
   - Fix any regressions
   - _Leverage: Existing test suite in tests/_
   - _Requirements: REQ-4_
   - _Prompt: Implement the task for spec fastmcp-oauth-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer | Task: Run all existing integration tests against new FastMCP server implementation, identify and fix any regressions | Restrictions: Do not modify test expectations unless behavior intentionally changed, document any intentional behavior changes | Success: All existing tests pass, no regressions | After completing: Mark task as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark as complete when done_
 
-- [ ] 5.3. Update .env.example with OAuth settings
+- [x] 5.3. Update .env.example with OAuth settings
   - File: `mcp_service/server/.env.example` or template
   - Add DWSIM_AUTH_ENABLED, CLERK_ISSUER_URL, CLERK_AUDIENCE, CLERK_REQUIRED_SCOPES
   - Add comments explaining each setting
   - _Requirements: REQ-5_
   - _Prompt: Implement the task for spec fastmcp-oauth-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: DevOps Engineer | Task: Update .env.example to include OAuth configuration variables (DWSIM_AUTH_ENABLED, CLERK_ISSUER_URL, CLERK_AUDIENCE, CLERK_REQUIRED_SCOPES) with helpful comments | Restrictions: Do not include real secrets, provide sensible defaults, maintain existing variable formatting | Success: .env.example documents all OAuth settings clearly | After completing: Mark task as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark as complete when done_
 
-- [ ] 5.4. Create Clerk setup documentation
+- [x] 5.4. Create Clerk setup documentation
   - File: `docs/mcp/clerk-oauth-setup.md`
   - Document Clerk dashboard configuration steps
   - Document environment variable setup
@@ -189,7 +189,7 @@
   - _Requirements: REQ-2, REQ-3, REQ-5_
   - _Prompt: Implement the task for spec fastmcp-oauth-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Technical Writer | Task: Create comprehensive Clerk OAuth setup documentation covering Clerk dashboard configuration, environment variables, mcp-remote client config, and troubleshooting | Restrictions: Do not include real secrets or account-specific URLs, provide generic examples | Success: Documentation enables new users to set up OAuth end-to-end | After completing: Mark task as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark as complete when done_
 
-- [ ] 5.5. Update README with authentication section
+- [x] 5.5. Update README with authentication section
   - File: `mcp_service/server/README.md` or main README
   - Add section on authentication options
   - Link to Clerk setup documentation

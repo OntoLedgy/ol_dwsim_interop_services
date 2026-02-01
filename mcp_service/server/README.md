@@ -162,6 +162,23 @@ LOG_LEVEL=INFO
 LOG_FORMAT=json
 ```
 
+## Authentication
+
+OAuth authentication is optional. By default, the server runs without auth
+(`DWSIM_AUTH_ENABLED=false`). For local development, keep auth disabled.
+
+To enable OAuth with Clerk, configure the Clerk issuer, audience, and scopes.
+See the setup guide: [docs/mcp/clerk-oauth-setup.md](../../docs/mcp/clerk-oauth-setup.md).
+
+Minimal example:
+
+```env
+DWSIM_AUTH_ENABLED=true
+CLERK_ISSUER_URL=https://<your-tenant>.clerk.accounts.dev
+CLERK_AUDIENCE=dwsim-mcp
+CLERK_REQUIRED_SCOPES=user
+```
+
 ## Usage
 
 ### Starting the MCP Server
