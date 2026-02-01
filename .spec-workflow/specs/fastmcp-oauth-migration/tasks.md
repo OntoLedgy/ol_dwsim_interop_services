@@ -48,7 +48,7 @@
 
 ## Phase 2: Context and Lifespan
 
-- [ ] 2.1. Create AppContext dataclass
+- [x] 2.1. Create AppContext dataclass
   - File: `mcp_service/server/dwsim_mcp_server/context.py`
   - Define AppContext dataclass with typed dependencies (settings, session_client, flowsheet_client, services)
   - Create app_lifespan async context manager for FastMCP
