@@ -24,6 +24,11 @@ class ClerkTokenVerifier(TokenVerifier):
         self._jwks_client: Optional[PyJWKClient] = None
         self._jwks_last_refresh = 0.0
 
+    @property
+    def required_scopes(self) -> list[str]:
+        """Return required scopes for RemoteAuthProvider compatibility."""
+        return self._config.required_scopes or []
+
     async def verify_token(self, token: str) -> AccessToken | None:
         if not token:
             self._logger.warning("auth_token_missing")

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from mcp.server import FastMCP
-from mcp.server.auth.settings import AuthSettings
+from fastmcp import FastMCP
+from fastmcp.server.auth import RemoteAuthProvider
+from pydantic import AnyHttpUrl
 
 from dwsim_mcp_server.auth import AuthConfig, ClerkTokenVerifier
 from dwsim_mcp_server.config import ServerSettings
@@ -27,19 +28,15 @@ def create_mcp_server(
     auth_config: AuthConfig,
     obs_settings: ObservabilitySettings,
 ) -> FastMCP:
-    auth_settings = _build_auth_settings(settings, auth_config)
-    token_verifier = _build_token_verifier(auth_config)
+    auth_provider = _build_auth_provider(settings, auth_config)
     server = FastMCP(
-        "dwsim-mcp-server",
-        host=settings.http_host,
-        port=settings.http_port,
-        log_level=obs_settings.log_level,
+        name="dwsim-mcp-server",
         lifespan=app_lifespan,
-        auth=auth_settings,
-        token_verifier=token_verifier,
+        auth=auth_provider,
     )
     register_all_tools(server)
-    register_resources(server)
+    # TODO: Fix resources for FastMCP compatibility
+    # register_resources(server)
     return server
 
 
@@ -97,28 +94,22 @@ def _build_services(
     )
 
 
-def _build_auth_settings(
+def _build_auth_provider(
     settings: ServerSettings, auth_config: AuthConfig
-) -> AuthSettings | None:
+) -> RemoteAuthProvider | None:
     if not auth_config.enabled:
         return None
     if auth_config.issuer_url is None:
         raise ValueError("CLERK_ISSUER_URL is required when auth is enabled.")
-    return AuthSettings(
-        issuer_url=auth_config.issuer_url,
-        required_scopes=auth_config.required_scopes or None,
-        resource_server_url=_resource_server_url(settings),
+
+    token_verifier = ClerkTokenVerifier(auth_config)
+    base_url = f"http://{settings.http_host}:{settings.http_port}"
+
+    return RemoteAuthProvider(
+        token_verifier=token_verifier,
+        authorization_servers=[AnyHttpUrl(str(auth_config.issuer_url))],
+        base_url=base_url,
     )
-
-
-def _build_token_verifier(auth_config: AuthConfig) -> ClerkTokenVerifier | None:
-    if not auth_config.enabled:
-        return None
-    return ClerkTokenVerifier(auth_config)
-
-
-def _resource_server_url(settings: ServerSettings) -> str:
-    return f"http://{settings.http_host}:{settings.http_port}/mcp"
 
 
 def _log_observability(logger, obs_settings: ObservabilitySettings) -> None:
@@ -167,7 +158,59 @@ def main() -> None:
     _log_observability(logger, obs_settings)
     server = create_mcp_server(settings, auth_config, obs_settings)
     _log_server_start(logger, settings, auth_config.enabled)
-    server.run(_transport(settings))
+
+    transport = _transport(settings)
+    if transport == "streamable-http":
+        _run_http_with_oauth(server, settings, auth_config)
+    else:
+        server.run(transport=transport)
+
+
+def _run_http_with_oauth(
+    server: FastMCP, settings: ServerSettings, auth_config: AuthConfig
+) -> None:
+    """Run HTTP server with OAuth discovery endpoints at root level."""
+    import uvicorn
+    from starlette.applications import Starlette
+    from starlette.routing import Mount, Route
+    from starlette.responses import JSONResponse
+
+    mcp_path = "/mcp"
+    mcp_app = server.http_app(path=mcp_path)
+
+    routes = []
+
+    # Add OAuth discovery routes at root if auth is enabled
+    auth_provider = _build_auth_provider(settings, auth_config)
+    if auth_provider is not None:
+        # Manually create the protected resource endpoint
+        base_url = f"http://{settings.http_host}:{settings.http_port}"
+
+        async def oauth_protected_resource(request):
+            return JSONResponse({
+                "resource": f"{base_url}{mcp_path}",
+                "authorization_servers": [str(auth_config.issuer_url)],
+                "scopes_supported": auth_config.required_scopes or [],
+            })
+
+        routes.append(
+            Route("/.well-known/oauth-protected-resource", oauth_protected_resource)
+        )
+
+    # Mount MCP app
+    routes.append(Mount("/", app=mcp_app))
+
+    app = Starlette(
+        routes=routes,
+        lifespan=mcp_app.lifespan,
+    )
+
+    uvicorn.run(
+        app,
+        host=settings.http_host,
+        port=settings.http_port,
+        log_level="info",
+    )
 
 
 def run() -> None:
