@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Awaitable, Callable, Dict
 
 from mcp import types
 from pydantic import ValidationError
@@ -18,71 +18,103 @@ from dwsim_mcp_server.models.mcp_inputs.compound_validation import (
 from dwsim_mcp_server.observability import get_logger
 
 
-def build_compound_tools() -> list[types.Tool]:
-    """Return MCP tool definitions for compound operations."""
-    return [
-        types.Tool(
-            name="validate_compounds",
-            title="Validate Compounds",
-            description=(
-                "Validate compound names against the DWSIM databank before adding them. "
-                "Returns canonical names, alias resolution (CO2, H2O, isobutane), and "
-                "fuzzy-matched suggestions for typos (e.g., 'methne' → Methane)."
-            ),
-            inputSchema=ValidateCompoundsInput.model_json_schema(),
-            outputSchema=ValidateCompoundsOutput.model_json_schema(),
-        ),
-        types.Tool(
-            name="list_available_compounds",
-            title="List Available Compounds",
-            description=(
-                "List compounds available in the DWSIM databank to discover valid names. "
-                "Use pattern for case-insensitive search (e.g., 'butan') and category for "
-                "type filtering (e.g., Hydrocarbon); supports limit/offset pagination."
-            ),
-            inputSchema=ListCompoundsInput.model_json_schema(),
-            outputSchema=ListCompoundsOutput.model_json_schema(),
-        ),
-    ]
+class _ServiceUnavailable(Exception):
+    pass
 
 
-async def handle_compound_tool(
-    tool_name: str, arguments: Dict[str, Any], dependencies: Any
-):
-    """Dispatch compound tools by name."""
+def register_compound_tools(mcp) -> None:
+    """Register compound tools with FastMCP."""
+
+    @mcp.tool(
+        description=(
+            "Validate compound names against the DWSIM databank before adding them. "
+            "Returns canonical names, alias resolution (CO2, H2O, isobutane), and "
+            "fuzzy-matched suggestions for typos (e.g., 'methne' -> Methane)."
+        )
+    )
+    async def validate_compounds(session_id: str, compounds: list[str], ctx: Any = None):
+        return await _execute_tool(
+            "validate_compounds",
+            lambda: _validate_compounds(ctx, session_id=session_id, compounds=compounds),
+        )
+
+    @mcp.tool(
+        description=(
+            "List compounds available in the DWSIM databank to discover valid names. "
+            "Use pattern for case-insensitive search (e.g., 'butan') and category for "
+            "type filtering (e.g., Hydrocarbon); supports limit/offset pagination."
+        )
+    )
+    async def list_available_compounds(session_id: str, pattern: str | None = None, category: str | None = None, limit: int | None = None, offset: int | None = None, ctx: Any = None):
+        return await _execute_tool(
+            "list_available_compounds",
+            lambda: _list_compounds(
+                ctx,
+                session_id=session_id,
+                pattern=pattern,
+                category=category,
+                limit=limit,
+                offset=offset,
+            ),
+        )
+
+
+async def _execute_tool(
+    tool_name: str, handler: Callable[[], Awaitable[Dict[str, Any]]]
+) -> Dict[str, Any] | types.CallToolResult:
     logger = get_logger(__name__)
-    service = getattr(dependencies, "flowsheet_service", None)
-
-    if service is None:
-        return _error_result(
-            code="SERVICE_UNAVAILABLE",
-            message="Flowsheet service is not configured.",
-        )
-
     try:
-        if tool_name == "validate_compounds":
-            payload = ValidateCompoundsInput.model_validate(arguments)
-            result = await service.validate_compounds(payload)
-            return result.model_dump()
+        return await handler()
+    except Exception as exc:  # noqa: BLE001 - map all tool failures
+        return _handle_tool_error(logger, tool_name, exc)
 
-        if tool_name == "list_available_compounds":
-            payload = ListCompoundsInput.model_validate(arguments)
-            result = await service.list_compounds(payload)
-            return result.model_dump()
 
-        return types.CallToolResult(
-            content=[types.TextContent(type="text", text=f"Unknown tool: {tool_name}")],
-            structuredContent={"code": "UNKNOWN_TOOL", "message": f"Unknown tool: {tool_name}"},
-            isError=True,
-        )
-    except ValidationError as exc:
-        return _error_result(
-            code="VALIDATION_ERROR",
-            message=str(exc),
-        )
-    except Exception as exc:
-        logger.exception("compound_tool_failed", extra={"tool": tool_name})
-        return _error_result(code="UNEXPECTED_ERROR", message=str(exc))
+def _handle_tool_error(logger, tool_name: str, exc: Exception) -> types.CallToolResult:
+    if isinstance(exc, _ServiceUnavailable):
+        return _error_result(code="SERVICE_UNAVAILABLE", message=str(exc))
+    if isinstance(exc, ValidationError):
+        return _error_result(code="VALIDATION_ERROR", message=str(exc))
+    logger.exception("compound_tool_failed", extra={"tool": tool_name})
+    return _error_result(code="UNEXPECTED_ERROR", message=str(exc))
+
+
+def _get_service(ctx: Any):
+    service = ctx.request_context.lifespan_context.flowsheet_service
+    if service is None:
+        raise _ServiceUnavailable("Flowsheet service is not configured.")
+    return service
+
+
+async def _validate_compounds(
+    ctx: Any, *, session_id: str, compounds: list[str]
+) -> Dict[str, Any]:
+    service = _get_service(ctx)
+    payload = ValidateCompoundsInput.model_validate(
+        {"session_id": session_id, "compounds": compounds}
+    )
+    return (await service.validate_compounds(payload)).model_dump()
+
+
+async def _list_compounds(
+    ctx: Any,
+    *,
+    session_id: str,
+    pattern: str | None,
+    category: str | None,
+    limit: int | None,
+    offset: int | None,
+) -> Dict[str, Any]:
+    service = _get_service(ctx)
+    payload = ListCompoundsInput.model_validate(
+        {
+            "session_id": session_id,
+            "pattern": pattern,
+            "category": category,
+            "limit": limit,
+            "offset": offset,
+        }
+    )
+    return (await service.list_compounds(payload)).model_dump()
 
 
 def _error_result(code: str, message: str) -> types.CallToolResult:

@@ -59,7 +59,7 @@
 
 ## Phase 3: Tool Conversion
 
-- [ ] 3.1. Convert session tools to FastMCP decorators
+- [x] 3.1. Convert session tools to FastMCP decorators
   - File: `mcp_service/server/dwsim_mcp_server/tools/session.py`
   - Convert 4 tools: create_session, close_session, save_case, load_case
   - Replace build_session_tools/handle_session_tool with register_session_tools(mcp)
@@ -69,7 +69,7 @@
   - _Requirements: REQ-1, REQ-4_
   - _Prompt: Implement the task for spec fastmcp-oauth-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer specializing in FastMCP and async programming | Task: Convert session.py tools (create_session, close_session, save_case, load_case) from build_session_tools/handle_session_tool pattern to register_session_tools(mcp) with @mcp.tool() decorators, accessing dependencies via ctx.request_context.lifespan_context | Restrictions: Preserve existing tool descriptions exactly, maintain parameter names and return types, keep all validation logic | Success: 4 tools registered with FastMCP, identical behavior to current implementation, proper type hints | After completing: Mark task as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark as complete when done_
 
-- [ ] 3.2. Convert flowsheet tools to FastMCP decorators
+- [x] 3.2. Convert flowsheet tools to FastMCP decorators
   - File: `mcp_service/server/dwsim_mcp_server/tools/flowsheet.py`
   - Convert 10 tools: add_compound, set_property_package, add_stream, add_unit, connect, set_object_parameter, delete_object, list_objects, flash_stream, set_binary_interaction_parameter
   - Replace build_flowsheet_tools/handle_flowsheet_tool with register_flowsheet_tools(mcp)
@@ -77,7 +77,7 @@
   - _Requirements: REQ-1, REQ-4_
   - _Prompt: Implement the task for spec fastmcp-oauth-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer specializing in FastMCP | Task: Convert flowsheet.py tools (10 tools including add_compound, set_property_package, add_stream, add_unit, connect, etc.) from current pattern to register_flowsheet_tools(mcp) with @mcp.tool() decorators | Restrictions: Preserve all tool descriptions and parameter schemas exactly, maintain Pydantic model validation, keep existing error handling | Success: 10 tools registered with FastMCP, identical behavior and schemas | After completing: Mark task as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark as complete when done_
 
-- [ ] 3.3. Convert simulation tools to FastMCP decorators
+- [x] 3.3. Convert simulation tools to FastMCP decorators
   - File: `mcp_service/server/dwsim_mcp_server/tools/simulation.py`
   - Convert 3 tools: run, get_status, get_results
   - Replace build_simulation_tools/handle_simulation_tool with register_simulation_tools(mcp)
@@ -85,7 +85,7 @@
   - _Requirements: REQ-1, REQ-4_
   - _Prompt: Implement the task for spec fastmcp-oauth-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer | Task: Convert simulation.py tools (run, get_status, get_results) to register_simulation_tools(mcp) with @mcp.tool() decorators | Restrictions: Preserve tool descriptions and behavior exactly | Success: 3 tools registered with FastMCP, identical behavior | After completing: Mark task as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark as complete when done_
 
-- [ ] 3.4. Convert compound tools to FastMCP decorators
+- [x] 3.4. Convert compound tools to FastMCP decorators
   - File: `mcp_service/server/dwsim_mcp_server/tools/compound.py`
   - Convert 2 tools: validate_compounds, list_available_compounds
   - Replace build_compound_tools/handle_compound_tool with register_compound_tools(mcp)
@@ -93,7 +93,7 @@
   - _Requirements: REQ-1, REQ-4_
   - _Prompt: Implement the task for spec fastmcp-oauth-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer | Task: Convert compound.py tools (validate_compounds, list_available_compounds) to register_compound_tools(mcp) with @mcp.tool() decorators | Restrictions: Preserve tool descriptions and behavior exactly | Success: 2 tools registered with FastMCP, identical behavior | After completing: Mark task as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark as complete when done_
 
-- [ ] 3.5. Convert analysis tools to FastMCP decorators
+- [x] 3.5. Convert analysis tools to FastMCP decorators
   - File: `mcp_service/server/dwsim_mcp_server/tools/analysis.py`
   - Convert 3 tools: flash_tp, flash_ph, flash_ps
   - Replace build_analysis_tools/handle_analysis_tool with register_analysis_tools(mcp)
@@ -101,7 +101,7 @@
   - _Requirements: REQ-1, REQ-4_
   - _Prompt: Implement the task for spec fastmcp-oauth-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer | Task: Convert analysis.py tools (flash_tp, flash_ph, flash_ps) to register_analysis_tools(mcp) with @mcp.tool() decorators | Restrictions: Preserve tool descriptions and Pydantic input models exactly | Success: 3 tools registered with FastMCP, identical behavior | After completing: Mark task as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark as complete when done_
 
-- [ ] 3.6. Convert sensitivity tools to FastMCP decorators
+- [x] 3.6. Convert sensitivity tools to FastMCP decorators
   - File: `mcp_service/server/dwsim_mcp_server/tools/sensitivity.py`
   - Convert 5 tools: sensitivity_analysis, parameter_sweep, optimize, get_study_status, cancel_study, export_study_results
   - Replace build_sensitivity_tools/handle_sensitivity_tool with register_sensitivity_tools(mcp)
@@ -109,7 +109,7 @@
   - _Requirements: REQ-1, REQ-4_
   - _Prompt: Implement the task for spec fastmcp-oauth-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer | Task: Convert sensitivity.py tools (sensitivity_analysis, parameter_sweep, optimize, get_study_status, cancel_study, export_study_results) to register_sensitivity_tools(mcp) with @mcp.tool() decorators | Restrictions: Preserve tool descriptions and Pydantic input models exactly | Success: All sensitivity tools registered with FastMCP, identical behavior | After completing: Mark task as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark as complete when done_
 
-- [ ] 3.7. Convert export tools to FastMCP decorators
+- [x] 3.7. Convert export tools to FastMCP decorators
   - File: `mcp_service/server/dwsim_mcp_server/tools/export.py`
   - Convert 3 tools: export_csv, export_json, generate_report
   - Replace build_export_tools/handle_export_tool with register_export_tools(mcp)
@@ -117,7 +117,7 @@
   - _Requirements: REQ-1, REQ-4_
   - _Prompt: Implement the task for spec fastmcp-oauth-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer | Task: Convert export.py tools (export_csv, export_json, generate_report) to register_export_tools(mcp) with @mcp.tool() decorators | Restrictions: Preserve tool descriptions and behavior exactly | Success: 3 tools registered with FastMCP, identical behavior | After completing: Mark task as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark as complete when done_
 
-- [ ] 3.8. Convert diagnostics tools to FastMCP decorators
+- [x] 3.8. Convert diagnostics tools to FastMCP decorators
   - File: `mcp_service/server/dwsim_mcp_server/tools/diagnostics.py`
   - Convert diagnostics tools: get_diagnostics (and any others)
   - Replace build_diagnostics_tools/handle_diagnostics_tool with register_diagnostics_tools(mcp)
