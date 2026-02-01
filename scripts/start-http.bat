@@ -30,10 +30,26 @@ set "PYTHONPATH=%REPO%;%SERVER%"
 set "DWSIM_TRANSPORT_MODE=streamable-http"
 set "DWSIM_HTTP_PORT=8000"
 
+REM Load OAuth settings from .env.auth if it exists
+if exist "%SERVER%\.env.auth" (
+    for /f "usebackq tokens=1,* delims==" %%a in ("%SERVER%\.env.auth") do (
+        if not "%%a"=="" if not "%%a:~0,1%"=="#" set "%%a=%%b"
+    )
+    echo [AUTH] Loaded OAuth configuration from .env.auth
+) else (
+    set "DWSIM_AUTH_ENABLED=false"
+    echo [AUTH] No .env.auth found - running without authentication
+)
+
 echo ============================================
 echo   DWSIM MCP Server - HTTP Mode
 echo ============================================
 echo Server URL: http://localhost:8000/mcp
+if "%DWSIM_AUTH_ENABLED%"=="true" (
+    echo Auth: Enabled (Clerk OAuth)
+) else (
+    echo Auth: Disabled
+)
 echo Press Ctrl+C to stop
 echo ============================================
 echo.

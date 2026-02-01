@@ -249,6 +249,28 @@ PYTHONPATH=$repoPath;$serverPath
 Set-Content -Path "$serverPath\.env" -Value $envContent
 Write-Success "Created .env file"
 
+# Create OAuth configuration template
+$envAuthContent = @"
+# OAuth Configuration (Clerk)
+# Copy this file and fill in your Clerk credentials
+# The start-http.bat script will load this automatically
+
+# Enable/disable authentication (set to true for production)
+DWSIM_AUTH_ENABLED=false
+
+# Clerk Configuration
+# Get these values from your Clerk dashboard
+CLERK_ISSUER_URL=https://your-app.clerk.accounts.dev
+CLERK_AUDIENCE=dwsim-mcp
+CLERK_REQUIRED_SCOPES=user
+
+# Optional: Override JWKS URL (normally derived from issuer)
+# CLERK_JWKS_URL=
+"@
+
+Set-Content -Path "$serverPath\.env.auth.template" -Value $envAuthContent
+Write-Success "Created .env.auth.template (copy to .env.auth and configure for OAuth)"
+
 # Create simulations directory
 $simPath = "$InstallPath\simulations"
 if (-not (Test-Path $simPath)) {
@@ -289,6 +311,13 @@ Write-Host @"
 
 Quick Start:
   $InstallPath\start-http.bat
+
+OAuth Setup (Optional):
+  1. Copy .env.auth.template to .env.auth
+  2. Set DWSIM_AUTH_ENABLED=true
+  3. Configure CLERK_ISSUER_URL with your Clerk app URL
+  4. Restart the server
+  See: docs/mcp/deployment-guide.md
 
 Manual Start:
   cd "$serverPath"
