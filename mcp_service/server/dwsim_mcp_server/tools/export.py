@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Awaitable, Callable, Dict
 
 from mcp import types
+from mcp.server.fastmcp.server import Context
 from pydantic import ValidationError
 
 from dwsim_mcp_server.models.errors.session_error import SessionError as SessionErrorModel
@@ -33,7 +34,7 @@ def register_export_tools(mcp) -> None:
         )
     )
     async def export_csv(
-        session_id: str, file_path: str, object_ids: list[str] | None = None, ctx: Any = None
+        session_id: str, file_path: str, object_ids: list[str] | None = None, ctx: Context | None = None
     ):
         return await _execute_tool(
             "export_csv",
@@ -51,7 +52,7 @@ def register_export_tools(mcp) -> None:
             "Use format='summary' for a top-level overview or format='full' for complete data."
         )
     )
-    async def export_json(session_id: str, format: str = "summary", ctx: Any = None):
+    async def export_json(session_id: str, format: str = "summary", ctx: Context | None = None):
         return await _execute_tool(
             "export_json",
             lambda: _export_json(ctx, session_id=session_id, format=format),
@@ -63,7 +64,7 @@ def register_export_tools(mcp) -> None:
             "Provide file_path ending in .md and choose template='summary' or 'detailed'."
         )
     )
-    async def generate_report(session_id: str, file_path: str, template: str = "summary", ctx: Any = None):
+    async def generate_report(session_id: str, file_path: str, template: str = "summary", ctx: Context | None = None):
         return await _execute_tool(
             "generate_report",
             lambda: _generate_report(
@@ -80,7 +81,7 @@ def register_export_tools(mcp) -> None:
             "Provide file_path ending in .dwxmz (compressed) or .dwxml (uncompressed)."
         )
     )
-    async def save_case(session_id: str, file_path: str, ctx: Any = None):
+    async def save_case(session_id: str, file_path: str, ctx: Context | None = None):
         return await _execute_tool(
             "save_case",
             lambda: _save_case(ctx, session_id=session_id, file_path=file_path),
@@ -106,7 +107,7 @@ def _handle_tool_error(logger, tool_name: str, exc: Exception) -> types.CallTool
     return _error_result(code="UNEXPECTED_ERROR", message=str(exc))
 
 
-def _get_service(ctx: Any):
+def _get_service(ctx: Context | None):
     service = ctx.request_context.lifespan_context.flowsheet_service
     if service is None:
         raise _ServiceUnavailable("Flowsheet service is not configured.")
@@ -114,7 +115,7 @@ def _get_service(ctx: Any):
 
 
 async def _export_csv(
-    ctx: Any, *, session_id: str, file_path: str, object_ids: list[str] | None
+    ctx: Context | None, *, session_id: str, file_path: str, object_ids: list[str] | None
 ) -> Dict[str, Any]:
     payload = ExportCsvInput.model_validate(
         {"session_id": session_id, "file_path": file_path, "object_ids": object_ids}
@@ -122,13 +123,13 @@ async def _export_csv(
     return (await _get_service(ctx).export_csv(payload)).model_dump()
 
 
-async def _export_json(ctx: Any, *, session_id: str, format: str) -> Dict[str, Any]:
+async def _export_json(ctx: Context | None, *, session_id: str, format: str) -> Dict[str, Any]:
     payload = ExportJsonInput.model_validate({"session_id": session_id, "format": format})
     return (await _get_service(ctx).export_json(payload)).model_dump()
 
 
 async def _generate_report(
-    ctx: Any, *, session_id: str, file_path: str, template: str
+    ctx: Context | None, *, session_id: str, file_path: str, template: str
 ) -> Dict[str, Any]:
     payload = GenerateReportInput.model_validate(
         {"session_id": session_id, "file_path": file_path, "template": template}
@@ -136,7 +137,7 @@ async def _generate_report(
     return (await _get_service(ctx).generate_report(payload)).model_dump()
 
 
-async def _save_case(ctx: Any, *, session_id: str, file_path: str) -> Dict[str, Any]:
+async def _save_case(ctx: Context | None, *, session_id: str, file_path: str) -> Dict[str, Any]:
     payload = SaveCaseInput.model_validate({"session_id": session_id, "file_path": file_path})
     return (await _get_service(ctx).save_case(payload)).model_dump()
 

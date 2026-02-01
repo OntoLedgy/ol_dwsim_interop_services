@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Awaitable, Callable, Dict, Optional
 
 from mcp import types
+from mcp.server.fastmcp.server import Context
 from pydantic import ValidationError
 
 from dwsim_mcp_server.models.errors.resource_limit_error import ResourceLimitError
@@ -43,7 +44,7 @@ def register_session_tools(mcp) -> None:
     async def create_session(
         name: Optional[str] = None,
         timeout: Optional[int] = None,
-        ctx: Any = None,
+        ctx: Context | None = None,
     ):
         return await _execute_tool(
             "create_session",
@@ -53,21 +54,21 @@ def register_session_tools(mcp) -> None:
     @mcp.tool(
         description="Close an existing DWSIM session and release resources. Always call this when done to free memory."
     )
-    async def close_session(session_id: str, ctx: Any = None):
+    async def close_session(session_id: str, ctx: Context | None = None):
         return await _execute_tool(
             "close_session",
             lambda: _close_session(ctx, session_id=session_id),
         )
 
     @mcp.tool(description="Save the current flowsheet case to a DWSIM file (.dwxmz).")
-    async def save_case(session_id: str, file_path: str, ctx: Any = None):
+    async def save_case(session_id: str, file_path: str, ctx: Context | None = None):
         return await _execute_tool(
             "save_case",
             lambda: _save_case(ctx, session_id=session_id, file_path=file_path),
         )
 
     @mcp.tool(description="Load a flowsheet case from a DWSIM file (.dwxmz) into a session.")
-    async def load_case(session_id: str, file_path: str, ctx: Any = None):
+    async def load_case(session_id: str, file_path: str, ctx: Context | None = None):
         return await _execute_tool(
             "load_case",
             lambda: _load_case(ctx, session_id=session_id, file_path=file_path),
@@ -99,11 +100,13 @@ def _handle_tool_error(logger, tool_name: str, exc: Exception) -> types.CallTool
     return _error_result(code="UNEXPECTED_ERROR", message=str(exc))
 
 
-def _get_app_context(ctx: Any):
+def _get_app_context(ctx: Context | None):
     return ctx.request_context.lifespan_context
 
 
-async def _create_session(ctx: Any, *, name: Optional[str], timeout: Optional[int]) -> Dict[str, Any]:
+async def _create_session(
+    ctx: Context | None, *, name: Optional[str], timeout: Optional[int]
+) -> Dict[str, Any]:
     app = _get_app_context(ctx)
     payload = CreateSessionRequest.model_validate({"name": name, "timeout": timeout})
     session_id = await app.session_client.create_session(
@@ -114,7 +117,7 @@ async def _create_session(ctx: Any, *, name: Optional[str], timeout: Optional[in
     return {"session_id": session_id}
 
 
-async def _close_session(ctx: Any, *, session_id: str) -> Dict[str, Any]:
+async def _close_session(ctx: Context | None, *, session_id: str) -> Dict[str, Any]:
     app = _get_app_context(ctx)
     payload = CloseSessionRequest.model_validate({"session_id": session_id})
     result = await app.session_client.close_session(payload.session_id)
@@ -122,7 +125,7 @@ async def _close_session(ctx: Any, *, session_id: str) -> Dict[str, Any]:
     return CloseSessionResponse(success=result).model_dump()
 
 
-async def _save_case(ctx: Any, *, session_id: str, file_path: str) -> Dict[str, Any]:
+async def _save_case(ctx: Context | None, *, session_id: str, file_path: str) -> Dict[str, Any]:
     app = _get_app_context(ctx)
     payload = SaveCaseRequest.model_validate(
         {"session_id": session_id, "file_path": file_path}
@@ -138,7 +141,7 @@ async def _save_case(ctx: Any, *, session_id: str, file_path: str) -> Dict[str, 
     return SaveCaseResponse(success=result).model_dump()
 
 
-async def _load_case(ctx: Any, *, session_id: str, file_path: str) -> Dict[str, Any]:
+async def _load_case(ctx: Context | None, *, session_id: str, file_path: str) -> Dict[str, Any]:
     app = _get_app_context(ctx)
     payload = LoadCaseRequest.model_validate(
         {"session_id": session_id, "file_path": file_path}

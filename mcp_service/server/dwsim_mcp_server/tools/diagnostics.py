@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Awaitable, Callable, Dict, Optional
 
 from mcp import types
+from mcp.server.fastmcp.server import Context
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from dwsim_mcp_server.models.errors.session_error import SessionError as SessionErrorModel
@@ -40,7 +41,7 @@ def register_diagnostics_tools(mcp) -> None:
             "Provide session_id to get session diagnostics; omit to get server diagnostics."
         )
     )
-    async def get_diagnostics(session_id: Optional[str] = None, ctx: Any = None):
+    async def get_diagnostics(session_id: Optional[str] = None, ctx: Context | None = None):
         return await _execute_tool(
             "get_diagnostics",
             lambda: _get_diagnostics(ctx, session_id=session_id),
@@ -68,14 +69,14 @@ def _handle_tool_error(logger, tool_name: str, exc: Exception) -> types.CallTool
     return _error_result(code="UNEXPECTED_ERROR", message=str(exc))
 
 
-def _get_service(ctx: Any):
+def _get_service(ctx: Context | None):
     service = ctx.request_context.lifespan_context.diagnostics_service
     if service is None:
         raise _ServiceUnavailable("Diagnostics service is not configured.")
     return service
 
 
-async def _get_diagnostics(ctx: Any, *, session_id: Optional[str]) -> Dict[str, Any]:
+async def _get_diagnostics(ctx: Context | None, *, session_id: Optional[str]) -> Dict[str, Any]:
     payload = GetDiagnosticsInput.model_validate({"session_id": session_id})
     service = _get_service(ctx)
     if payload.session_id:

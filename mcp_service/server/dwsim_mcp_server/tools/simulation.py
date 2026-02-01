@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Awaitable, Callable, Dict
 
 from mcp import types
+from mcp.server.fastmcp.server import Context
 from pydantic import ValidationError
 
 from dwsim_mcp_server.models.errors.resource_limit_error import ResourceLimitError
@@ -28,7 +29,7 @@ def register_simulation_tools(mcp) -> None:
             "Returns convergence status, stream properties, and mass balance diagnostics."
         )
     )
-    async def run(session_id: str, timeout_seconds: int | None = None, ctx: Any = None):
+    async def run(session_id: str, timeout_seconds: int | None = None, ctx: Context | None = None):
         return await _execute_tool(
             "run",
             lambda: _run_simulation(ctx, session_id=session_id, timeout_seconds=timeout_seconds),
@@ -37,7 +38,7 @@ def register_simulation_tools(mcp) -> None:
     @mcp.tool(
         description="Retrieve the latest simulation status for a session: idle, running, converged, or failed."
     )
-    async def get_status(session_id: str, ctx: Any = None):
+    async def get_status(session_id: str, ctx: Context | None = None):
         return await _execute_tool(
             "get_status",
             lambda: _get_status(ctx, session_id=session_id),
@@ -49,7 +50,7 @@ def register_simulation_tools(mcp) -> None:
             "thermodynamic properties (enthalpy, entropy, density, viscosity), and mass balance error."
         )
     )
-    async def get_results(session_id: str, object_id: str | None = None, ctx: Any = None):
+    async def get_results(session_id: str, object_id: str | None = None, ctx: Context | None = None):
         return await _execute_tool(
             "get_results",
             lambda: _get_results(ctx, session_id=session_id, object_id=object_id),
@@ -79,12 +80,12 @@ def _handle_tool_error(logger, tool_name: str, exc: Exception) -> types.CallTool
     return _error_result(code="UNEXPECTED_ERROR", message=str(exc))
 
 
-def _get_session_client(ctx: Any):
+def _get_session_client(ctx: Context | None):
     return ctx.request_context.lifespan_context.session_client
 
 
 async def _run_simulation(
-    ctx: Any, *, session_id: str, timeout_seconds: int | None
+    ctx: Context | None, *, session_id: str, timeout_seconds: int | None
 ) -> Dict[str, Any]:
     logger = get_logger(__name__)
     payload = RunSimulationRequest.model_validate(
@@ -103,7 +104,7 @@ async def _run_simulation(
     return response.model_dump()
 
 
-async def _get_status(ctx: Any, *, session_id: str) -> Dict[str, Any]:
+async def _get_status(ctx: Context | None, *, session_id: str) -> Dict[str, Any]:
     logger = get_logger(__name__)
     payload = GetStatusRequest.model_validate({"session_id": session_id})
     result = await _get_session_client(ctx).get_calculation_status(payload.session_id)
@@ -117,7 +118,7 @@ async def _get_status(ctx: Any, *, session_id: str) -> Dict[str, Any]:
     return response.model_dump()
 
 
-async def _get_results(ctx: Any, *, session_id: str, object_id: str | None) -> Dict[str, Any]:
+async def _get_results(ctx: Context | None, *, session_id: str, object_id: str | None) -> Dict[str, Any]:
     logger = get_logger(__name__)
     payload = GetResultsRequest.model_validate({"session_id": session_id, "object_id": object_id})
     result = await _get_session_client(ctx).get_calculation_results(

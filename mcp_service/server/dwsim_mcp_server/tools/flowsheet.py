@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Awaitable, Callable, Dict
 
 from mcp import types
+from mcp.server.fastmcp.server import Context
 from pydantic import ValidationError
 
 from dwsim_mcp_server.models.errors.session_error import SessionError as SessionErrorModel
@@ -48,7 +49,7 @@ def register_flowsheet_tools(mcp) -> None:
             "Methane, n-Butane, Water, and Carbon Dioxide."
         )
     )
-    async def add_compound(session_id: str, compound_name: str, ctx: Any = None):
+    async def add_compound(session_id: str, compound_name: str, ctx: Context | None = None):
         return await _execute_tool(
             "add_compound",
             lambda: _add_compound(ctx, session_id=session_id, compound_name=compound_name),
@@ -58,7 +59,7 @@ def register_flowsheet_tools(mcp) -> None:
         description="Set a thermodynamic property package for the session. Common packages: Peng-Robinson (general hydrocarbons), SRK (gases), NRTL (polar/non-ideal), UNIQUAC (activity coefficients)."
     )
     async def set_property_package(
-        session_id: str, property_package: str, ctx: Any = None
+        session_id: str, property_package: str, ctx: Context | None = None
     ):
         return await _execute_tool(
             "set_property_package",
@@ -75,7 +76,7 @@ def register_flowsheet_tools(mcp) -> None:
             "Always flash feed streams after creation."
         )
     )
-    async def add_stream(session_id: str, stream_name: str, stream_type: str, is_source: bool, temperature: float | None = None, pressure: float | None = None, molar_flow: float | None = None, composition: Dict[str, float] | None = None, ctx: Any = None):
+    async def add_stream(session_id: str, stream_name: str, stream_type: str, is_source: bool, temperature: float | None = None, pressure: float | None = None, molar_flow: float | None = None, composition: Dict[str, float] | None = None, ctx: Context | None = None):
         return await _execute_tool(
             "add_stream",
             lambda: _add_stream(
@@ -94,7 +95,7 @@ def register_flowsheet_tools(mcp) -> None:
     @mcp.tool(
         description="Create a unit operation. Currently supported: unit_type='separator' (three-phase separator). Parameters: CalculationMode='Legacy', PressureCalculation='Average', DimensionRatio=3.0, ResidenceTime=5.0."
     )
-    async def add_unit(session_id: str, unit_name: str, unit_type: str, parameters: Dict[str, Any] | None = None, ctx: Any = None):
+    async def add_unit(session_id: str, unit_name: str, unit_type: str, parameters: Dict[str, Any] | None = None, ctx: Context | None = None):
         return await _execute_tool(
             "add_unit",
             lambda: _add_unit(
@@ -109,7 +110,7 @@ def register_flowsheet_tools(mcp) -> None:
     @mcp.tool(
         description="Connect a stream to a unit operation port. For separator: port_name can be 'Inlet', 'VaporOutlet', 'LiquidOutlet1', or 'LiquidOutlet2'. source_id is the stream ID, target_id is the unit ID."
     )
-    async def connect(session_id: str, source_id: str, target_id: str, port_name: str, ctx: Any = None):
+    async def connect(session_id: str, source_id: str, target_id: str, port_name: str, ctx: Context | None = None):
         return await _execute_tool(
             "connect",
             lambda: _connect(
@@ -124,14 +125,14 @@ def register_flowsheet_tools(mcp) -> None:
     @mcp.tool(
         description="List all streams, units, and connections in the current session. Use to verify flowsheet topology before running simulation."
     )
-    async def list_objects(session_id: str, ctx: Any = None):
+    async def list_objects(session_id: str, ctx: Context | None = None):
         return await _execute_tool(
             "list_objects",
             lambda: _list_objects(ctx, session_id=session_id),
         )
 
     @mcp.tool(description="Update a parameter on a flowsheet object.")
-    async def set_object_parameter(session_id: str, object_id: str, parameter_name: str, parameter_value: Any, ctx: Any = None):
+    async def set_object_parameter(session_id: str, object_id: str, parameter_name: str, parameter_value: Any, ctx: Context | None = None):
         return await _execute_tool(
             "set_object_parameter",
             lambda: _set_object_parameter(
@@ -144,7 +145,7 @@ def register_flowsheet_tools(mcp) -> None:
         )
 
     @mcp.tool(description="Delete a flowsheet object and orphaned connections safely.")
-    async def delete_object(session_id: str, object_id: str, ctx: Any = None):
+    async def delete_object(session_id: str, object_id: str, ctx: Context | None = None):
         return await _execute_tool(
             "delete_object",
             lambda: _delete_object(ctx, session_id=session_id, object_id=object_id),
@@ -153,7 +154,7 @@ def register_flowsheet_tools(mcp) -> None:
     @mcp.tool(
         description="Perform flash calculation on a feed stream to compute phase equilibrium. MUST be called on feed streams (is_source=true) after creation and before running simulation."
     )
-    async def flash_stream(session_id: str, stream_id: str, ctx: Any = None):
+    async def flash_stream(session_id: str, stream_id: str, ctx: Context | None = None):
         return await _execute_tool(
             "flash_stream",
             lambda: _flash_stream(ctx, session_id=session_id, stream_id=stream_id),
@@ -162,7 +163,7 @@ def register_flowsheet_tools(mcp) -> None:
     @mcp.tool(
         description="Set a binary interaction parameter (BIP) for a pair of compounds. CRITICAL for accurate phase equilibrium. Typical values: hydrocarbon pairs ~0.01-0.05, water-hydrocarbon ~0.5. Set AFTER property package, BEFORE adding streams."
     )
-    async def set_binary_interaction_parameter(session_id: str, compound_a: str, compound_b: str, interaction_value: float, ctx: Any = None):
+    async def set_binary_interaction_parameter(session_id: str, compound_a: str, compound_b: str, interaction_value: float, ctx: Context | None = None):
         return await _execute_tool(
             "set_binary_interaction_parameter",
             lambda: _set_binary_interaction_parameter(
@@ -194,14 +195,14 @@ def _handle_tool_error(logger, tool_name: str, exc: Exception) -> types.CallTool
     return _error_result(code="UNEXPECTED_ERROR", message=str(exc))
 
 
-def _get_service(ctx: Any):
+def _get_service(ctx: Context | None):
     service = ctx.request_context.lifespan_context.flowsheet_service
     if service is None:
         raise _ServiceUnavailable("Flowsheet service is not configured.")
     return service
 
 
-async def _add_compound(ctx: Any, *, session_id: str, compound_name: str) -> Dict[str, Any]:
+async def _add_compound(ctx: Context | None, *, session_id: str, compound_name: str) -> Dict[str, Any]:
     service = _get_service(ctx)
     payload = AddCompoundInput.model_validate(
         {"session_id": session_id, "compound_name": compound_name}
@@ -210,7 +211,7 @@ async def _add_compound(ctx: Any, *, session_id: str, compound_name: str) -> Dic
 
 
 async def _set_property_package(
-    ctx: Any, *, session_id: str, property_package: str
+    ctx: Context | None, *, session_id: str, property_package: str
 ) -> Dict[str, Any]:
     service = _get_service(ctx)
     payload = SetPropertyPackageInput.model_validate(
@@ -220,7 +221,7 @@ async def _set_property_package(
 
 
 async def _add_stream(
-    ctx: Any,
+    ctx: Context | None,
     *,
     session_id: str,
     stream_name: str,
@@ -248,7 +249,7 @@ async def _add_stream(
 
 
 async def _add_unit(
-    ctx: Any,
+    ctx: Context | None,
     *,
     session_id: str,
     unit_name: str,
@@ -268,7 +269,7 @@ async def _add_unit(
 
 
 async def _connect(
-    ctx: Any,
+    ctx: Context | None,
     *,
     session_id: str,
     source_id: str,
@@ -287,14 +288,14 @@ async def _connect(
     return (await service.connect(payload)).model_dump()
 
 
-async def _list_objects(ctx: Any, *, session_id: str) -> Dict[str, Any]:
+async def _list_objects(ctx: Context | None, *, session_id: str) -> Dict[str, Any]:
     service = _get_service(ctx)
     payload = ListObjectsInput.model_validate({"session_id": session_id})
     return (await service.list_objects(payload)).model_dump()
 
 
 async def _set_object_parameter(
-    ctx: Any,
+    ctx: Context | None,
     *,
     session_id: str,
     object_id: str,
@@ -313,7 +314,7 @@ async def _set_object_parameter(
     return (await service.set_object_parameter(payload)).model_dump()
 
 
-async def _delete_object(ctx: Any, *, session_id: str, object_id: str) -> Dict[str, Any]:
+async def _delete_object(ctx: Context | None, *, session_id: str, object_id: str) -> Dict[str, Any]:
     service = _get_service(ctx)
     payload = DeleteObjectInput.model_validate(
         {"session_id": session_id, "object_id": object_id}
@@ -321,14 +322,14 @@ async def _delete_object(ctx: Any, *, session_id: str, object_id: str) -> Dict[s
     return (await service.delete_object(payload)).model_dump()
 
 
-async def _flash_stream(ctx: Any, *, session_id: str, stream_id: str) -> Dict[str, Any]:
+async def _flash_stream(ctx: Context | None, *, session_id: str, stream_id: str) -> Dict[str, Any]:
     service = _get_service(ctx)
     payload = FlashStreamInput.model_validate({"session_id": session_id, "stream_id": stream_id})
     return (await service.flash_stream(payload)).model_dump()
 
 
 async def _set_binary_interaction_parameter(
-    ctx: Any,
+    ctx: Context | None,
     *,
     session_id: str,
     compound_a: str,

@@ -1,5 +1,5 @@
 """MCP tool implementations for DWSIM operations."""
 
-from dwsim_mcp_server.tools.registry import register_tools
+from dwsim_mcp_server.tools.registry import register_all_tools
 
-__all__ = ["register_tools"]
+__all__ = ["register_all_tools"]

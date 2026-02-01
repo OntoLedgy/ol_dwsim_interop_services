@@ -1,117 +1,26 @@
-"""Tool registration for MCP server."""
+"""Tool registration for FastMCP server."""
 
 from __future__ import annotations
 
-from typing import Any, Dict, Set
-
-from mcp.server import Server
-
 from dwsim_mcp_server.observability import get_logger
-from dwsim_mcp_server.observability.metrics import measure_duration
-from dwsim_mcp_server.tools.analysis import build_analysis_tools, handle_analysis_tool
-from dwsim_mcp_server.tools.compound import build_compound_tools, handle_compound_tool
-from dwsim_mcp_server.tools.diagnostics import (
-    build_diagnostics_tools,
-    handle_diagnostics_tool,
-)
-from dwsim_mcp_server.tools.export import build_export_tools, handle_export_tool
-from dwsim_mcp_server.tools.flowsheet import build_flowsheet_tools, handle_flowsheet_tool
-from dwsim_mcp_server.tools.sensitivity import (
-    build_sensitivity_tools,
-    handle_sensitivity_tool,
-)
-from dwsim_mcp_server.tools.session import build_session_tools, handle_session_tool
-from dwsim_mcp_server.tools.simulation import build_simulation_tools, handle_simulation_tool
+from dwsim_mcp_server.tools.analysis import register_analysis_tools
+from dwsim_mcp_server.tools.compound import register_compound_tools
+from dwsim_mcp_server.tools.diagnostics import register_diagnostics_tools
+from dwsim_mcp_server.tools.export import register_export_tools
+from dwsim_mcp_server.tools.flowsheet import register_flowsheet_tools
+from dwsim_mcp_server.tools.sensitivity import register_sensitivity_tools
+from dwsim_mcp_server.tools.session import register_session_tools
+from dwsim_mcp_server.tools.simulation import register_simulation_tools
 
 
-def register_tools(server: Server, dependencies: Any) -> None:
-    """Register tool handlers with the MCP server."""
-    logger = get_logger(__name__)
-
-    session_tools = build_session_tools()
-    flowsheet_tools = build_flowsheet_tools()
-    simulation_tools = build_simulation_tools()
-    analysis_tools = build_analysis_tools()
-    sensitivity_tools = build_sensitivity_tools()
-    export_tools = build_export_tools()
-    compound_tools = build_compound_tools()
-    diagnostics_tools = build_diagnostics_tools()
-
-    session_tool_names: Set[str] = {tool.name for tool in session_tools}
-    flowsheet_tool_names: Set[str] = {tool.name for tool in flowsheet_tools}
-    simulation_tool_names: Set[str] = {tool.name for tool in simulation_tools}
-    analysis_tool_names: Set[str] = {tool.name for tool in analysis_tools}
-    sensitivity_tool_names: Set[str] = {tool.name for tool in sensitivity_tools}
-    export_tool_names: Set[str] = {tool.name for tool in export_tools}
-    compound_tool_names: Set[str] = {tool.name for tool in compound_tools}
-    diagnostics_tool_names: Set[str] = {tool.name for tool in diagnostics_tools}
-    tool_by_name: Dict[str, Any] = {
-        tool.name: tool
-        for tool in (
-            *session_tools,
-            *flowsheet_tools,
-            *simulation_tools,
-            *analysis_tools,
-            *sensitivity_tools,
-            *export_tools,
-            *compound_tools,
-            *diagnostics_tools,
-        )
-    }
-
-    @server.list_tools()
-    async def list_tools():
-        return list(tool_by_name.values())
-
-    @server.call_tool()
-    async def call_tool(tool_name: str, arguments: dict):
-        class _ToolCallError(Exception):
-            def __init__(self, result: Any) -> None:
-                super().__init__("Tool returned isError=True")
-                self.result = result
-
-        try:
-            with measure_duration(tool_name):
-                if tool_name in flowsheet_tool_names:
-                    result = await handle_flowsheet_tool(
-                        tool_name, arguments, dependencies
-                    )
-                elif tool_name in session_tool_names:
-                    result = await handle_session_tool(
-                        tool_name, arguments, dependencies
-                    )
-                elif tool_name in simulation_tool_names:
-                    result = await handle_simulation_tool(
-                        tool_name, arguments, dependencies
-                    )
-                elif tool_name in analysis_tool_names:
-                    result = await handle_analysis_tool(
-                        tool_name, arguments, dependencies
-                    )
-                elif tool_name in sensitivity_tool_names:
-                    result = await handle_sensitivity_tool(
-                        tool_name, arguments, dependencies
-                    )
-                elif tool_name in export_tool_names:
-                    result = await handle_export_tool(tool_name, arguments, dependencies)
-                elif tool_name in compound_tool_names:
-                    result = await handle_compound_tool(
-                        tool_name, arguments, dependencies
-                    )
-                elif tool_name in diagnostics_tool_names:
-                    result = await handle_diagnostics_tool(
-                        tool_name, arguments, dependencies
-                    )
-                else:
-                    result = await handle_session_tool(
-                        tool_name, arguments, dependencies
-                    )
-
-                if getattr(result, "isError", False):
-                    raise _ToolCallError(result)
-
-                return result
-        except _ToolCallError as exc:
-            return exc.result
-
-    logger.info("tools_registered", tool_count=len(tool_by_name))
+def register_all_tools(mcp) -> None:
+    """Register all tools with FastMCP."""
+    register_session_tools(mcp)
+    register_flowsheet_tools(mcp)
+    register_simulation_tools(mcp)
+    register_analysis_tools(mcp)
+    register_sensitivity_tools(mcp)
+    register_export_tools(mcp)
+    register_compound_tools(mcp)
+    register_diagnostics_tools(mcp)
+    get_logger(__name__).info("tools_registered", tool_count=33)

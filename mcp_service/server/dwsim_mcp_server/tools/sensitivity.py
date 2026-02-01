@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Awaitable, Callable, Dict
 
 from mcp import types
+from mcp.server.fastmcp.server import Context
 from pydantic import ValidationError
 
 from dwsim_mcp_server.models.errors.simulation_error import SimulationError as SimulationErrorModel
@@ -32,7 +33,7 @@ def register_sensitivity_tools(mcp) -> None:
         )
     )
     async def sensitivity_analysis(
-        session_id: str, variable_name: str, start_value: float, end_value: float, step_count: int, outputs: list[str], ctx: Any = None
+        session_id: str, variable_name: str, start_value: float, end_value: float, step_count: int, outputs: list[str], ctx: Context | None = None
     ):
         return await _execute_tool(
             "sensitivity_analysis",
@@ -55,7 +56,7 @@ def register_sensitivity_tools(mcp) -> None:
         )
     )
     async def parameter_sweep(
-        session_id: str, variables: list[dict[str, Any]], outputs: list[str], ctx: Any = None
+        session_id: str, variables: list[dict[str, Any]], outputs: list[str], ctx: Context | None = None
     ):
         return await _execute_tool(
             "parameter_sweep",
@@ -74,7 +75,7 @@ def register_sensitivity_tools(mcp) -> None:
         )
     )
     async def optimize(
-        session_id: str, objective: dict[str, Any], variables: list[dict[str, Any]], constraints: list[dict[str, Any]] | None = None, ctx: Any = None
+        session_id: str, objective: dict[str, Any], variables: list[dict[str, Any]], constraints: list[dict[str, Any]] | None = None, ctx: Context | None = None
     ):
         return await _execute_tool(
             "optimize",
@@ -93,7 +94,7 @@ def register_sensitivity_tools(mcp) -> None:
             "completion counts and estimated remaining time."
         )
     )
-    async def get_study_status(study_id: str, ctx: Any = None):
+    async def get_study_status(study_id: str, ctx: Context | None = None):
         return await _execute_tool(
             "get_study_status",
             lambda: _get_study_status(ctx, study_id=study_id),
@@ -105,7 +106,7 @@ def register_sensitivity_tools(mcp) -> None:
             "and marks the study as cancelled."
         )
     )
-    async def cancel_study(study_id: str, ctx: Any = None):
+    async def cancel_study(study_id: str, ctx: Context | None = None):
         return await _execute_tool(
             "cancel_study",
             lambda: _cancel_study(ctx, study_id=study_id),
@@ -117,7 +118,7 @@ def register_sensitivity_tools(mcp) -> None:
             "Use this to persist results for external analysis."
         )
     )
-    async def export_study_results(study_id: str, file_path: str, ctx: Any = None):
+    async def export_study_results(study_id: str, file_path: str, ctx: Context | None = None):
         return await _execute_tool(
             "export_study_results",
             lambda: _export_study_results(ctx, study_id=study_id, file_path=file_path),
@@ -147,7 +148,7 @@ def _handle_tool_error(logger, tool_name: str, exc: Exception) -> types.CallTool
     return _error_result(code="UNEXPECTED_ERROR", message=str(exc))
 
 
-def _get_service(ctx: Any):
+def _get_service(ctx: Context | None):
     service = ctx.request_context.lifespan_context.sensitivity_service
     if service is None:
         raise _ServiceUnavailable("Sensitivity service is not configured.")
@@ -155,7 +156,7 @@ def _get_service(ctx: Any):
 
 
 async def _sensitivity_analysis(
-    ctx: Any,
+    ctx: Context | None,
     *,
     session_id: str,
     variable_name: str,
@@ -178,7 +179,7 @@ async def _sensitivity_analysis(
 
 
 async def _parameter_sweep(
-    ctx: Any,
+    ctx: Context | None,
     *,
     session_id: str,
     variables: list[dict[str, Any]],
@@ -191,7 +192,7 @@ async def _parameter_sweep(
 
 
 async def _optimize(
-    ctx: Any,
+    ctx: Context | None,
     *,
     session_id: str,
     objective: dict[str, Any],
@@ -209,16 +210,16 @@ async def _optimize(
     return (await _get_service(ctx).run_optimization(payload)).model_dump()
 
 
-async def _get_study_status(ctx: Any, *, study_id: str) -> Dict[str, Any]:
+async def _get_study_status(ctx: Context | None, *, study_id: str) -> Dict[str, Any]:
     return (await _get_service(ctx).get_study_status(study_id)).model_dump()
 
 
-async def _cancel_study(ctx: Any, *, study_id: str) -> Dict[str, Any]:
+async def _cancel_study(ctx: Context | None, *, study_id: str) -> Dict[str, Any]:
     return (await _get_service(ctx).cancel_study(study_id)).model_dump()
 
 
 async def _export_study_results(
-    ctx: Any, *, study_id: str, file_path: str
+    ctx: Context | None, *, study_id: str, file_path: str
 ) -> Dict[str, Any]:
     await _get_service(ctx).export_results(study_id, file_path)
     return {"study_id": study_id, "file_path": file_path, "status": "success"}

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Awaitable, Callable, Dict
 
 from mcp import types
+from mcp.server.fastmcp.server import Context
 from pydantic import ValidationError
 
 from dwsim_mcp_server.models.errors.session_error import SessionError as SessionErrorModel
@@ -29,10 +30,10 @@ def register_compound_tools(mcp) -> None:
         description=(
             "Validate compound names against the DWSIM databank before adding them. "
             "Returns canonical names, alias resolution (CO2, H2O, isobutane), and "
-            "fuzzy-matched suggestions for typos (e.g., 'methne' -> Methane)."
+            "fuzzy-matched suggestions for typos (e.g., 'methne' → Methane)."
         )
     )
-    async def validate_compounds(session_id: str, compounds: list[str], ctx: Any = None):
+    async def validate_compounds(session_id: str, compounds: list[str], ctx: Context | None = None):
         return await _execute_tool(
             "validate_compounds",
             lambda: _validate_compounds(ctx, session_id=session_id, compounds=compounds),
@@ -45,7 +46,7 @@ def register_compound_tools(mcp) -> None:
             "type filtering (e.g., Hydrocarbon); supports limit/offset pagination."
         )
     )
-    async def list_available_compounds(session_id: str, pattern: str | None = None, category: str | None = None, limit: int | None = None, offset: int | None = None, ctx: Any = None):
+    async def list_available_compounds(session_id: str, pattern: str | None = None, category: str | None = None, limit: int | None = None, offset: int | None = None, ctx: Context | None = None):
         return await _execute_tool(
             "list_available_compounds",
             lambda: _list_compounds(
@@ -78,7 +79,7 @@ def _handle_tool_error(logger, tool_name: str, exc: Exception) -> types.CallTool
     return _error_result(code="UNEXPECTED_ERROR", message=str(exc))
 
 
-def _get_service(ctx: Any):
+def _get_service(ctx: Context | None):
     service = ctx.request_context.lifespan_context.flowsheet_service
     if service is None:
         raise _ServiceUnavailable("Flowsheet service is not configured.")
@@ -86,7 +87,7 @@ def _get_service(ctx: Any):
 
 
 async def _validate_compounds(
-    ctx: Any, *, session_id: str, compounds: list[str]
+    ctx: Context | None, *, session_id: str, compounds: list[str]
 ) -> Dict[str, Any]:
     service = _get_service(ctx)
     payload = ValidateCompoundsInput.model_validate(
@@ -96,7 +97,7 @@ async def _validate_compounds(
 
 
 async def _list_compounds(
-    ctx: Any,
+    ctx: Context | None,
     *,
     session_id: str,
     pattern: str | None,

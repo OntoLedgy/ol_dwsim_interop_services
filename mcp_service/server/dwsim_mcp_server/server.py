@@ -2,176 +2,66 @@
 
 from __future__ import annotations
 
-import asyncio
-from contextlib import asynccontextmanager
-from typing import AsyncIterator, Optional
+from mcp.server import FastMCP
+from mcp.server.auth.settings import AuthSettings
 
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
-from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
-
+from dwsim_mcp_server.auth import AuthConfig, ClerkTokenVerifier
 from dwsim_mcp_server.config import ServerSettings
 from dwsim_mcp_server.config.server_settings import TransportMode
-from dwsim_mcp_server.ipc.flowsheet_client import FlowsheetClient
-from dwsim_mcp_server.ipc.limited_session_client import LimitedSessionClient
+from dwsim_mcp_server.context import app_lifespan
 from dwsim_mcp_server.observability import configure_logging, get_logger
-from dwsim_mcp_server.observability.logging import start_seq_sink, stop_seq_sink
-from dwsim_mcp_server.observability.metrics_server import start_metrics_server, stop_metrics_server
 from dwsim_mcp_server.observability.settings import ObservabilitySettings
 from dwsim_mcp_server.observability.tracing import configure_tracing
-from dwsim_mcp_server.service import FlowsheetService
-from dwsim_mcp_server.service.diagnostics_service import DiagnosticsService
-from dwsim_mcp_server.services import ThermodynamicsService
-from dwsim_mcp_server.services.sensitivity_service import SensitivityService
-from dwsim_mcp_server.tools.registry import register_tools
 from dwsim_mcp_server.resources.registry import register_resources
+from dwsim_mcp_server.tools.registry import register_all_tools
 
 
-class ServerDependencies:
-    """Container for server-scoped dependencies."""
-
-    def __init__(
-        self,
-        *,
-        settings: ServerSettings,
-        flowsheet_service: Optional[FlowsheetService] = None,
-        thermodynamics_service: Optional[ThermodynamicsService] = None,
-        sensitivity_service: Optional[SensitivityService] = None,
-        diagnostics_service: Optional[DiagnosticsService] = None,
-    ) -> None:
-        self.settings = settings
-        self.session_client = LimitedSessionClient(settings.resource_limits)
-        self.flowsheet_client = FlowsheetClient(self.session_client)
-        self.flowsheet_service = flowsheet_service or FlowsheetService(
-            session_client=self.session_client,
-            flowsheet_client=self.flowsheet_client,
-        )
-        self.thermodynamics_service = thermodynamics_service or ThermodynamicsService(
-            session_client=self.session_client,
-        )
-        self.sensitivity_service = sensitivity_service or SensitivityService(
-            session_client=self.session_client,
-            flowsheet_client=self.flowsheet_client,
-            allowed_export_roots=settings.case_storage_roots
-            if hasattr(settings, "case_storage_roots")
-            else [],
-        )
-        self.diagnostics_service = diagnostics_service or DiagnosticsService(
-            session_client=self.session_client,
-        )
-
-    async def start(self) -> None:
-        self.session_client.start_monitoring()
-
-    async def close(self) -> None:
-        await self.session_client.stop_monitoring()
-        self.session_client.dispose()
-
-
-def create_server(settings: ServerSettings, dependencies: ServerDependencies) -> Server:
-    """Create and register MCP server instance."""
-    server = Server("dwsim-mcp-server")
-    register_tools(server, dependencies)
-    register_resources(server, dependencies)
+def create_mcp_server(
+    settings: ServerSettings,
+    auth_config: AuthConfig,
+    obs_settings: ObservabilitySettings,
+) -> FastMCP:
+    auth_settings = _build_auth_settings(settings, auth_config)
+    token_verifier = _build_token_verifier(auth_config)
+    server = FastMCP(
+        "dwsim-mcp-server",
+        host=settings.http_host,
+        port=settings.http_port,
+        log_level=obs_settings.log_level,
+        lifespan=app_lifespan,
+        auth=auth_settings,
+        token_verifier=token_verifier,
+    )
+    register_all_tools(server)
+    register_resources(server)
     return server
 
 
-async def _run_stdio_server(
-    server: Server,
-    dependencies: ServerDependencies,
-    obs_settings: ObservabilitySettings,
-    logger,
-) -> None:
-    """Run MCP server with stdio transport."""
-    metrics_server = await start_metrics_server() if obs_settings.metrics_enabled else None
-
-    try:
-        async with stdio_server() as (read_stream, write_stream):
-            await server.run(
-                read_stream,
-                write_stream,
-                server.create_initialization_options(),
-            )
-    finally:
-        if metrics_server:
-            await stop_metrics_server(metrics_server)
-        await stop_seq_sink()
-        await dependencies.close()
-        logger.info("server_shutdown")
-
-
-async def _run_http_server(
-    server: Server,
-    settings: ServerSettings,
-    dependencies: ServerDependencies,
-    obs_settings: ObservabilitySettings,
-    logger,
-) -> None:
-    """Run MCP server with streamable HTTP transport."""
-    try:
-        import uvicorn
-        from starlette.applications import Starlette
-        from starlette.routing import Mount
-    except ImportError as e:
-        logger.error(
-            "http_transport_dependencies_missing",
-            error=str(e),
-            hint="Install uvicorn and starlette: pip install uvicorn starlette",
-        )
-        raise RuntimeError(
-            "HTTP transport requires uvicorn and starlette. "
-            "Install with: pip install uvicorn starlette"
-        ) from e
-
-    session_manager = StreamableHTTPSessionManager(app=server)
-    metrics_server = await start_metrics_server() if obs_settings.metrics_enabled else None
-
-    @asynccontextmanager
-    async def lifespan(app: Starlette) -> AsyncIterator[None]:
-        async with session_manager.run():
-            logger.info(
-                "http_server_ready",
-                host=settings.http_host,
-                port=settings.http_port,
-                endpoint=f"http://{settings.http_host}:{settings.http_port}/mcp",
-            )
-            try:
-                yield
-            finally:
-                if metrics_server:
-                    await stop_metrics_server(metrics_server)
-                await stop_seq_sink()
-                await dependencies.close()
-                logger.info("server_shutdown")
-
-    app = Starlette(
-        routes=[Mount("/mcp", app=session_manager.handle_request)],
-        lifespan=lifespan,
+def _build_auth_settings(
+    settings: ServerSettings, auth_config: AuthConfig
+) -> AuthSettings | None:
+    if not auth_config.enabled:
+        return None
+    if auth_config.issuer_url is None:
+        raise ValueError("CLERK_ISSUER_URL is required when auth is enabled.")
+    return AuthSettings(
+        issuer_url=auth_config.issuer_url,
+        required_scopes=auth_config.required_scopes or None,
+        resource_server_url=_resource_server_url(settings),
     )
 
-    config = uvicorn.Config(
-        app,
-        host=settings.http_host,
-        port=settings.http_port,
-        log_level=obs_settings.log_level.lower(),
-    )
-    uvicorn_server = uvicorn.Server(config)
-    await uvicorn_server.serve()
+
+def _build_token_verifier(auth_config: AuthConfig) -> ClerkTokenVerifier | None:
+    if not auth_config.enabled:
+        return None
+    return ClerkTokenVerifier(auth_config)
 
 
-async def main() -> None:
-    settings = ServerSettings()
-    obs_settings = ObservabilitySettings.from_env()
+def _resource_server_url(settings: ServerSettings) -> str:
+    return f"http://{settings.http_host}:{settings.http_port}/mcp"
 
-    configure_logging(obs_settings.log_level)
-    logger = get_logger(__name__)
 
-    configure_tracing(
-        exporter=obs_settings.tracing_exporter,
-        endpoint=obs_settings.tracing_endpoint,
-        sample_rate=obs_settings.tracing_sample_rate,
-    )
-
+def _log_observability(logger, obs_settings: ObservabilitySettings) -> None:
     logger.info(
         "observability_configured",
         log_level=obs_settings.log_level,
@@ -184,28 +74,46 @@ async def main() -> None:
         metrics_port=obs_settings.metrics_port,
     )
 
-    dependencies = ServerDependencies(settings=settings)
-    server = create_server(settings, dependencies)
 
+def _log_server_start(logger, settings: ServerSettings, auth_enabled: bool) -> None:
     logger.info(
         "server_starting",
-        log_level=obs_settings.log_level,
+        log_level=settings.log_level,
         transport_mode=settings.transport_mode.value,
+        auth_enabled=auth_enabled,
     )
 
-    await dependencies.start()
-    await start_seq_sink()
 
+def _transport(settings: ServerSettings) -> str:
     if settings.transport_mode == TransportMode.STREAMABLE_HTTP:
-        await _run_http_server(server, settings, dependencies, obs_settings, logger)
-    else:
-        await _run_stdio_server(server, dependencies, obs_settings, logger)
+        return "streamable-http"
+    return "stdio"
+
+
+def main() -> None:
+    settings = ServerSettings()
+    obs_settings = ObservabilitySettings.from_env()
+    auth_config = AuthConfig()
+
+    configure_logging(obs_settings.log_level)
+    logger = get_logger(__name__)
+
+    configure_tracing(
+        exporter=obs_settings.tracing_exporter,
+        endpoint=obs_settings.tracing_endpoint,
+        sample_rate=obs_settings.tracing_sample_rate,
+    )
+
+    _log_observability(logger, obs_settings)
+    server = create_mcp_server(settings, auth_config, obs_settings)
+    _log_server_start(logger, settings, auth_config.enabled)
+    server.run(_transport(settings))
 
 
 def run() -> None:
     """Synchronous entry point for CLI usage."""
     try:
-        asyncio.run(main())
+        main()
     except KeyboardInterrupt:
         pass
 

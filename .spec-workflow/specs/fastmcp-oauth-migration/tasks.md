@@ -127,13 +127,13 @@
 
 ## Phase 4: Server Bootstrap
 
-- [ ] 4.1. Add FastMCP dependency to pyproject.toml
+- [x] 4.1. Add FastMCP dependency to pyproject.toml
   - File: `mcp_service/server/pyproject.toml`
   - Add fastmcp>=2.0.0 to dependencies
   - _Requirements: REQ-1_
   - _Prompt: Implement the task for spec fastmcp-oauth-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer | Task: Add fastmcp>=2.0.0 to pyproject.toml dependencies section | Restrictions: Do not modify other dependencies, maintain toml formatting | Success: fastmcp is listed in dependencies, uv sync or pip install works | After completing: Mark task as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark as complete when done_
 
-- [ ] 4.2. Update server.py to use FastMCP
+- [x] 4.2. Update server.py to use FastMCP
   - File: `mcp_service/server/dwsim_mcp_server/server.py`
   - Replace Server + StreamableHTTPSessionManager with FastMCP
   - Create create_mcp_server() function that:
@@ -146,7 +146,7 @@
   - _Requirements: REQ-1, REQ-2, REQ-3, REQ-4_
   - _Prompt: Implement the task for spec fastmcp-oauth-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Python Developer specializing in FastMCP server architecture | Task: Replace server.py implementation with FastMCP-based create_mcp_server() that loads AuthConfig, conditionally enables Clerk OAuth, uses app_lifespan for dependency injection, registers all tools via register_*_tools functions, and configures appropriate transport (streamable-http or stdio) | Restrictions: Maintain backward compatibility for stdio mode, preserve existing observability setup, keep DWSIM_AUTH_ENABLED=false as default | Success: Server starts with FastMCP, OAuth works when enabled, stdio mode works, all 33 tools registered | After completing: Mark task as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark as complete when done_
 
-- [ ] 4.3. Update tools registry.py
+- [x] 4.3. Update tools registry.py
   - File: `mcp_service/server/dwsim_mcp_server/tools/registry.py`
   - Remove old register_tools function or keep as legacy
   - Add register_all_tools(mcp) that calls all register_*_tools functions

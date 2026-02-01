@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Awaitable, Callable, Dict
 
 from mcp import types
+from mcp.server.fastmcp.server import Context
 from pydantic import ValidationError
 
 from dwsim_mcp_server.models.errors.resource_limit_error import ResourceLimitError
@@ -30,7 +31,7 @@ def register_analysis_tools(mcp) -> None:
             "fractions (must sum to 1.0), plus temperature and pressure measurements with units."
         )
     )
-    async def flash_tp(session_id: str, temperature: float, pressure: float, compounds: Dict[str, float], units: Dict[str, str], ctx: Any = None):
+    async def flash_tp(session_id: str, temperature: float, pressure: float, compounds: Dict[str, float], units: Dict[str, str], ctx: Context | None = None):
         return await _execute_tool(
             "flash_tp",
             lambda: _flash_tp(
@@ -50,7 +51,7 @@ def register_analysis_tools(mcp) -> None:
             "fractions (must sum to 1.0), plus pressure and molar enthalpy measurements with units."
         )
     )
-    async def flash_ph(session_id: str, pressure: float, enthalpy: float, compounds: Dict[str, float], units: Dict[str, str], ctx: Any = None):
+    async def flash_ph(session_id: str, pressure: float, enthalpy: float, compounds: Dict[str, float], units: Dict[str, str], ctx: Context | None = None):
         return await _execute_tool(
             "flash_ph",
             lambda: _flash_ph(
@@ -70,7 +71,7 @@ def register_analysis_tools(mcp) -> None:
             "fractions (must sum to 1.0), plus pressure and molar entropy measurements with units."
         )
     )
-    async def flash_ps(session_id: str, pressure: float, entropy: float, compounds: Dict[str, float], units: Dict[str, str], ctx: Any = None):
+    async def flash_ps(session_id: str, pressure: float, entropy: float, compounds: Dict[str, float], units: Dict[str, str], ctx: Context | None = None):
         return await _execute_tool(
             "flash_ps",
             lambda: _flash_ps(
@@ -109,7 +110,7 @@ def _handle_tool_error(logger, tool_name: str, exc: Exception) -> types.CallTool
     return _error_result(code="UNEXPECTED_ERROR", message=str(exc))
 
 
-def _get_service(ctx: Any):
+def _get_service(ctx: Context | None):
     service = ctx.request_context.lifespan_context.thermodynamics_service
     if service is None:
         raise _ServiceUnavailable("Thermodynamics service is not configured.")
@@ -117,7 +118,7 @@ def _get_service(ctx: Any):
 
 
 async def _flash_tp(
-    ctx: Any,
+    ctx: Context | None,
     *,
     session_id: str,
     temperature: float,
@@ -138,7 +139,7 @@ async def _flash_tp(
 
 
 async def _flash_ph(
-    ctx: Any,
+    ctx: Context | None,
     *,
     session_id: str,
     pressure: float,
@@ -159,7 +160,7 @@ async def _flash_ph(
 
 
 async def _flash_ps(
-    ctx: Any,
+    ctx: Context | None,
     *,
     session_id: str,
     pressure: float,
