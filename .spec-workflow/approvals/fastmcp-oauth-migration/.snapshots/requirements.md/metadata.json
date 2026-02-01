@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/fastmcp-oauth-migration/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-31T19:50:52.911Z",
+      "trigger": "initial",
+      "approvalId": "approval_1769889052841_7ng9yyl9p",
+      "approvalTitle": "Requirements: FastMCP OAuth Migration"
+    }
+  ]
+}

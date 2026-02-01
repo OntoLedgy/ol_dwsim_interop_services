@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/fastmcp-oauth-migration/design.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-31T19:53:08.076Z",
+      "trigger": "initial",
+      "approvalId": "approval_1769889188020_ijyw0kp7z",
+      "approvalTitle": "Design: FastMCP OAuth Migration"
+    }
+  ]
+}
