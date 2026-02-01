@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any, List
 
 from mcp.server import Server
-from mcp.server.fastmcp.server import Context
 from mcp import types
 
 from dwsim_mcp_server.observability import get_logger
@@ -111,14 +110,23 @@ def _register_server_resources(server: Server, dependencies: Any) -> None:
 
 
 def _register_fastmcp_resources(server) -> None:
+    # Build providers once at registration time
+    # Note: These use default paths; for custom paths, use legacy Server resources
+    _docs_provider = DocsProvider(docs_path="./docs/resources")
+    _samples_provider = SamplesProvider(
+        samples_path="./cases/samples",
+        case_storage_roots=[],
+    )
+
     @server.resource(
         "resource://docs",
         name="Documentation Index",
         description="List all available DWSIM documentation topics",
         mime_type="application/json",
     )
-    async def docs_index(ctx: Context | None = None):
-        return await _read_provider_resource(ctx, "docs", "resource://docs")
+    async def docs_index() -> str:
+        result = await _docs_provider.read_resource("resource://docs")
+        return _extract_resource_content(result)
 
     @server.resource(
         "resource://docs/{topic}",
@@ -126,8 +134,9 @@ def _register_fastmcp_resources(server) -> None:
         description="Get documentation for a specific topic (e.g., unit-operations, property-packages)",
         mime_type="text/markdown",
     )
-    async def docs_topic(topic: str, ctx: Context | None = None):
-        return await _read_provider_resource(ctx, "docs", f"resource://docs/{topic}")
+    async def docs_topic(topic: str) -> str:
+        result = await _docs_provider.read_resource(f"resource://docs/{topic}")
+        return _extract_resource_content(result)
 
     @server.resource(
         "resource://cases",
@@ -135,8 +144,9 @@ def _register_fastmcp_resources(server) -> None:
         description="List all available DWSIM sample simulation cases",
         mime_type="application/json",
     )
-    async def cases_index(ctx: Context | None = None):
-        return await _read_provider_resource(ctx, "cases", "resource://cases")
+    async def cases_index() -> str:
+        result = await _samples_provider.read_resource("resource://cases")
+        return _extract_resource_content(result)
 
     @server.resource(
         "resource://cases/{name}",
@@ -144,8 +154,9 @@ def _register_fastmcp_resources(server) -> None:
         description="Get metadata for a specific sample case (compounds, units, complexity)",
         mime_type="application/json",
     )
-    async def case_metadata(name: str, ctx: Context | None = None):
-        return await _read_provider_resource(ctx, "cases", f"resource://cases/{name}")
+    async def case_metadata(name: str) -> str:
+        result = await _samples_provider.read_resource(f"resource://cases/{name}")
+        return _extract_resource_content(result)
 
     @server.resource(
         "resource://cases/{name}/flowsheet",
@@ -153,64 +164,26 @@ def _register_fastmcp_resources(server) -> None:
         description="Get flowsheet topology (streams, units, connections) for a sample case",
         mime_type="application/json",
     )
-    async def case_flowsheet(name: str, ctx: Context | None = None):
-        return await _read_provider_resource(
-            ctx, "cases", f"resource://cases/{name}/flowsheet"
+    async def case_flowsheet(name: str) -> str:
+        result = await _samples_provider.read_resource(
+            f"resource://cases/{name}/flowsheet"
         )
+        return _extract_resource_content(result)
 
-    @server.resource(
-        "resource://session/{sessionId}/results",
-        name="Session Results",
-        description="Get all simulation results for a session (streams, units, overall status)",
-        mime_type="application/json",
-    )
-    async def session_results(sessionId: str, ctx: Context | None = None):
-        return await _read_provider_resource(
-            ctx, "session", f"resource://session/{sessionId}/results"
-        )
-
-    @server.resource(
-        "resource://session/{sessionId}/results/{objectId}",
-        name="Object Results",
-        description="Get detailed results for a specific stream or unit operation",
-        mime_type="application/json",
-    )
-    async def object_results(sessionId: str, objectId: str, ctx: Context | None = None):
-        uri = f"resource://session/{sessionId}/results/{objectId}"
-        return await _read_provider_resource(ctx, "session", uri)
-
-
-async def _read_provider_resource(ctx: Context | None, key: str, uri: str) -> str | bytes:
-    providers = _get_providers(ctx)
-    result = await providers[key].read_resource(uri)
-    return _extract_resource_content(result)
+    # NOTE: Session resources require session_client from lifespan context.
+    # FastMCP resources are registered at startup before lifespan runs.
+    # These resources are available via the legacy Server path when dependencies
+    # are provided. For FastMCP, use the get_results tool instead.
+    #
+    # TODO: Implement session resources for FastMCP when FastMCP supports
+    # accessing lifespan context from resource handlers.
 
 
 def _extract_resource_content(result: types.ReadResourceResult) -> str | bytes:
+    """Extract text or blob content from a ReadResourceResult."""
     if not result.contents:
         return ""
     content = result.contents[0]
     if hasattr(content, "text"):
         return content.text
     return content.blob
-
-
-def _get_providers(ctx: Context | None) -> Dict[str, Any]:
-    app_context = ctx.request_context.lifespan_context
-    providers = getattr(app_context, "_resource_providers", None)
-    if providers is None:
-        providers = _build_providers(app_context)
-        setattr(app_context, "_resource_providers", providers)
-    return providers
-
-
-def _build_providers(app_context: Any) -> Dict[str, Any]:
-    settings = app_context.settings
-    return {
-        "docs": DocsProvider(docs_path=getattr(settings, "docs_path", "./docs/resources")),
-        "cases": SamplesProvider(
-            samples_path=getattr(settings, "sample_cases_path", "./cases/samples"),
-            case_storage_roots=getattr(settings, "case_storage_roots", []),
-        ),
-        "session": ResultsProvider(session_client=app_context.session_client),
-    }

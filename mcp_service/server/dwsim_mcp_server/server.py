@@ -35,8 +35,7 @@ def create_mcp_server(
         auth=auth_provider,
     )
     register_all_tools(server)
-    # TODO: Fix resources for FastMCP compatibility
-    # register_resources(server)
+    register_resources(server)
     return server
 
 
