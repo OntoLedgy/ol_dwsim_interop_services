@@ -93,6 +93,13 @@ def _build_services(
     )
 
 
+def _get_base_url(settings: ServerSettings) -> str:
+    """Get the base URL for OAuth discovery, using public URL if configured."""
+    if settings.public_base_url:
+        return settings.public_base_url.rstrip("/")
+    return f"http://{settings.http_host}:{settings.http_port}"
+
+
 def _build_auth_provider(
     settings: ServerSettings, auth_config: AuthConfig
 ) -> RemoteAuthProvider | None:
@@ -102,7 +109,7 @@ def _build_auth_provider(
         raise ValueError("CLERK_ISSUER_URL is required when auth is enabled.")
 
     token_verifier = ClerkTokenVerifier(auth_config)
-    base_url = f"http://{settings.http_host}:{settings.http_port}"
+    base_url = _get_base_url(settings)
 
     return RemoteAuthProvider(
         token_verifier=token_verifier,
@@ -183,11 +190,16 @@ def _run_http_with_oauth(
     auth_provider = _build_auth_provider(settings, auth_config)
     if auth_provider is not None:
         # Manually create the protected resource endpoint
-        base_url = f"http://{settings.http_host}:{settings.http_port}"
+        # If public_base_url is set, use it directly (it should include /mcp)
+        # Otherwise construct from host:port + mcp_path
+        if settings.public_base_url:
+            resource_url = settings.public_base_url.rstrip("/")
+        else:
+            resource_url = f"http://{settings.http_host}:{settings.http_port}{mcp_path}"
 
         async def oauth_protected_resource(request):
             return JSONResponse({
-                "resource": f"{base_url}{mcp_path}",
+                "resource": resource_url,
                 "authorization_servers": [str(auth_config.issuer_url)],
                 "scopes_supported": auth_config.required_scopes or [],
             })

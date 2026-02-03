@@ -44,9 +44,9 @@ set "PYTHONPATH=%REPO%;%SERVER%"
 set "DWSIM_TRANSPORT_MODE=streamable-http"
 set "DWSIM_HTTP_PORT=8000"
 
-REM Load OAuth settings from .env.auth
-for /f "usebackq tokens=1,* delims==" %%a in ("%SERVER%\.env.auth") do (
-    if not "%%a"=="" if not "%%a:~0,1%"=="#" set "%%a=%%b"
+REM Load OAuth settings from .env.auth (skip comments and empty lines)
+for /f "usebackq eol=# tokens=1,* delims==" %%a in ("%SERVER%\.env.auth") do (
+    if not "%%a"=="" set "%%a=%%b"
 )
 
 REM Verify auth is enabled

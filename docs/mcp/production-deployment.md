@@ -56,14 +56,22 @@ Format: `https://your-app.clerk.accounts.dev`
 Create `mcp_service/server/.env.auth` on the production server:
 
 ```env
-# OAuth Configuration (Clerk) - Production
+# OAuth and Server Configuration - Production
+
+# Public MCP URL (REQUIRED when behind a reverse proxy)
+# This is the full URL clients use to reach the MCP endpoint
+DWSIM_PUBLIC_BASE_URL=https://your-domain.com/dwsim/mcp
+
+# OAuth Configuration
 DWSIM_AUTH_ENABLED=true
 CLERK_ISSUER_URL=https://YOUR-PROD-ISSUER.clerk.accounts.dev
 CLERK_AUDIENCE=dwsim-mcp
 CLERK_REQUIRED_SCOPES=["user"]
 ```
 
-Replace `YOUR-PROD-ISSUER` with your actual Clerk production issuer URL.
+Replace:
+- `your-domain.com/dwsim` with your actual public URL (including any path prefix from your reverse proxy)
+- `YOUR-PROD-ISSUER` with your actual Clerk production issuer URL
 
 ## Step 4: Start the Server
 
@@ -241,6 +249,7 @@ Replace:
 ## Security Checklist
 
 - [ ] HTTPS enabled via reverse proxy
+- [ ] `DWSIM_PUBLIC_BASE_URL` set to your public HTTPS URL
 - [ ] `DWSIM_AUTH_ENABLED=true` set
 - [ ] `CLERK_AUDIENCE=dwsim-mcp` set (prevents token reuse from other apps)
 - [ ] Firewall blocks direct access to port 8000 from external
@@ -254,8 +263,11 @@ Replace:
 | `DWSIM_TRANSPORT_MODE` | Yes | `stdio` | Set to `streamable-http` for HTTP |
 | `DWSIM_HTTP_HOST` | No | `0.0.0.0` | Bind address |
 | `DWSIM_HTTP_PORT` | No | `8000` | HTTP port |
+| `DWSIM_PUBLIC_BASE_URL` | Yes* | - | Full public MCP URL behind reverse proxy (e.g., `https://example.com/dwsim/mcp`) |
 | `DWSIM_AUTH_ENABLED` | Yes | `false` | Must be `true` for production |
 | `CLERK_ISSUER_URL` | Yes | - | Your Clerk issuer URL |
 | `CLERK_AUDIENCE` | Recommended | - | JWT audience claim |
 | `CLERK_REQUIRED_SCOPES` | No | `["user"]` | Required OAuth scopes |
 | `DWSIM_LOG_LEVEL` | No | `INFO` | Logging level |
+
+*Required when running behind a reverse proxy (HTTPS, path prefix, etc.)

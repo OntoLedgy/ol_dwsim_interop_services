@@ -249,27 +249,65 @@ PYTHONPATH=$repoPath;$serverPath
 Set-Content -Path "$serverPath\.env" -Value $envContent
 Write-Success "Created .env file"
 
-# Create OAuth configuration template
+# Create OAuth configuration
+Write-Host ""
+Write-Host "OAuth Configuration" -ForegroundColor Cyan
+Write-Host "  Configure authentication and public URL for the MCP server."
+Write-Host "  Press Enter to use defaults, or type a custom value."
+Write-Host ""
+
+$defaultPublicUrl = "https://ontoledgy.io/dwsim/mcp"
+$publicUrlPrompt = Read-Host "  Public MCP URL (for reverse proxy) [$defaultPublicUrl]"
+if ([string]::IsNullOrWhiteSpace($publicUrlPrompt)) {
+    $publicBaseUrl = $defaultPublicUrl
+} else {
+    $publicBaseUrl = $publicUrlPrompt.Trim().TrimEnd('/')
+}
+
+$defaultIssuer = "https://clerk.ontoledgy.io"
+$issuerPrompt = Read-Host "  Clerk Issuer URL [$defaultIssuer]"
+if ([string]::IsNullOrWhiteSpace($issuerPrompt)) {
+    $clerkIssuer = $defaultIssuer
+} else {
+    $clerkIssuer = $issuerPrompt.Trim()
+}
+
+$enableAuthPrompt = Read-Host "  Enable authentication? (Y/n) [Y]"
+if ($enableAuthPrompt -match "^[Nn]") {
+    $authEnabled = "false"
+} else {
+    $authEnabled = "true"
+}
+
 $envAuthContent = @"
-# OAuth Configuration (Clerk)
-# Copy this file and fill in your Clerk credentials
-# The start-http.bat script will load this automatically
+# OAuth and Server Configuration
+# The start-http-prod.bat script loads this automatically
+
+# Public MCP URL (required when behind a reverse proxy)
+# This is the full URL clients use to reach the MCP endpoint
+DWSIM_PUBLIC_BASE_URL=$publicBaseUrl
 
 # Enable/disable authentication (set to true for production)
-DWSIM_AUTH_ENABLED=false
+DWSIM_AUTH_ENABLED=$authEnabled
 
 # Clerk Configuration
-# Get these values from your Clerk dashboard
-CLERK_ISSUER_URL=https://your-app.clerk.accounts.dev
+CLERK_ISSUER_URL=$clerkIssuer
 CLERK_AUDIENCE=dwsim-mcp
-CLERK_REQUIRED_SCOPES=user
+CLERK_REQUIRED_SCOPES=["user"]
 
 # Optional: Override JWKS URL (normally derived from issuer)
 # CLERK_JWKS_URL=
 "@
 
+Set-Content -Path "$serverPath\.env.auth" -Value $envAuthContent
+Write-Success "Created .env.auth"
+Write-Host "    Public URL: $publicBaseUrl"
+Write-Host "    Issuer: $clerkIssuer"
+Write-Host "    Auth: $authEnabled"
+
+# Also create template for reference
 Set-Content -Path "$serverPath\.env.auth.template" -Value $envAuthContent
-Write-Success "Created .env.auth.template (copy to .env.auth and configure for OAuth)"
+Write-Host "  Also created .env.auth.template for reference"
 
 # Create simulations directory
 $simPath = "$InstallPath\simulations"
@@ -283,7 +321,7 @@ if (-not (Test-Path $simPath)) {
 # ============================================
 Write-Step "Copying convenience scripts"
 
-$scriptsToInstall = @("start-http.bat", "start-stdio.bat", "diagnose.bat", "test-server.bat")
+$scriptsToInstall = @("start-http.bat", "start-http-prod.bat", "start-stdio.bat", "diagnose.bat", "test-server.bat")
 foreach ($script in $scriptsToInstall) {
     $src = "$repoPath\scripts\$script"
     if (Test-Path $src) {
@@ -309,15 +347,15 @@ Write-Host @"
   INSTALLATION COMPLETE!
 =========================================
 
-Quick Start:
+Quick Start (Development - no auth):
   $InstallPath\start-http.bat
 
-OAuth Setup (Optional):
-  1. Copy .env.auth.template to .env.auth
-  2. Set DWSIM_AUTH_ENABLED=true
-  3. Configure CLERK_ISSUER_URL with your Clerk app URL
-  4. Restart the server
-  See: docs/mcp/deployment-guide.md
+Production (with OAuth):
+  $InstallPath\start-http-prod.bat
+
+To modify OAuth settings:
+  Edit: $serverPath\.env.auth
+  See: docs/mcp/production-deployment.md
 
 Manual Start:
   cd "$serverPath"

@@ -38,6 +38,12 @@ class ServerSettings(BaseSettings):
         validation_alias="DWSIM_HTTP_PORT",
         description="Port for HTTP transport (only used when transport_mode='streamable-http').",
     )
+    public_base_url: Optional[str] = Field(
+        None,
+        validation_alias="DWSIM_PUBLIC_BASE_URL",
+        description="Full public MCP URL when behind a reverse proxy (e.g., https://example.com/dwsim/mcp). "
+        "Used for OAuth discovery. If not set, uses http://{http_host}:{http_port}/mcp.",
+    )
     log_level: str = Field(
         "INFO",
         validation_alias="DWSIM_LOG_LEVEL",
