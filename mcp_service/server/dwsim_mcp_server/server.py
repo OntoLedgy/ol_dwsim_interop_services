@@ -197,15 +197,36 @@ def _run_http_with_oauth(
         else:
             resource_url = f"http://{settings.http_host}:{settings.http_port}{mcp_path}"
 
+        issuer = str(auth_config.issuer_url).rstrip("/")
+
         async def oauth_protected_resource(request):
             return JSONResponse({
                 "resource": resource_url,
-                "authorization_servers": [str(auth_config.issuer_url)],
+                "authorization_servers": [resource_url.rsplit("/mcp", 1)[0]],
                 "scopes_supported": auth_config.required_scopes or [],
             })
 
         routes.append(
             Route("/.well-known/oauth-protected-resource", oauth_protected_resource)
+        )
+
+        async def oauth_authorization_server(request):
+            return JSONResponse({
+                "issuer": issuer,
+                "authorization_endpoint": f"{issuer}/oauth/authorize",
+                "token_endpoint": f"{issuer}/oauth/token",
+                "revocation_endpoint": f"{issuer}/oauth/token/revoke",
+                "userinfo_endpoint": f"{issuer}/oauth/userinfo",
+                "jwks_uri": f"{issuer}/.well-known/jwks.json",
+                "scopes_supported": ["openid", "profile", "email", "offline_access"],
+                "response_types_supported": ["code"],
+                "grant_types_supported": ["authorization_code", "refresh_token"],
+                "token_endpoint_auth_methods_supported": ["client_secret_basic", "client_secret_post"],
+                "code_challenge_methods_supported": ["S256"],
+            })
+
+        routes.append(
+            Route("/.well-known/oauth-authorization-server", oauth_authorization_server)
         )
 
     # Mount MCP app
