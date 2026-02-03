@@ -202,7 +202,7 @@ def _run_http_with_oauth(
         async def oauth_protected_resource(request):
             return JSONResponse({
                 "resource": resource_url,
-                "authorization_servers": [resource_url.rsplit("/mcp", 1)[0]],
+                "authorization_servers": [issuer],
                 "scopes_supported": auth_config.required_scopes or [],
             })
 
