@@ -221,6 +221,8 @@ def _run_http_with_oauth(
         host=settings.http_host,
         port=settings.http_port,
         log_level="info",
+        proxy_headers=True,
+        forwarded_allow_ips="*",
     )
 
 
