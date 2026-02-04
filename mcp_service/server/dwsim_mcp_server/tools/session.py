@@ -146,7 +146,7 @@ def _handle_tool_error(logger, tool_name: str, exc: Exception) -> types.CallTool
 
 
 def _get_app_context(ctx: Context | None):
-    return ctx.lifespan_context
+    return ctx.request_context.lifespan_context
 
 
 async def _create_session(

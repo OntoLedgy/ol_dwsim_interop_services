@@ -154,7 +154,7 @@ def _handle_tool_error(logger, tool_name: str, exc: Exception) -> types.CallTool
 
 
 def _get_service(ctx: Context | None):
-    service = ctx.lifespan_context.thermodynamics_service
+    service = ctx.request_context.lifespan_context.thermodynamics_service
     if service is None:
         raise _ServiceUnavailable("Thermodynamics service is not configured.")
     return service

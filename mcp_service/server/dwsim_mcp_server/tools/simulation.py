@@ -113,7 +113,7 @@ def _handle_tool_error(logger, tool_name: str, exc: Exception) -> types.CallTool
 
 
 def _get_session_client(ctx: Context | None):
-    return ctx.lifespan_context.session_client
+    return ctx.request_context.lifespan_context.session_client
 
 
 async def _run_simulation(
