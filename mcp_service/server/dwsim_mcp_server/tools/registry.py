@@ -1,7 +1,5 @@
 """Tool registration for FastMCP server."""
 
-from __future__ import annotations
-
 from dwsim_mcp_server.observability import get_logger
 from dwsim_mcp_server.tools.analysis import register_analysis_tools
 from dwsim_mcp_server.tools.compound import register_compound_tools

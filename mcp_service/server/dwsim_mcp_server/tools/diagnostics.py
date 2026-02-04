@@ -1,7 +1,5 @@
 """Diagnostics MCP tools."""
 
-from __future__ import annotations
-
 from typing import Any, Awaitable, Callable, Dict, Optional
 
 from mcp import types
@@ -41,7 +39,7 @@ def register_diagnostics_tools(mcp) -> None:
             "Provide session_id to get session diagnostics; omit to get server diagnostics."
         )
     )
-    async def get_diagnostics(session_id: Optional[str] = None, ctx: Context | None = None):
+    async def get_diagnostics(session_id: Optional[str] = None, ctx: Optional[Context] = None):
         return await _execute_tool(
             "get_diagnostics",
             lambda: _get_diagnostics(ctx, session_id=session_id),

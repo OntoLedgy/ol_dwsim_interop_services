@@ -1,7 +1,5 @@
 """Session management tools for the DWSIM MCP server."""
 
-from __future__ import annotations
-
 from typing import Any, Awaitable, Callable, Dict, Optional
 
 from mcp import types
@@ -54,7 +52,7 @@ def register_session_tools(mcp) -> None:
     async def create_session(
         name: Optional[str] = None,
         timeout: Optional[int] = None,
-        ctx: Context | None = None,
+        ctx: Optional[Context] = None,
     ):
         return await _execute_tool(
             "create_session",

@@ -1,7 +1,5 @@
 """Legacy tool helpers for compatibility with pre-FastMCP tests."""
 
-from __future__ import annotations
-
 
 class _LegacyRequestContext:
     def __init__(self, dependencies) -> None:
