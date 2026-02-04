@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Awaitable, Callable, Dict
 
 from mcp import types
-from mcp.server.fastmcp.server import Context
+from fastmcp import Context
 from pydantic import ValidationError
 
 from dwsim_mcp_server.models.errors.session_error import SessionError as SessionErrorModel
@@ -150,7 +150,7 @@ def _handle_tool_error(logger, tool_name: str, exc: Exception) -> types.CallTool
 
 
 def _get_service(ctx: Context | None):
-    service = ctx.request_context.lifespan_context.flowsheet_service
+    service = ctx.lifespan_context.flowsheet_service
     if service is None:
         raise _ServiceUnavailable("Flowsheet service is not configured.")
     return service

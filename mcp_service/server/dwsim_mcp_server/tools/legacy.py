@@ -12,4 +12,6 @@ class LegacyContext:
     """Compatibility wrapper to emulate FastMCP request context."""
 
     def __init__(self, dependencies) -> None:
+        self.lifespan_context = dependencies
+        # Keep request_context for backward compatibility with older tests
         self.request_context = _LegacyRequestContext(dependencies)

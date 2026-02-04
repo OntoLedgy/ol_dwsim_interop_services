@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Awaitable, Callable, Dict
 
 from mcp import types
-from mcp.server.fastmcp.server import Context
+from fastmcp import Context
 from pydantic import ValidationError
 
 from dwsim_mcp_server.models.errors.resource_limit_error import ResourceLimitError
@@ -115,7 +115,7 @@ def _handle_tool_error(logger, tool_name: str, exc: Exception) -> types.CallTool
 
 
 def _get_session_client(ctx: Context | None):
-    return ctx.request_context.lifespan_context.session_client
+    return ctx.lifespan_context.session_client
 
 
 async def _run_simulation(
