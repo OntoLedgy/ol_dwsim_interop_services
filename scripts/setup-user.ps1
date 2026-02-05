@@ -292,8 +292,11 @@ DWSIM_AUTH_ENABLED=$authEnabled
 
 # Clerk Configuration
 CLERK_ISSUER_URL=$clerkIssuer
-CLERK_AUDIENCE=dwsim-mcp
-CLERK_REQUIRED_SCOPES=["user"]
+
+# Note: Clerk OAuth tokens use standard OIDC scopes and don't include custom
+# JWT template claims. These settings are typically not needed:
+# CLERK_AUDIENCE=dwsim-mcp
+# CLERK_REQUIRED_SCOPES=
 
 # Optional: Override JWKS URL (normally derived from issuer)
 # CLERK_JWKS_URL=
