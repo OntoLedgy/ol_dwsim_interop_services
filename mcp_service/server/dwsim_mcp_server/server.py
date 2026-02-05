@@ -230,6 +230,47 @@ def _run_http_with_oauth(
             Route("/.well-known/oauth-authorization-server", oauth_authorization_server)
         )
 
+        # Token proxy endpoint for browser-based test harness
+        # This proxies client credentials to Clerk's token endpoint server-side
+        async def token_proxy(request):
+            import httpx
+
+            try:
+                form_data = await request.form()
+                client_id = form_data.get("client_id")
+                client_secret = form_data.get("client_secret")
+
+                if not client_id or not client_secret:
+                    return JSONResponse(
+                        {"error": "missing_credentials"},
+                        status_code=400
+                    )
+
+                # Get Clerk's token endpoint
+                token_url = f"{issuer}/oauth/token"
+
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        token_url,
+                        data={
+                            "grant_type": "client_credentials",
+                            "client_id": client_id,
+                            "client_secret": client_secret,
+                        },
+                        headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    )
+                    return JSONResponse(
+                        response.json(),
+                        status_code=response.status_code
+                    )
+            except Exception as e:
+                return JSONResponse(
+                    {"error": "proxy_error", "message": str(e)},
+                    status_code=500
+                )
+
+        routes.append(Route("/oauth/token", token_proxy, methods=["POST"]))
+
     # Mount MCP app
     routes.append(Mount("/", app=mcp_app))
 

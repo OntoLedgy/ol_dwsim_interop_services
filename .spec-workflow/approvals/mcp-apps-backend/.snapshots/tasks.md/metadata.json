@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-apps-backend/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-05T17:42:38.551Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770313358488_ez6q5ctr4",
+      "approvalTitle": "MCP Apps Backend Tasks Document"
+    }
+  ]
+}

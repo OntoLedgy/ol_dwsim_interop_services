@@ -42,6 +42,7 @@
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
+    "codex",
     "dwsim"
   ]
 }
