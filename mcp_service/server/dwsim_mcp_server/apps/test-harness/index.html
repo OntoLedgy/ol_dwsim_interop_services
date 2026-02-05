@@ -274,10 +274,6 @@
             <input type="text" id="server-url" placeholder="https://your-domain.com/mcp" />
           </div>
           <div class="control-group">
-            <label for="token-url">OAuth Token URL</label>
-            <input type="text" id="token-url" placeholder="https://your-clerk-domain/oauth/token" />
-          </div>
-          <div class="control-group">
             <label for="client-id">Client ID</label>
             <input type="text" id="client-id" placeholder="OAuth client ID" />
           </div>
@@ -587,7 +583,6 @@
         var mockPanel = document.getElementById("mock-panel");
         var livePanel = document.getElementById("live-panel");
         var serverUrlInput = document.getElementById("server-url");
-        var tokenUrlInput = document.getElementById("token-url");
         var clientIdInput = document.getElementById("client-id");
         var clientSecretInput = document.getElementById("client-secret");
         var sessionIdInput = document.getElementById("session-id");
@@ -601,6 +596,7 @@
         // Live mode state
         var liveSessionId = null;
         var liveAccessToken = null;
+        var discoveredTokenUrl = null;
         var currentMode = "mock";
 
         var bridge = new MockAppBridge(iframe, {
@@ -627,30 +623,87 @@
           });
         });
 
+        // OAuth Discovery: find token endpoint from MCP server
+        function discoverTokenEndpoint() {
+          var serverUrl = serverUrlInput.value.trim();
+          if (!serverUrl) {
+            return Promise.reject(new Error("Server URL is required"));
+          }
+
+          // Get base URL (remove /mcp path if present)
+          var baseUrl = serverUrl.replace(/\/mcp\/?$/, "");
+          var discoveryUrl = baseUrl + "/.well-known/oauth-protected-resource";
+
+          appendLog("AUTH", "Discovering OAuth config from " + discoveryUrl);
+
+          return fetch(discoveryUrl)
+            .then(function (response) {
+              if (!response.ok) {
+                throw new Error("OAuth discovery failed: HTTP " + response.status);
+              }
+              return response.json();
+            })
+            .then(function (protectedResource) {
+              // Get the authorization server URL
+              var authServers = protectedResource.authorization_servers || [];
+              if (authServers.length === 0) {
+                throw new Error("No authorization servers found in discovery");
+              }
+              var authServerUrl = authServers[0].replace(/\/$/, "");
+              appendLog("AUTH", "Found auth server: " + authServerUrl);
+
+              // Fetch OpenID configuration to get token endpoint
+              return fetch(authServerUrl + "/.well-known/openid-configuration")
+                .then(function (response) {
+                  if (!response.ok) {
+                    // Fallback: try standard OAuth endpoint
+                    appendLog("AUTH", "OpenID config not found, using default /oauth/token");
+                    return { token_endpoint: authServerUrl + "/oauth/token" };
+                  }
+                  return response.json();
+                });
+            })
+            .then(function (oidcConfig) {
+              var tokenEndpoint = oidcConfig.token_endpoint;
+              if (!tokenEndpoint) {
+                throw new Error("No token_endpoint in OpenID configuration");
+              }
+              appendLog("AUTH", "Token endpoint: " + tokenEndpoint);
+              discoveredTokenUrl = tokenEndpoint;
+              return tokenEndpoint;
+            });
+        }
+
         // OAuth: get access token using client credentials
         function getAccessToken() {
-          var tokenUrl = tokenUrlInput.value.trim();
           var clientId = clientIdInput.value.trim();
           var clientSecret = clientSecretInput.value.trim();
 
-          if (!tokenUrl || !clientId || !clientSecret) {
-            return Promise.reject(new Error("Token URL, Client ID, and Client Secret are required"));
+          if (!clientId || !clientSecret) {
+            return Promise.reject(new Error("Client ID and Client Secret are required"));
           }
 
-          appendLog("AUTH", "Requesting access token...");
+          // First discover the token endpoint if we don't have it
+          var tokenUrlPromise = discoveredTokenUrl
+            ? Promise.resolve(discoveredTokenUrl)
+            : discoverTokenEndpoint();
 
-          // Client credentials grant
-          var body = new URLSearchParams();
-          body.append("grant_type", "client_credentials");
-          body.append("client_id", clientId);
-          body.append("client_secret", clientSecret);
+          return tokenUrlPromise.then(function (tokenUrl) {
+            appendLog("AUTH", "Requesting access token...");
 
-          return fetch(tokenUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded"
-            },
-            body: body.toString()
+            // Client credentials grant
+            var body = new URLSearchParams();
+            body.append("grant_type", "client_credentials");
+            body.append("client_id", clientId);
+            body.append("client_secret", clientSecret);
+
+            return fetch(tokenUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+              },
+              body: body.toString()
+            });
           })
           .then(function (response) {
             if (!response.ok) {
@@ -781,6 +834,7 @@
             .then(function () {
               liveSessionId = null;
               liveAccessToken = null;
+              discoveredTokenUrl = null;
               sessionIdInput.value = "";
               setLiveStatus("disconnected");
               connectBtn.disabled = false;
@@ -791,12 +845,18 @@
               // Still clean up locally even on error
               liveSessionId = null;
               liveAccessToken = null;
+              discoveredTokenUrl = null;
               sessionIdInput.value = "";
               setLiveStatus("disconnected");
               connectBtn.disabled = false;
               disconnectBtn.disabled = true;
               appendLog("ERROR", err.message);
             });
+        });
+
+        // Clear discovered token URL when server URL changes
+        serverUrlInput.addEventListener("change", function () {
+          discoveredTokenUrl = null;
         });
 
         // Call tool
@@ -868,7 +928,6 @@
         function saveSettings() {
           try {
             localStorage.setItem("dwsim-harness-url", serverUrlInput.value);
-            localStorage.setItem("dwsim-harness-token-url", tokenUrlInput.value);
             localStorage.setItem("dwsim-harness-client-id", clientIdInput.value);
             // Note: storing client secret in localStorage is not ideal for production
             // but acceptable for a development test harness
@@ -879,18 +938,15 @@
         function loadSettings() {
           try {
             var url = localStorage.getItem("dwsim-harness-url");
-            var tokenUrl = localStorage.getItem("dwsim-harness-token-url");
             var clientId = localStorage.getItem("dwsim-harness-client-id");
             var clientSecret = localStorage.getItem("dwsim-harness-client-secret");
             if (url) serverUrlInput.value = url;
-            if (tokenUrl) tokenUrlInput.value = tokenUrl;
             if (clientId) clientIdInput.value = clientId;
             if (clientSecret) clientSecretInput.value = clientSecret;
           } catch (e) { /* ignore */ }
         }
 
         serverUrlInput.addEventListener("change", saveSettings);
-        tokenUrlInput.addEventListener("change", saveSettings);
         clientIdInput.addEventListener("change", saveSettings);
         clientSecretInput.addEventListener("change", saveSettings);
         loadSettings();
