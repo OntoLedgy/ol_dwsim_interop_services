@@ -274,8 +274,16 @@
             <input type="text" id="server-url" placeholder="https://your-domain.com/mcp" />
           </div>
           <div class="control-group">
-            <label for="access-token">Access Token</label>
-            <input type="text" id="access-token" placeholder="Bearer token from OAuth" />
+            <label for="token-url">OAuth Token URL</label>
+            <input type="text" id="token-url" placeholder="https://your-clerk-domain/oauth/token" />
+          </div>
+          <div class="control-group">
+            <label for="client-id">Client ID</label>
+            <input type="text" id="client-id" placeholder="OAuth client ID" />
+          </div>
+          <div class="control-group">
+            <label for="client-secret">Client Secret</label>
+            <input type="text" id="client-secret" placeholder="OAuth client secret" />
           </div>
           <div class="control-group">
             <label for="session-id">Session ID</label>
@@ -579,7 +587,9 @@
         var mockPanel = document.getElementById("mock-panel");
         var livePanel = document.getElementById("live-panel");
         var serverUrlInput = document.getElementById("server-url");
-        var accessTokenInput = document.getElementById("access-token");
+        var tokenUrlInput = document.getElementById("token-url");
+        var clientIdInput = document.getElementById("client-id");
+        var clientSecretInput = document.getElementById("client-secret");
         var sessionIdInput = document.getElementById("session-id");
         var liveStatus = document.getElementById("live-status");
         var toolSelect = document.getElementById("tool-select");
@@ -590,6 +600,7 @@
 
         // Live mode state
         var liveSessionId = null;
+        var liveAccessToken = null;
         var currentMode = "mock";
 
         var bridge = new MockAppBridge(iframe, {
@@ -616,20 +627,65 @@
           });
         });
 
+        // OAuth: get access token using client credentials
+        function getAccessToken() {
+          var tokenUrl = tokenUrlInput.value.trim();
+          var clientId = clientIdInput.value.trim();
+          var clientSecret = clientSecretInput.value.trim();
+
+          if (!tokenUrl || !clientId || !clientSecret) {
+            return Promise.reject(new Error("Token URL, Client ID, and Client Secret are required"));
+          }
+
+          appendLog("AUTH", "Requesting access token...");
+
+          // Client credentials grant
+          var body = new URLSearchParams();
+          body.append("grant_type", "client_credentials");
+          body.append("client_id", clientId);
+          body.append("client_secret", clientSecret);
+
+          return fetch(tokenUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: body.toString()
+          })
+          .then(function (response) {
+            if (!response.ok) {
+              return response.text().then(function (text) {
+                throw new Error("Token request failed: HTTP " + response.status + " - " + text);
+              });
+            }
+            return response.json();
+          })
+          .then(function (json) {
+            if (json.error) {
+              throw new Error("OAuth error: " + (json.error_description || json.error));
+            }
+            if (!json.access_token) {
+              throw new Error("No access_token in response");
+            }
+            appendLog("AUTH", "Got access token (expires in " + (json.expires_in || "?") + "s)");
+            return json.access_token;
+          });
+        }
+
         // Live mode: JSON-RPC call helper
         function mcpCall(method, params) {
           var url = serverUrlInput.value.trim();
-          var token = accessTokenInput.value.trim();
           if (!url) {
             return Promise.reject(new Error("Server URL is required"));
           }
+          if (!liveAccessToken) {
+            return Promise.reject(new Error("Not authenticated - click Connect first"));
+          }
 
           var headers = {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + liveAccessToken
           };
-          if (token) {
-            headers["Authorization"] = "Bearer " + token;
-          }
 
           var body = {
             jsonrpc: "2.0",
@@ -647,6 +703,11 @@
           })
           .then(function (response) {
             if (!response.ok) {
+              if (response.status === 401) {
+                liveAccessToken = null;
+                setLiveStatus("disconnected");
+                throw new Error("Token expired - reconnect required");
+              }
               throw new Error("HTTP " + response.status + ": " + response.statusText);
             }
             return response.json();
@@ -665,12 +726,16 @@
           liveStatus.textContent = status.charAt(0).toUpperCase() + status.slice(1);
         }
 
-        // Connect: create session
+        // Connect: get token then create session
         connectBtn.addEventListener("click", function () {
           setLiveStatus("connecting");
-          appendLog("LIVE", "Creating session...");
 
-          mcpCall("tools/call", { name: "create_session", arguments: {} })
+          getAccessToken()
+            .then(function (token) {
+              liveAccessToken = token;
+              appendLog("LIVE", "Creating session...");
+              return mcpCall("tools/call", { name: "create_session", arguments: {} });
+            })
             .then(function (result) {
               // Extract session_id from result
               var content = result.content || [];
@@ -702,6 +767,7 @@
             })
             .catch(function (err) {
               setLiveStatus("error");
+              liveAccessToken = null;
               appendLog("ERROR", err.message);
             });
         });
@@ -714,6 +780,7 @@
           mcpCall("tools/call", { name: "close_session", arguments: { session_id: liveSessionId } })
             .then(function () {
               liveSessionId = null;
+              liveAccessToken = null;
               sessionIdInput.value = "";
               setLiveStatus("disconnected");
               connectBtn.disabled = false;
@@ -721,6 +788,13 @@
               appendLog("LIVE", "Disconnected");
             })
             .catch(function (err) {
+              // Still clean up locally even on error
+              liveSessionId = null;
+              liveAccessToken = null;
+              sessionIdInput.value = "";
+              setLiveStatus("disconnected");
+              connectBtn.disabled = false;
+              disconnectBtn.disabled = true;
               appendLog("ERROR", err.message);
             });
         });
@@ -794,21 +868,31 @@
         function saveSettings() {
           try {
             localStorage.setItem("dwsim-harness-url", serverUrlInput.value);
-            localStorage.setItem("dwsim-harness-token", accessTokenInput.value);
+            localStorage.setItem("dwsim-harness-token-url", tokenUrlInput.value);
+            localStorage.setItem("dwsim-harness-client-id", clientIdInput.value);
+            // Note: storing client secret in localStorage is not ideal for production
+            // but acceptable for a development test harness
+            localStorage.setItem("dwsim-harness-client-secret", clientSecretInput.value);
           } catch (e) { /* ignore */ }
         }
 
         function loadSettings() {
           try {
             var url = localStorage.getItem("dwsim-harness-url");
-            var token = localStorage.getItem("dwsim-harness-token");
+            var tokenUrl = localStorage.getItem("dwsim-harness-token-url");
+            var clientId = localStorage.getItem("dwsim-harness-client-id");
+            var clientSecret = localStorage.getItem("dwsim-harness-client-secret");
             if (url) serverUrlInput.value = url;
-            if (token) accessTokenInput.value = token;
+            if (tokenUrl) tokenUrlInput.value = tokenUrl;
+            if (clientId) clientIdInput.value = clientId;
+            if (clientSecret) clientSecretInput.value = clientSecret;
           } catch (e) { /* ignore */ }
         }
 
         serverUrlInput.addEventListener("change", saveSettings);
-        accessTokenInput.addEventListener("change", saveSettings);
+        tokenUrlInput.addEventListener("change", saveSettings);
+        clientIdInput.addEventListener("change", saveSettings);
+        clientSecretInput.addEventListener("change", saveSettings);
         loadSettings();
 
         // Map apps to their default mock data
