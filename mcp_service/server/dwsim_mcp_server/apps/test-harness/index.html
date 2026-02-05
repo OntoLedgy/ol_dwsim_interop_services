@@ -121,6 +121,86 @@
         overflow-y: auto;
       }
 
+      .divider {
+        border-top: 1px solid var(--border);
+        margin: 8px 0;
+      }
+
+      .mode-tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 12px;
+      }
+
+      .mode-tab {
+        flex: 1;
+        padding: 6px 8px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-align: center;
+      }
+
+      .mode-tab.active {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+      }
+
+      .mode-panel {
+        display: none;
+      }
+
+      .mode-panel.active {
+        display: block;
+      }
+
+      input[type="text"], textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 10px;
+        background: var(--panel);
+        color: var(--text);
+        font-size: 0.85rem;
+        font-family: inherit;
+      }
+
+      textarea {
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        font-size: 0.75rem;
+        resize: vertical;
+        min-height: 60px;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .status-badge.disconnected {
+        background: var(--border);
+        color: var(--muted);
+      }
+
+      .status-badge.connected {
+        background: #10b981;
+        color: #fff;
+      }
+
+      .status-badge.error {
+        background: #ef4444;
+        color: #fff;
+      }
+
       @media (max-width: 900px) {
         .layout {
           grid-template-columns: 1fr;
@@ -141,7 +221,7 @@
     <div class="layout">
       <aside class="panel">
         <h1>DWSIM MCP App Harness</h1>
-        <p>Load an app in the iframe and send mock tool results.</p>
+        <p>Test apps with mock data or live MCP server.</p>
 
         <div class="control-group">
           <label for="app-select">App</label>
@@ -155,24 +235,77 @@
           <button id="load-app">Load App</button>
         </div>
 
-        <div class="control-group">
-          <label for="mock-select">Mock Data</label>
-          <select id="mock-select">
-            <option value="simulation-result-converged.json">simulation-result-converged</option>
-            <option value="simulation-result-failed.json">simulation-result-failed</option>
-            <option value="stream-properties.json">stream-properties</option>
-            <option value="flowsheet-topology.json">flowsheet-topology</option>
-            <option value="sensitivity-2d.json">sensitivity-2d (multi-output)</option>
-            <option value="sensitivity-3d.json">sensitivity-3d (surface)</option>
-            <option value="sensitivity-real-format.json">sensitivity (real MCP format)</option>
-            <option value="diagnostics.json">diagnostics</option>
-          </select>
-          <button id="send-mock">Send Tool Result</button>
-          <label style="display:flex;align-items:center;gap:6px;margin-top:6px;">
-            <input type="checkbox" id="auto-send" checked />
-            Auto-send on app load
-          </label>
+        <div class="divider"></div>
+
+        <div class="mode-tabs">
+          <button class="mode-tab active" data-mode="mock">Mock Data</button>
+          <button class="mode-tab" data-mode="live">Live Server</button>
         </div>
+
+        <!-- Mock Mode Panel -->
+        <div id="mock-panel" class="mode-panel active">
+          <div class="control-group">
+            <label for="mock-select">Mock Data</label>
+            <select id="mock-select">
+              <option value="simulation-result-converged.json">simulation-result-converged</option>
+              <option value="simulation-result-failed.json">simulation-result-failed</option>
+              <option value="stream-properties.json">stream-properties</option>
+              <option value="flowsheet-topology.json">flowsheet-topology</option>
+              <option value="sensitivity-2d.json">sensitivity-2d (multi-output)</option>
+              <option value="sensitivity-3d.json">sensitivity-3d (surface)</option>
+              <option value="sensitivity-real-format.json">sensitivity (real MCP format)</option>
+              <option value="diagnostics.json">diagnostics</option>
+            </select>
+            <button id="send-mock">Send Tool Result</button>
+            <label style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+              <input type="checkbox" id="auto-send" checked />
+              Auto-send on app load
+            </label>
+          </div>
+        </div>
+
+        <!-- Live Mode Panel -->
+        <div id="live-panel" class="mode-panel">
+          <div class="control-group">
+            <label>Status: <span id="live-status" class="status-badge disconnected">Disconnected</span></label>
+          </div>
+          <div class="control-group">
+            <label for="server-url">MCP Server URL</label>
+            <input type="text" id="server-url" placeholder="https://your-domain.com/mcp" />
+          </div>
+          <div class="control-group">
+            <label for="access-token">Access Token</label>
+            <input type="text" id="access-token" placeholder="Bearer token from OAuth" />
+          </div>
+          <div class="control-group">
+            <label for="session-id">Session ID</label>
+            <input type="text" id="session-id" placeholder="Auto-filled on connect" readonly />
+          </div>
+          <div class="control-group">
+            <button id="live-connect">Connect (Create Session)</button>
+            <button id="live-disconnect" class="secondary" disabled>Disconnect</button>
+          </div>
+          <div class="divider"></div>
+          <div class="control-group">
+            <label for="tool-select">Tool</label>
+            <select id="tool-select">
+              <option value="get_diagnostics">get_diagnostics</option>
+              <option value="list_objects">list_objects</option>
+              <option value="run">run (simulation)</option>
+              <option value="get_results">get_results</option>
+              <option value="sensitivity_analysis">sensitivity_analysis</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label for="tool-args">Arguments (JSON)</label>
+            <textarea id="tool-args">{}</textarea>
+          </div>
+          <div class="control-group">
+            <button id="call-tool">Call Tool</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
 
         <div class="control-group">
           <label>Theme</label>
@@ -441,6 +574,24 @@
         var log = document.getElementById("log");
         var theme = "light";
 
+        // Live mode elements
+        var modeTabs = document.querySelectorAll(".mode-tab");
+        var mockPanel = document.getElementById("mock-panel");
+        var livePanel = document.getElementById("live-panel");
+        var serverUrlInput = document.getElementById("server-url");
+        var accessTokenInput = document.getElementById("access-token");
+        var sessionIdInput = document.getElementById("session-id");
+        var liveStatus = document.getElementById("live-status");
+        var toolSelect = document.getElementById("tool-select");
+        var toolArgsInput = document.getElementById("tool-args");
+        var connectBtn = document.getElementById("live-connect");
+        var disconnectBtn = document.getElementById("live-disconnect");
+        var callToolBtn = document.getElementById("call-tool");
+
+        // Live mode state
+        var liveSessionId = null;
+        var currentMode = "mock";
+
         var bridge = new MockAppBridge(iframe, {
           onMessage: function (message) {
             appendLog("FROM APP", message);
@@ -453,6 +604,212 @@
           log.appendChild(entry);
           log.scrollTop = log.scrollHeight;
         }
+
+        // Mode tab switching
+        modeTabs.forEach(function (tab) {
+          tab.addEventListener("click", function () {
+            modeTabs.forEach(function (t) { t.classList.remove("active"); });
+            tab.classList.add("active");
+            currentMode = tab.getAttribute("data-mode");
+            mockPanel.classList.toggle("active", currentMode === "mock");
+            livePanel.classList.toggle("active", currentMode === "live");
+          });
+        });
+
+        // Live mode: JSON-RPC call helper
+        function mcpCall(method, params) {
+          var url = serverUrlInput.value.trim();
+          var token = accessTokenInput.value.trim();
+          if (!url) {
+            return Promise.reject(new Error("Server URL is required"));
+          }
+
+          var headers = {
+            "Content-Type": "application/json"
+          };
+          if (token) {
+            headers["Authorization"] = "Bearer " + token;
+          }
+
+          var body = {
+            jsonrpc: "2.0",
+            id: Date.now(),
+            method: method,
+            params: params || {}
+          };
+
+          appendLog("REQUEST", method + " -> " + JSON.stringify(params || {}));
+
+          return fetch(url, {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify(body)
+          })
+          .then(function (response) {
+            if (!response.ok) {
+              throw new Error("HTTP " + response.status + ": " + response.statusText);
+            }
+            return response.json();
+          })
+          .then(function (json) {
+            if (json.error) {
+              throw new Error(json.error.message || JSON.stringify(json.error));
+            }
+            appendLog("RESPONSE", JSON.stringify(json.result).substring(0, 200) + "...");
+            return json.result;
+          });
+        }
+
+        function setLiveStatus(status) {
+          liveStatus.className = "status-badge " + status;
+          liveStatus.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        }
+
+        // Connect: create session
+        connectBtn.addEventListener("click", function () {
+          setLiveStatus("connecting");
+          appendLog("LIVE", "Creating session...");
+
+          mcpCall("tools/call", { name: "create_session", arguments: {} })
+            .then(function (result) {
+              // Extract session_id from result
+              var content = result.content || [];
+              var textContent = content.find(function (c) { return c.type === "text"; });
+              if (textContent && textContent.text) {
+                try {
+                  var parsed = JSON.parse(textContent.text);
+                  liveSessionId = parsed.session_id;
+                } catch (e) {
+                  // Try structuredContent
+                  if (result.structuredContent && result.structuredContent.session_id) {
+                    liveSessionId = result.structuredContent.session_id;
+                  }
+                }
+              }
+              if (result.structuredContent && result.structuredContent.session_id) {
+                liveSessionId = result.structuredContent.session_id;
+              }
+
+              if (liveSessionId) {
+                sessionIdInput.value = liveSessionId;
+                setLiveStatus("connected");
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                appendLog("LIVE", "Connected! Session: " + liveSessionId);
+              } else {
+                throw new Error("No session_id in response");
+              }
+            })
+            .catch(function (err) {
+              setLiveStatus("error");
+              appendLog("ERROR", err.message);
+            });
+        });
+
+        // Disconnect: close session
+        disconnectBtn.addEventListener("click", function () {
+          if (!liveSessionId) return;
+
+          appendLog("LIVE", "Closing session...");
+          mcpCall("tools/call", { name: "close_session", arguments: { session_id: liveSessionId } })
+            .then(function () {
+              liveSessionId = null;
+              sessionIdInput.value = "";
+              setLiveStatus("disconnected");
+              connectBtn.disabled = false;
+              disconnectBtn.disabled = true;
+              appendLog("LIVE", "Disconnected");
+            })
+            .catch(function (err) {
+              appendLog("ERROR", err.message);
+            });
+        });
+
+        // Call tool
+        callToolBtn.addEventListener("click", function () {
+          var toolName = toolSelect.value;
+          var argsText = toolArgsInput.value.trim() || "{}";
+          var args;
+
+          try {
+            args = JSON.parse(argsText);
+          } catch (e) {
+            appendLog("ERROR", "Invalid JSON in arguments: " + e.message);
+            return;
+          }
+
+          // Auto-inject session_id for tools that need it
+          if (liveSessionId && !args.session_id) {
+            args.session_id = liveSessionId;
+          }
+
+          appendLog("LIVE", "Calling " + toolName + "...");
+
+          mcpCall("tools/call", { name: toolName, arguments: args })
+            .then(function (result) {
+              appendLog("LIVE", "Tool returned successfully");
+
+              // Extract structured content and send to app
+              var payload = null;
+              if (result.structuredContent) {
+                payload = result.structuredContent;
+              } else if (result.content) {
+                var textContent = result.content.find(function (c) { return c.type === "text"; });
+                if (textContent && textContent.text) {
+                  try {
+                    payload = JSON.parse(textContent.text);
+                  } catch (e) {
+                    payload = { raw: textContent.text };
+                  }
+                }
+              }
+
+              if (payload && iframe.contentWindow) {
+                bridge.sendToolResult({
+                  content: result.content || [{ type: "text", text: "Live tool result" }],
+                  structuredContent: payload,
+                });
+                appendLog("LIVE", "Sent result to app");
+              }
+            })
+            .catch(function (err) {
+              appendLog("ERROR", err.message);
+            });
+        });
+
+        // Update tool args placeholder based on selected tool
+        toolSelect.addEventListener("change", function () {
+          var tool = toolSelect.value;
+          var examples = {
+            "get_diagnostics": "{}",
+            "list_objects": "{}",
+            "run": "{}",
+            "get_results": "{}",
+            "sensitivity_analysis": '{\n  "variable": {\n    "object_id": "Feed",\n    "parameter_name": "Temperature",\n    "min": 280,\n    "max": 380\n  },\n  "steps": 10,\n  "outputs": [\n    {"object_id": "VaporOut", "parameter_name": "MolarFlow"}\n  ]\n}'
+          };
+          toolArgsInput.value = examples[tool] || "{}";
+        });
+
+        // Persist settings to localStorage
+        function saveSettings() {
+          try {
+            localStorage.setItem("dwsim-harness-url", serverUrlInput.value);
+            localStorage.setItem("dwsim-harness-token", accessTokenInput.value);
+          } catch (e) { /* ignore */ }
+        }
+
+        function loadSettings() {
+          try {
+            var url = localStorage.getItem("dwsim-harness-url");
+            var token = localStorage.getItem("dwsim-harness-token");
+            if (url) serverUrlInput.value = url;
+            if (token) accessTokenInput.value = token;
+          } catch (e) { /* ignore */ }
+        }
+
+        serverUrlInput.addEventListener("change", saveSettings);
+        accessTokenInput.addEventListener("change", saveSettings);
+        loadSettings();
 
         // Map apps to their default mock data
         var APP_TO_MOCK = {
