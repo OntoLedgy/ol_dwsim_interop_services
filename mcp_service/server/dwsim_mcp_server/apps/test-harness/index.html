@@ -164,6 +164,7 @@
             <option value="flowsheet-topology.json">flowsheet-topology</option>
             <option value="sensitivity-2d.json">sensitivity-2d (multi-output)</option>
             <option value="sensitivity-3d.json">sensitivity-3d (surface)</option>
+            <option value="sensitivity-real-format.json">sensitivity (real MCP format)</option>
             <option value="diagnostics.json">diagnostics</option>
           </select>
           <button id="send-mock">Send Tool Result</button>
@@ -415,6 +416,22 @@
               "z": 94.8,
               "description": "Maximum separation efficiency at T=340K, P=300kPa"
             }
+          },
+          "sensitivity-real-format.json": {
+            "study_id": "study-abc123",
+            "status": "completed",
+            "rows": [
+              { "inputs": { "feed_temperature_k": 280 }, "outputs": { "vapor_fraction": 0.02, "liquid_hc_fraction": 0.58, "energy_duty_kw": -52.3 }, "converged": true, "error": null },
+              { "inputs": { "feed_temperature_k": 300 }, "outputs": { "vapor_fraction": 0.09, "liquid_hc_fraction": 0.53, "energy_duty_kw": -29.5 }, "converged": true, "error": null },
+              { "inputs": { "feed_temperature_k": 320 }, "outputs": { "vapor_fraction": 0.21, "liquid_hc_fraction": 0.44, "energy_duty_kw": 4.1 }, "converged": true, "error": null },
+              { "inputs": { "feed_temperature_k": 340 }, "outputs": { "vapor_fraction": 0.38, "liquid_hc_fraction": 0.31, "energy_duty_kw": 51.2 }, "converged": true, "error": null },
+              { "inputs": { "feed_temperature_k": 360 }, "outputs": { "vapor_fraction": 0.58, "liquid_hc_fraction": 0.17, "energy_duty_kw": 121.4 }, "converged": true, "error": null },
+              { "inputs": { "feed_temperature_k": 380 }, "outputs": { "vapor_fraction": 0.78, "liquid_hc_fraction": 0.06, "energy_duty_kw": 227.5 }, "converged": true, "error": null }
+            ],
+            "completed_steps": 6,
+            "total_steps": 6,
+            "elapsed_seconds": 12.4,
+            "cancelled": false
           }
         };
 

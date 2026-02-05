@@ -453,20 +453,81 @@
           Plotly.newPlot(chart3d, [surfaceTrace, optimumTrace], layout, { displayModeBar: true, responsive: true });
         }
 
+        // Normalize data to handle both mock format and real MCP SensitivityStudyResult format
+        function normalizeData(payload) {
+          // Real MCP format has "rows" with { inputs: {}, outputs: {}, converged: bool }
+          if (payload.rows && Array.isArray(payload.rows)) {
+            var rows = payload.rows;
+            if (rows.length === 0) return payload;
+
+            // Extract variable name(s) from first row's inputs
+            var inputKeys = Object.keys(rows[0].inputs || {});
+            var outputKeys = Object.keys(rows[0].outputs || {});
+
+            // Single variable case (2D sensitivity)
+            if (inputKeys.length === 1) {
+              var inputKey = inputKeys[0];
+              return {
+                study_type: "sensitivity",
+                variable: {
+                  name: inputKey,
+                  parameter: inputKey,
+                  min: Math.min.apply(null, rows.map(function(r) { return r.inputs[inputKey]; })),
+                  max: Math.max.apply(null, rows.map(function(r) { return r.inputs[inputKey]; }))
+                },
+                outputs: outputKeys.map(function(k) { return { name: k }; }),
+                results: rows.map(function(r) {
+                  var result = { input_value: r.inputs[inputKey] };
+                  outputKeys.forEach(function(k) {
+                    result[k] = r.outputs ? r.outputs[k] : null;
+                  });
+                  return result;
+                })
+              };
+            }
+
+            // Two variable case (3D surface)
+            if (inputKeys.length >= 2) {
+              var xKey = inputKeys[0];
+              var yKey = inputKeys[1];
+              var zKey = outputKeys[0] || "output";
+              return {
+                study_type: "parameter_sweep",
+                variables: [
+                  { name: xKey, parameter: xKey },
+                  { name: yKey, parameter: yKey }
+                ],
+                output_name: zKey,
+                grid: rows.map(function(r) {
+                  return {
+                    x: r.inputs[xKey],
+                    y: r.inputs[yKey],
+                    z: r.outputs ? r.outputs[zKey] : null
+                  };
+                })
+              };
+            }
+          }
+
+          // Already in mock format or unknown - return as-is
+          return payload;
+        }
+
         function handleToolResult(result) {
           var payload = result && (result.structuredContent || result);
           if (!payload) return;
 
-          currentData = payload;
+          // Normalize real MCP format to rendering format
+          currentData = normalizeData(payload);
 
           // Determine which view to show based on data
-          var hasMultipleVariables = payload.variables && payload.variables.length >= 2;
+          var hasMultipleVariables = currentData.variables && currentData.variables.length >= 2;
           var activeTab = document.querySelector(".tab.active").getAttribute("data-tab");
 
           if (activeTab === "2d") {
-            render2D(payload);
+            render2D(currentData);
           } else if (activeTab === "3d") {
-            render3D(payload);
+            render3D(currentData);
           }
         }
 
