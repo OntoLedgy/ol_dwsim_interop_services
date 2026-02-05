@@ -1,6 +1,6 @@
 """Thermodynamic analysis MCP tools."""
 
-from typing import Any, Awaitable, Callable, Dict
+from typing import Any, Awaitable, Callable, Dict, List, Tuple
 
 from mcp import types
 from fastmcp import Context
@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from dwsim_mcp_server.models.errors.resource_limit_error import ResourceLimitError
 from dwsim_mcp_server.models.errors.simulation_error import SimulationError as SimulationErrorModel
 from dwsim_mcp_server.models.mcp_inputs import FlashPHInputs, FlashPSInputs, FlashTPInputs
+from dwsim_mcp_server.models.enums.physical_quantity_types import PhysicalQuantityTypes
 
 from dwsim_mcp_server.ipc.exceptions import InteropError, SessionError
 from dwsim_mcp_server.limits.resource_limit_guard import ResourceLimitViolation
@@ -18,6 +19,27 @@ from dwsim_mcp_server.tools.legacy import LegacyContext
 
 class _ServiceUnavailable(Exception):
     pass
+
+
+# --- Input transformation helpers ---
+
+def _split_compounds(compounds: Dict[str, float]) -> Tuple[List[str], List[float]]:
+    """Convert {compound: fraction} dict to parallel lists."""
+    names = list(compounds.keys())
+    fractions = list(compounds.values())
+    return names, fractions
+
+
+def _make_measurement(value: float, unit_str: str, quantity_type: PhysicalQuantityTypes) -> Dict[str, Any]:
+    """Create a Measurements-compatible dict from simple value and unit string."""
+    return {
+        "quantity_type": quantity_type.value,
+        "value": value,
+        "unit": {
+            "unit_name": unit_str,
+            "quantity_type": quantity_type.value,
+        },
+    }
 
 
 def register_analysis_tools(mcp) -> None:
@@ -169,13 +191,18 @@ async def _flash_tp(
     compounds: Dict[str, float],
     units: Dict[str, str],
 ) -> Dict[str, Any]:
+    # Transform MCP-style inputs to internal model format
+    compound_names, composition = _split_compounds(compounds)
+    temp_unit = units.get("temperature", "K")
+    press_unit = units.get("pressure", "Pa")
+
     payload = FlashTPInputs.model_validate(
         {
             "session_id": session_id,
-            "temperature": temperature,
-            "pressure": pressure,
-            "compounds": compounds,
-            "units": units,
+            "compounds": compound_names,
+            "composition": composition,
+            "temperature": _make_measurement(temperature, temp_unit, PhysicalQuantityTypes.TEMPERATURE),
+            "pressure": _make_measurement(pressure, press_unit, PhysicalQuantityTypes.PRESSURE),
         }
     )
     return (await _get_service(ctx).flash_tp(payload)).model_dump()
@@ -190,13 +217,18 @@ async def _flash_ph(
     compounds: Dict[str, float],
     units: Dict[str, str],
 ) -> Dict[str, Any]:
+    # Transform MCP-style inputs to internal model format
+    compound_names, composition = _split_compounds(compounds)
+    press_unit = units.get("pressure", "Pa")
+    enthalpy_unit = units.get("enthalpy", "J/mol")
+
     payload = FlashPHInputs.model_validate(
         {
             "session_id": session_id,
-            "pressure": pressure,
-            "enthalpy": enthalpy,
-            "compounds": compounds,
-            "units": units,
+            "compounds": compound_names,
+            "composition": composition,
+            "pressure": _make_measurement(pressure, press_unit, PhysicalQuantityTypes.PRESSURE),
+            "enthalpy": _make_measurement(enthalpy, enthalpy_unit, PhysicalQuantityTypes.MOLAR_ENTHALPY),
         }
     )
     return (await _get_service(ctx).flash_ph(payload)).model_dump()
@@ -211,13 +243,18 @@ async def _flash_ps(
     compounds: Dict[str, float],
     units: Dict[str, str],
 ) -> Dict[str, Any]:
+    # Transform MCP-style inputs to internal model format
+    compound_names, composition = _split_compounds(compounds)
+    press_unit = units.get("pressure", "Pa")
+    entropy_unit = units.get("entropy", "J/mol/K")
+
     payload = FlashPSInputs.model_validate(
         {
             "session_id": session_id,
-            "pressure": pressure,
-            "entropy": entropy,
-            "compounds": compounds,
-            "units": units,
+            "compounds": compound_names,
+            "composition": composition,
+            "pressure": _make_measurement(pressure, press_unit, PhysicalQuantityTypes.PRESSURE),
+            "entropy": _make_measurement(entropy, entropy_unit, PhysicalQuantityTypes.MOLAR_ENTROPY),
         }
     )
     return (await _get_service(ctx).flash_ps(payload)).model_dump()
