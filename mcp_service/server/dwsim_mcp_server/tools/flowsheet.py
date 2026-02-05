@@ -272,9 +272,10 @@ async def handle_flowsheet_tool(
         "set_binary_interaction_parameter": lambda: _set_binary_interaction_parameter(
             ctx,
             session_id=arguments.get("session_id"),
-            compound_a=arguments.get("compound_a"),
-            compound_b=arguments.get("compound_b"),
-            interaction_value=arguments.get("interaction_value"),
+            # Support both MCP field names (compound_a/b, interaction_value) and model field names (compound1/2, value)
+            compound_a=arguments.get("compound_a") if arguments.get("compound_a") is not None else arguments.get("compound1"),
+            compound_b=arguments.get("compound_b") if arguments.get("compound_b") is not None else arguments.get("compound2"),
+            interaction_value=arguments.get("interaction_value") if arguments.get("interaction_value") is not None else arguments.get("value"),
         ),
     }
     handler = handlers.get(tool_name)
@@ -449,12 +450,13 @@ async def _set_binary_interaction_parameter(
     interaction_value: float,
 ) -> Dict[str, Any]:
     service = _get_service(ctx)
+    # Transform MCP field names to model field names
     payload = SetBinaryInteractionParameterInput.model_validate(
         {
             "session_id": session_id,
-            "compound_a": compound_a,
-            "compound_b": compound_b,
-            "interaction_value": interaction_value,
+            "compound1": compound_a,
+            "compound2": compound_b,
+            "value": interaction_value,
         }
     )
     return (await service.set_binary_interaction_parameter(payload)).model_dump()
