@@ -34,6 +34,7 @@ class AuthConfig(BaseSettings):
         description="Optional JWT audience to enforce during verification.",
     )
     required_scopes: list[str] = Field(
+y
         default_factory=list,
         validation_alias="CLERK_REQUIRED_SCOPES",
         description="Required OAuth scopes for access tokens. Empty means any authenticated token is accepted.",
