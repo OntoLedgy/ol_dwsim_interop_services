@@ -178,6 +178,7 @@ def _run_http_with_oauth(
     """Run HTTP server with OAuth discovery endpoints at root level."""
     import uvicorn
     from starlette.applications import Starlette
+    from starlette.middleware.cors import CORSMiddleware
     from starlette.routing import Mount, Route
     from starlette.responses import JSONResponse
 
@@ -235,6 +236,15 @@ def _run_http_with_oauth(
     app = Starlette(
         routes=routes,
         lifespan=mcp_app.lifespan,
+    )
+
+    # Add CORS middleware to allow browser-based test harness and apps
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Allow any origin for test harness
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["*"],
     )
 
     uvicorn.run(
