@@ -640,7 +640,7 @@
           var baseUrl = serverUrl.replace(/\/mcp\/?$/, "");
           var tokenProxyUrl = baseUrl + "/oauth/token";
 
-          appendLog("AUTH", "Requesting access token via proxy...");
+          appendLog("AUTH", "Token proxy: " + tokenProxyUrl);
 
           var body = new URLSearchParams();
           body.append("grant_type", "client_credentials");
@@ -655,17 +655,21 @@
             body: body.toString()
           })
           .then(function (response) {
-            if (!response.ok) {
+            return response.json().then(function (json) {
+              appendLog("AUTH", "Response: " + JSON.stringify(json).substring(0, 200));
+              if (!response.ok || json.error) {
+                var errMsg = json.error_description || json.error || json.message || "Unknown error";
+                throw new Error("Token failed (" + response.status + "): " + errMsg);
+              }
+              return json;
+            }).catch(function (e) {
+              if (e.message && e.message.indexOf("Token failed") === 0) throw e;
               return response.text().then(function (text) {
                 throw new Error("Token request failed: HTTP " + response.status + " - " + text);
               });
-            }
-            return response.json();
+            });
           })
           .then(function (json) {
-            if (json.error) {
-              throw new Error("OAuth error: " + (json.error_description || json.error));
-            }
             if (!json.access_token) {
               throw new Error("No access_token in response");
             }
