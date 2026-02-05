@@ -1,0 +1,24 @@
+{
+  "uptime_seconds": 86400,
+  "active_sessions": 3,
+  "memory": {
+    "rss_bytes": 524288000,
+    "limit_bytes": 1073741824,
+    "recovery_threshold_bytes": 805306368,
+    "breached": false
+  },
+  "error_count": 2,
+  "metrics_text": "dwsim_sessions_active 3\ndwsim_memory_rss_bytes 524288000\n",
+  "sessions": [
+    {
+      "session_id": "session-abc",
+      "state": "active",
+      "remaining_lifetime_seconds": 4200
+    },
+    {
+      "session_id": "session-def",
+      "state": "active",
+      "remaining_lifetime_seconds": 1800
+    }
+  ]
+}

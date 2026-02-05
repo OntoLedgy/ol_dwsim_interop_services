@@ -1,0 +1,7 @@
+{
+  "name": "flowsheet-viewer",
+  "title": "Flowsheet Viewer",
+  "description": "Interactive topology view of units, streams, and connections.",
+  "version": "1.0.0",
+  "entryPoint": "index.html"
+}

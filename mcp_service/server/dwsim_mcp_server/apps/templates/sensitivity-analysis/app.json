@@ -1,0 +1,12 @@
+{
+  "name": "sensitivity-analysis",
+  "title": "Sensitivity Analysis",
+  "description": "Visualize parameter sweeps with 2D multi-series plots and 3D surface plots for optimization",
+  "version": "1.0.0",
+  "csp": {
+    "connectDomains": ["cdn.plot.ly"],
+    "resourceDomains": ["cdn.plot.ly"]
+  },
+  "prefersBoorder": false,
+  "entryPoint": "index.html"
+}

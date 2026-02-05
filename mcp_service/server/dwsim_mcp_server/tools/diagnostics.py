@@ -10,6 +10,9 @@ from dwsim_mcp_server.models.errors.session_error import SessionError as Session
 
 from dwsim_mcp_server.observability import get_logger
 from dwsim_mcp_server.service.diagnostics_service import SessionNotFoundError
+from dwsim_mcp_server.tools.ui_metadata import get_ui_result_annotation
+
+from fastmcp.tools.tool import ToolResult
 
 
 class GetDiagnosticsInput(BaseModel):
@@ -30,6 +33,9 @@ class _ServiceUnavailable(Exception):
     pass
 
 
+DIAGNOSTICS_UI_URI = "ui://dwsim/diagnostics"
+
+
 def register_diagnostics_tools(mcp) -> None:
     """Register diagnostics tools with FastMCP."""
 
@@ -37,13 +43,17 @@ def register_diagnostics_tools(mcp) -> None:
         description=(
             "Retrieve diagnostics for the server or a specific session. "
             "Provide session_id to get session diagnostics; omit to get server diagnostics."
-        )
+        ),
+        meta=get_ui_result_annotation(DIAGNOSTICS_UI_URI),
     )
-    async def get_diagnostics(session_id: Optional[str] = None, ctx: Optional[Context] = None):
-        return await _execute_tool(
+    async def get_diagnostics(session_id: Optional[str] = None, ctx: Context | None = None):
+        result = await _execute_tool(
             "get_diagnostics",
             lambda: _get_diagnostics(ctx, session_id=session_id),
         )
+        if isinstance(result, types.CallToolResult):
+            return result
+        return ToolResult(structured_content=result, meta=get_ui_result_annotation(DIAGNOSTICS_UI_URI))
 
 
 async def _execute_tool(

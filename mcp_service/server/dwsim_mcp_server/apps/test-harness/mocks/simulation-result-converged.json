@@ -1,0 +1,47 @@
+{
+  "status": "converged",
+  "convergence_state": "Converged",
+  "elapsed_ms": 1420.5,
+  "stream_results": [
+    {
+      "id": "stream-001",
+      "name": "Feed",
+      "temperature_k": 298.15,
+      "pressure_pa": 101325.0,
+      "total_molar_flow_mol_per_s": 12.4,
+      "phases": [
+        {
+          "phase_label": "Liquid",
+          "phase_fraction": 0.95,
+          "composition": [
+            { "compound": "water", "mole_fraction": 0.98 },
+            { "compound": "ethanol", "mole_fraction": 0.02 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stream-002",
+      "name": "Vapor Outlet",
+      "temperature_k": 356.2,
+      "pressure_pa": 101000.0,
+      "total_molar_flow_mol_per_s": 4.8,
+      "phases": [
+        {
+          "phase_label": "Vapor",
+          "phase_fraction": 1.0,
+          "composition": [
+            { "compound": "methane", "mole_fraction": 0.72 },
+            { "compound": "ethane", "mole_fraction": 0.28 }
+          ]
+        }
+      ]
+    }
+  ],
+  "messages": [
+    "Converged in 12 iterations.",
+    "Energy balance within 0.3%."
+  ],
+  "mass_balance_valid": true,
+  "mass_balance_error_percent": 0.31
+}

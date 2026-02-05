@@ -15,6 +15,12 @@ from dwsim_mcp_server.ipc.exceptions import InteropError, SessionError
 from dwsim_mcp_server.limits.resource_limit_guard import ResourceLimitViolation
 from dwsim_mcp_server.observability import get_logger
 from dwsim_mcp_server.tools.legacy import LegacyContext
+from dwsim_mcp_server.tools.ui_metadata import add_ui_metadata, get_ui_result_annotation
+
+from fastmcp.tools.tool import ToolResult
+
+
+UI_RESOURCE_URI = "ui://dwsim/simulation-results"
 
 
 def register_simulation_tools(mcp) -> None:
@@ -26,13 +32,17 @@ def register_simulation_tools(mcp) -> None:
             "2) Property package set, 3) BIPs configured, 4) Feed stream created and flashed, "
             "5) Outlet streams created, 6) Unit operation added, 7) All streams connected. "
             "Returns convergence status, stream properties, and mass balance diagnostics."
-        )
+        ),
+        meta=get_ui_result_annotation(UI_RESOURCE_URI),
     )
     async def run(session_id: str, timeout_seconds: int | None = None, ctx: Context | None = None):
-        return await _execute_tool(
+        result = await _execute_tool(
             "run",
             lambda: _run_simulation(ctx, session_id=session_id, timeout_seconds=timeout_seconds),
         )
+        if isinstance(result, types.CallToolResult):
+            return result
+        return ToolResult(structured_content=result, meta=get_ui_result_annotation(UI_RESOURCE_URI))
 
     @mcp.tool(
         description="Retrieve the latest simulation status for a session: idle, running, converged, or failed."
@@ -57,8 +67,12 @@ def register_simulation_tools(mcp) -> None:
 
 
 def build_simulation_tools() -> list[types.Tool]:
-    return [
+    run_tool = add_ui_metadata(
         _tool("run", _run_description(), RunSimulationRequest),
+        UI_RESOURCE_URI,
+    )
+    return [
+        run_tool,
         _tool("get_status", _status_description(), GetStatusRequest),
         _tool("get_results", _results_description(), GetResultsRequest),
     ]
@@ -86,7 +100,10 @@ async def handle_simulation_tool(
     handler = handlers.get(tool_name)
     if handler is None:
         return _error_result(code="UNKNOWN_TOOL", message=f"Unknown tool: {tool_name}")
-    return await _execute_tool(tool_name, handler)
+    result = await _execute_tool(tool_name, handler)
+    if tool_name != "run" or isinstance(result, types.CallToolResult):
+        return result
+    return _ui_success_result(result)
 
 
 async def _execute_tool(
@@ -183,6 +200,15 @@ def _resource_limit_error(error: ResourceLimitError) -> types.CallToolResult:
         content=[types.TextContent(type="text", text=error.message)],
         structuredContent=payload,
         isError=True,
+    )
+
+
+def _ui_success_result(payload: Dict[str, Any]) -> types.CallToolResult:
+    message = payload.get("status", "Simulation complete")
+    return types.CallToolResult(
+        content=[types.TextContent(type="text", text=str(message))],
+        structuredContent=payload,
+        _meta=get_ui_result_annotation(UI_RESOURCE_URI),
     )
 
 

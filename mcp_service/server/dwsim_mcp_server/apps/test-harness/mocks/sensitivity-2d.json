@@ -1,0 +1,29 @@
+{
+  "study_type": "sensitivity",
+  "variable": {
+    "name": "Feed Temperature",
+    "parameter": "feed_temperature_k",
+    "min": 280,
+    "max": 380,
+    "unit": "K"
+  },
+  "outputs": [
+    { "name": "vapor_fraction", "unit": "-" },
+    { "name": "liquid_hc_fraction", "unit": "-" },
+    { "name": "liquid_aq_fraction", "unit": "-" },
+    { "name": "energy_duty_kw", "unit": "kW" }
+  ],
+  "results": [
+    { "input_value": 280, "vapor_fraction": 0.02, "liquid_hc_fraction": 0.58, "liquid_aq_fraction": 0.40, "energy_duty_kw": -52.3 },
+    { "input_value": 290, "vapor_fraction": 0.05, "liquid_hc_fraction": 0.56, "liquid_aq_fraction": 0.39, "energy_duty_kw": -41.8 },
+    { "input_value": 300, "vapor_fraction": 0.09, "liquid_hc_fraction": 0.53, "liquid_aq_fraction": 0.38, "energy_duty_kw": -29.5 },
+    { "input_value": 310, "vapor_fraction": 0.14, "liquid_hc_fraction": 0.49, "liquid_aq_fraction": 0.37, "energy_duty_kw": -14.2 },
+    { "input_value": 320, "vapor_fraction": 0.21, "liquid_hc_fraction": 0.44, "liquid_aq_fraction": 0.35, "energy_duty_kw": 4.1 },
+    { "input_value": 330, "vapor_fraction": 0.29, "liquid_hc_fraction": 0.38, "liquid_aq_fraction": 0.33, "energy_duty_kw": 25.7 },
+    { "input_value": 340, "vapor_fraction": 0.38, "liquid_hc_fraction": 0.31, "liquid_aq_fraction": 0.31, "energy_duty_kw": 51.2 },
+    { "input_value": 350, "vapor_fraction": 0.48, "liquid_hc_fraction": 0.24, "liquid_aq_fraction": 0.28, "energy_duty_kw": 82.6 },
+    { "input_value": 360, "vapor_fraction": 0.58, "liquid_hc_fraction": 0.17, "liquid_aq_fraction": 0.25, "energy_duty_kw": 121.4 },
+    { "input_value": 370, "vapor_fraction": 0.68, "liquid_hc_fraction": 0.11, "liquid_aq_fraction": 0.21, "energy_duty_kw": 168.9 },
+    { "input_value": 380, "vapor_fraction": 0.78, "liquid_hc_fraction": 0.06, "liquid_aq_fraction": 0.16, "energy_duty_kw": 227.5 }
+  ]
+}

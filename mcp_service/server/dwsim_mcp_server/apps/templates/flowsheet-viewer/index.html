@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flowsheet Viewer</title>
+    <link rel="stylesheet" href="../../static/theme.css" />
+    <style>
+      .viewer-layout {
+        display: grid;
+        grid-template-columns: 1fr 260px;
+        gap: 16px;
+      }
+
+      .canvas-card {
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        padding: 12px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .toolbar button {
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--text);
+        border-radius: 10px;
+        padding: 6px 10px;
+        cursor: pointer;
+        font-size: 0.85rem;
+      }
+
+      .sidebar {
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        padding: 12px;
+      }
+
+      .sidebar h3 {
+        margin: 0 0 10px;
+        font-size: 1rem;
+      }
+
+      .detail-list {
+        display: grid;
+        gap: 8px;
+        font-size: 0.9rem;
+      }
+
+      .detail-item {
+        background: rgba(0, 0, 0, 0.03);
+        border-radius: 10px;
+        padding: 8px;
+      }
+
+      svg {
+        width: 100%;
+        height: 520px;
+        border-radius: 12px;
+        background: radial-gradient(circle at top, rgba(198, 91, 45, 0.08), transparent 40%);
+      }
+
+      .unit {
+        fill: var(--accent);
+        cursor: pointer;
+      }
+
+      .stream {
+        fill: var(--text);
+      }
+
+      .connection {
+        stroke: var(--muted);
+        stroke-width: 2;
+        marker-end: url(#arrow);
+      }
+
+      .label {
+        font-size: 12px;
+        fill: var(--text);
+      }
+
+      @media (max-width: 900px) {
+        .viewer-layout {
+          grid-template-columns: 1fr;
+        }
+
+        svg {
+          height: 420px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <div class="app-title">Flowsheet Viewer</div>
+        <div class="app-subtitle">Interactive topology visualization</div>
+      </header>
+
+      <div class="viewer-layout">
+        <section class="canvas-card">
+          <div class="toolbar">
+            <button id="zoom-in">Zoom In</button>
+            <button id="zoom-out">Zoom Out</button>
+            <button id="reset-view">Reset</button>
+          </div>
+          <svg id="flowsheet-canvas" viewBox="0 0 800 520">
+            <defs>
+              <marker id="arrow" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L6,3 z" fill="currentColor"></path>
+              </marker>
+            </defs>
+            <g id="flowsheet-layer"></g>
+          </svg>
+        </section>
+
+        <aside class="sidebar">
+          <h3>Selection</h3>
+          <div id="selection-details" class="detail-list">
+            <div class="detail-item">Click a unit to see details.</div>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <script src="https://unpkg.com/@modelcontextprotocol/ext-apps/dist/index.umd.js"></script>
+    <script src="../../static/app-client.js"></script>
+    <script>
+      (function () {
+        "use strict";
+
+        var svg = document.getElementById("flowsheet-canvas");
+        var layer = document.getElementById("flowsheet-layer");
+        var selection = document.getElementById("selection-details");
+        var viewBox = { x: 0, y: 0, width: 800, height: 520 };
+        var isPanning = false;
+        var panStart = { x: 0, y: 0 };
+
+        function setViewBox() {
+          svg.setAttribute(
+            "viewBox",
+            [viewBox.x, viewBox.y, viewBox.width, viewBox.height].join(" ")
+          );
+        }
+
+        function clearLayer() {
+          while (layer.firstChild) {
+            layer.removeChild(layer.firstChild);
+          }
+        }
+
+        function layoutNodes(units, streams, connections) {
+          var positions = {};
+          var allNodes = {};
+
+          // Build node lookup
+          units.forEach(function (u) { allNodes[u.id] = { type: "unit", data: u }; });
+          streams.forEach(function (s) { allNodes[s.id] = { type: "stream", data: s }; });
+
+          // Build adjacency lists
+          var outgoing = {}; // node -> [target nodes]
+          var incoming = {}; // node -> [source nodes]
+          Object.keys(allNodes).forEach(function (id) {
+            outgoing[id] = [];
+            incoming[id] = [];
+          });
+          connections.forEach(function (conn) {
+            if (outgoing[conn.source_id]) outgoing[conn.source_id].push(conn.target_id);
+            if (incoming[conn.target_id]) incoming[conn.target_id].push(conn.source_id);
+          });
+
+          // Assign layers using BFS from sources (nodes with no incoming connections)
+          var layers = {};
+          var queue = [];
+          Object.keys(allNodes).forEach(function (id) {
+            if (incoming[id].length === 0) {
+              layers[id] = 0;
+              queue.push(id);
+            }
+          });
+
+          while (queue.length > 0) {
+            var nodeId = queue.shift();
+            var currentLayer = layers[nodeId];
+            outgoing[nodeId].forEach(function (targetId) {
+              var newLayer = currentLayer + 1;
+              if (layers[targetId] === undefined || layers[targetId] < newLayer) {
+                layers[targetId] = newLayer;
+                queue.push(targetId);
+              }
+            });
+          }
+
+          // Handle any unvisited nodes (cycles or disconnected)
+          Object.keys(allNodes).forEach(function (id) {
+            if (layers[id] === undefined) layers[id] = 0;
+          });
+
+          // Group nodes by layer
+          var layerGroups = {};
+          Object.keys(layers).forEach(function (id) {
+            var layer = layers[id];
+            if (!layerGroups[layer]) layerGroups[layer] = [];
+            layerGroups[layer].push(id);
+          });
+
+          // Position nodes
+          var layerX = 80;
+          var layerGapX = 140;
+          var nodeGapY = 90;
+          var maxLayers = Math.max.apply(null, Object.keys(layerGroups).map(Number)) + 1;
+
+          for (var layer = 0; layer < maxLayers; layer++) {
+            var nodesInLayer = layerGroups[layer] || [];
+            var totalHeight = (nodesInLayer.length - 1) * nodeGapY;
+            var startY = (520 - totalHeight) / 2; // Center vertically in viewBox
+
+            nodesInLayer.forEach(function (id, index) {
+              positions[id] = {
+                x: layerX + layer * layerGapX,
+                y: startY + index * nodeGapY
+              };
+            });
+          }
+
+          return positions;
+        }
+
+        function renderTopology(topology) {
+          clearLayer();
+          if (!topology) return;
+
+          var units = topology.units || [];
+          var streams = topology.streams || [];
+          var connections = topology.connections || [];
+
+          var positions = layoutNodes(units, streams, connections);
+
+          // Draw connections first (so they appear behind nodes)
+          connections.forEach(function (connection) {
+            var sourcePos = positions[connection.source_id];
+            var targetPos = positions[connection.target_id];
+            if (!sourcePos || !targetPos) return;
+
+            // Calculate edge points for cleaner connections
+            var dx = targetPos.x - sourcePos.x;
+            var dy = targetPos.y - sourcePos.y;
+            var len = Math.sqrt(dx * dx + dy * dy) || 1;
+            var offsetX = (dx / len) * 12;
+            var offsetY = (dy / len) * 12;
+
+            var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", sourcePos.x + offsetX);
+            line.setAttribute("y1", sourcePos.y + offsetY);
+            line.setAttribute("x2", targetPos.x - offsetX);
+            line.setAttribute("y2", targetPos.y - offsetY);
+            line.setAttribute("class", "connection");
+            layer.appendChild(line);
+          });
+
+          // Draw units (rectangles)
+          units.forEach(function (unit) {
+            var pos = positions[unit.id];
+            if (!pos) return;
+
+            var rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            rect.setAttribute("x", pos.x - 45);
+            rect.setAttribute("y", pos.y - 22);
+            rect.setAttribute("width", 90);
+            rect.setAttribute("height", 44);
+            rect.setAttribute("rx", 10);
+            rect.setAttribute("class", "unit");
+            rect.addEventListener("click", function () {
+              showSelection(unit);
+            });
+            layer.appendChild(rect);
+
+            var label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            label.setAttribute("x", pos.x);
+            label.setAttribute("y", pos.y + 5);
+            label.setAttribute("text-anchor", "middle");
+            label.setAttribute("class", "label");
+            label.textContent = unit.name || unit.id;
+            layer.appendChild(label);
+          });
+
+          // Draw streams (circles)
+          streams.forEach(function (stream) {
+            var pos = positions[stream.id];
+            if (!pos) return;
+
+            var circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            circle.setAttribute("cx", pos.x);
+            circle.setAttribute("cy", pos.y);
+            circle.setAttribute("r", 10);
+            circle.setAttribute("class", "stream");
+            circle.addEventListener("click", function () {
+              showStreamSelection(stream);
+            });
+            layer.appendChild(circle);
+
+            var label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            label.setAttribute("x", pos.x);
+            label.setAttribute("y", pos.y + 26);
+            label.setAttribute("text-anchor", "middle");
+            label.setAttribute("class", "label");
+            label.textContent = stream.name || stream.id;
+            layer.appendChild(label);
+          });
+        }
+
+        function showStreamSelection(stream) {
+          selection.innerHTML = "";
+          var entries = [
+            { label: "Stream", value: stream.name || stream.id },
+            { label: "ID", value: stream.id },
+            { label: "Description", value: stream.description || "N/A" }
+          ];
+          entries.forEach(function (entry) {
+            var div = document.createElement("div");
+            div.className = "detail-item";
+            div.textContent = entry.label + ": " + entry.value;
+            selection.appendChild(div);
+          });
+        }
+
+        function showSelection(unit) {
+          selection.innerHTML = "";
+          var entries = [
+            { label: "Unit", value: unit.name || unit.id },
+            { label: "Type", value: unit.unit_type || unit.type || "Unknown" },
+            { label: "ID", value: unit.id },
+            { label: "Description", value: unit.description || "N/A" }
+          ];
+          entries.forEach(function (entry) {
+            var div = document.createElement("div");
+            div.className = "detail-item";
+            div.textContent = entry.label + ": " + entry.value;
+            selection.appendChild(div);
+          });
+        }
+
+        function zoom(factor) {
+          viewBox.width *= factor;
+          viewBox.height *= factor;
+          setViewBox();
+        }
+
+        function resetView() {
+          viewBox = { x: 0, y: 0, width: 800, height: 520 };
+          setViewBox();
+        }
+
+        svg.addEventListener("wheel", function (event) {
+          event.preventDefault();
+          zoom(event.deltaY > 0 ? 1.1 : 0.9);
+        });
+
+        svg.addEventListener("pointerdown", function (event) {
+          isPanning = true;
+          panStart = { x: event.clientX, y: event.clientY };
+        });
+
+        svg.addEventListener("pointermove", function (event) {
+          if (!isPanning) return;
+          var dx = ((event.clientX - panStart.x) / svg.clientWidth) * viewBox.width;
+          var dy = ((event.clientY - panStart.y) / svg.clientHeight) * viewBox.height;
+          viewBox.x -= dx;
+          viewBox.y -= dy;
+          panStart = { x: event.clientX, y: event.clientY };
+          setViewBox();
+        });
+
+        svg.addEventListener("pointerup", function () {
+          isPanning = false;
+        });
+
+        svg.addEventListener("pointerleave", function () {
+          isPanning = false;
+        });
+
+        document.getElementById("zoom-in").addEventListener("click", function () {
+          zoom(0.85);
+        });
+        document.getElementById("zoom-out").addEventListener("click", function () {
+          zoom(1.15);
+        });
+        document.getElementById("reset-view").addEventListener("click", resetView);
+
+        function handleToolResult(result) {
+          var payload = result && (result.structuredContent || result);
+          renderTopology(payload);
+        }
+
+        function handleHostContext(changes) {
+          if (changes && changes.theme) {
+            window.DwsimApp.applyTheme(changes.theme);
+          }
+        }
+
+        window.DwsimApp.initialize({
+          onToolResult: handleToolResult,
+          onHostContextChanged: handleHostContext,
+          onInitialized: function (context) {
+            if (context && context.hostContext && context.hostContext.theme) {
+              window.DwsimApp.applyTheme(context.hostContext.theme);
+            }
+          },
+        });
+      })();
+    </script>
+  </body>
+</html>

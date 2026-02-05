@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Diagnostics</title>
+    <link rel="stylesheet" href="../../static/theme.css" />
+    <style>
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+      }
+
+      .card {
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        padding: 14px;
+      }
+
+      .label {
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.75rem;
+      }
+
+      .value {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-top: 6px;
+      }
+
+      .section {
+        margin-top: 16px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        padding: 14px;
+      }
+
+      .session-list,
+      .metrics-list {
+        display: grid;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .item {
+        background: rgba(0, 0, 0, 0.03);
+        border-radius: 10px;
+        padding: 10px;
+        font-size: 0.9rem;
+      }
+
+      .progress {
+        width: 100%;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--border);
+        overflow: hidden;
+        margin-top: 8px;
+      }
+
+      .progress-bar {
+        height: 100%;
+        background: var(--accent);
+        width: 0%;
+      }
+
+      .empty-state {
+        padding: 10px;
+        background: var(--accent-soft);
+        border-radius: 10px;
+        color: var(--accent);
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <div class="app-title">Diagnostics</div>
+        <div class="app-subtitle">Server status, sessions, and resource usage</div>
+      </header>
+
+      <section class="grid">
+        <div class="card">
+          <div class="label">Uptime</div>
+          <div class="value" id="uptime">--</div>
+        </div>
+        <div class="card">
+          <div class="label">Active Sessions</div>
+          <div class="value" id="active-sessions">--</div>
+        </div>
+        <div class="card">
+          <div class="label">Errors</div>
+          <div class="value" id="error-count">--</div>
+        </div>
+        <div class="card">
+          <div class="label">Memory</div>
+          <div class="value" id="memory-usage">--</div>
+          <div class="progress">
+            <div id="memory-bar" class="progress-bar"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="label">Sessions</div>
+        <div id="session-list" class="session-list">
+          <div class="empty-state">No session details available.</div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="label">Metrics</div>
+        <div id="metrics-list" class="metrics-list">
+          <div class="empty-state">Metrics not loaded.</div>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://unpkg.com/@modelcontextprotocol/ext-apps/dist/index.umd.js"></script>
+    <script src="../../static/app-client.js"></script>
+    <script>
+      (function () {
+        "use strict";
+
+        var uptimeEl = document.getElementById("uptime");
+        var sessionsEl = document.getElementById("active-sessions");
+        var errorsEl = document.getElementById("error-count");
+        var memoryEl = document.getElementById("memory-usage");
+        var memoryBar = document.getElementById("memory-bar");
+        var sessionList = document.getElementById("session-list");
+        var metricsList = document.getElementById("metrics-list");
+
+        function formatSeconds(value) {
+          if (value === null || value === undefined) return "--";
+          var seconds = Math.floor(value);
+          var hours = Math.floor(seconds / 3600);
+          var minutes = Math.floor((seconds % 3600) / 60);
+          return hours + "h " + minutes + "m";
+        }
+
+        function formatBytes(value) {
+          if (value === null || value === undefined) return "--";
+          var units = ["B", "KB", "MB", "GB"];
+          var size = value;
+          var index = 0;
+          while (size > 1024 && index < units.length - 1) {
+            size /= 1024;
+            index += 1;
+          }
+          return size.toFixed(1) + " " + units[index];
+        }
+
+        function renderSessions(list) {
+          sessionList.innerHTML = "";
+          if (!list || !list.length) {
+            sessionList.innerHTML = "<div class='empty-state'>No session details available.</div>";
+            return;
+          }
+          list.forEach(function (session) {
+            var item = document.createElement("div");
+            item.className = "item";
+            item.textContent =
+              (session.session_id || session.id || "Session") +
+              " · " +
+              (session.state || "unknown") +
+              (session.remaining_lifetime_seconds ? " · " + Math.round(session.remaining_lifetime_seconds) + "s left" : "");
+            sessionList.appendChild(item);
+          });
+        }
+
+        function renderMetrics(metricsText) {
+          metricsList.innerHTML = "";
+          if (!metricsText) {
+            metricsList.innerHTML = "<div class='empty-state'>Metrics not loaded.</div>";
+            return;
+          }
+          var lines = metricsText.split("\n").filter(function (line) {
+            return line && line.indexOf("#") !== 0;
+          });
+          lines.slice(0, 6).forEach(function (line) {
+            var item = document.createElement("div");
+            item.className = "item";
+            item.textContent = line;
+            metricsList.appendChild(item);
+          });
+        }
+
+        function renderDiagnostics(payload) {
+          if (!payload) return;
+          uptimeEl.textContent = formatSeconds(payload.uptime_seconds);
+          sessionsEl.textContent = payload.active_sessions != null ? payload.active_sessions : "--";
+          errorsEl.textContent = payload.error_count != null ? payload.error_count : "--";
+          if (payload.memory) {
+            memoryEl.textContent = formatBytes(payload.memory.rss_bytes) + " / " + formatBytes(payload.memory.limit_bytes);
+            if (payload.memory.limit_bytes) {
+              var percent = Math.min(100, (payload.memory.rss_bytes / payload.memory.limit_bytes) * 100);
+              memoryBar.style.width = percent.toFixed(0) + "%";
+            }
+          }
+          renderSessions(payload.sessions);
+          renderMetrics(payload.metrics_text);
+        }
+
+        function requestDiagnostics() {
+          if (window.McpApp && typeof window.McpApp.callTool === "function") {
+            window.McpApp.callTool("get_diagnostics", {});
+            return;
+          }
+          if (window.McpApp && typeof window.McpApp.request === "function") {
+            window.McpApp.request({
+              jsonrpc: "2.0",
+              method: "tools/call",
+              params: { name: "get_diagnostics", arguments: {} },
+            });
+          }
+        }
+
+        function handleToolResult(result) {
+          var payload = result && (result.structuredContent || result);
+          renderDiagnostics(payload);
+        }
+
+        function handleHostContext(changes) {
+          if (changes && changes.theme) {
+            window.DwsimApp.applyTheme(changes.theme);
+          }
+        }
+
+        window.DwsimApp.initialize({
+          onToolResult: handleToolResult,
+          onHostContextChanged: handleHostContext,
+          onInitialized: function (context) {
+            if (context && context.hostContext && context.hostContext.theme) {
+              window.DwsimApp.applyTheme(context.hostContext.theme);
+            }
+            requestDiagnostics();
+            setInterval(requestDiagnostics, 15000);
+          },
+        });
+      })();
+    </script>
+  </body>
+</html>

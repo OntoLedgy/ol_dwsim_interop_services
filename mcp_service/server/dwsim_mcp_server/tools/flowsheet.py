@@ -20,6 +20,7 @@ from dwsim_mcp_server.models.mcp_inputs import (
     DeleteObjectOutput,
     FlashStreamInput,
     FlashStreamOutput,
+    GetStreamPropertiesInput,
     ListObjectsInput,
     ListObjectsOutput,
     SetBinaryInteractionParameterInput,
@@ -32,6 +33,9 @@ from dwsim_mcp_server.models.mcp_inputs import (
 
 from dwsim_mcp_server.observability import get_logger
 from dwsim_mcp_server.tools.legacy import LegacyContext
+from dwsim_mcp_server.tools.ui_metadata import add_ui_metadata, get_ui_result_annotation
+
+from fastmcp.tools.tool import ToolResult
 
 
 class _ServiceUnavailable(Exception):
@@ -61,6 +65,9 @@ CONNECT_DESCRIPTION = (
 LIST_OBJECTS_DESCRIPTION = (
     "List all streams, units, and connections in the current session. Use to verify flowsheet topology before running simulation."
 )
+GET_FLOWSHEET_TOPOLOGY_DESCRIPTION = (
+    "Retrieve flowsheet topology (streams, units, connections) for visualization."
+)
 SET_OBJECT_PARAMETER_DESCRIPTION = "Update a parameter on a flowsheet object."
 DELETE_OBJECT_DESCRIPTION = "Delete a flowsheet object and orphaned connections safely."
 FLASH_STREAM_DESCRIPTION = (
@@ -69,6 +76,12 @@ FLASH_STREAM_DESCRIPTION = (
 SET_BIP_DESCRIPTION = (
     "Set a binary interaction parameter (BIP) for a pair of compounds. CRITICAL for accurate phase equilibrium. Typical values: hydrocarbon pairs ~0.01-0.05, water-hydrocarbon ~0.5. Set AFTER property package, BEFORE adding streams."
 )
+GET_STREAM_PROPERTIES_DESCRIPTION = (
+    "Retrieve detailed properties for a specific stream from the latest simulation results."
+)
+
+STREAM_PROPERTIES_UI_URI = "ui://dwsim/stream-properties"
+FLOWSHEET_VIEWER_UI_URI = "ui://dwsim/flowsheet-viewer"
 
 
 def register_flowsheet_tools(mcp) -> None:
@@ -161,6 +174,19 @@ def register_flowsheet_tools(mcp) -> None:
             ),
         )
 
+    @mcp.tool(
+        description=GET_FLOWSHEET_TOPOLOGY_DESCRIPTION,
+        meta=get_ui_result_annotation(FLOWSHEET_VIEWER_UI_URI),
+    )
+    async def get_flowsheet_topology(session_id: str, ctx: Context | None = None):
+        result = await _execute_tool(
+            "get_flowsheet_topology",
+            lambda: _get_flowsheet_topology(ctx, session_id=session_id),
+        )
+        if isinstance(result, types.CallToolResult):
+            return result
+        return ToolResult(structured_content=result, meta=get_ui_result_annotation(FLOWSHEET_VIEWER_UI_URI))
+
     @mcp.tool(description=DELETE_OBJECT_DESCRIPTION)
     async def delete_object(session_id: str, object_id: str, ctx: Context | None = None):
         return await _execute_tool(
@@ -188,8 +214,29 @@ def register_flowsheet_tools(mcp) -> None:
             ),
         )
 
+    @mcp.tool(
+        description=GET_STREAM_PROPERTIES_DESCRIPTION,
+        meta=get_ui_result_annotation(STREAM_PROPERTIES_UI_URI),
+    )
+    async def get_stream_properties(session_id: str, stream_id: str, ctx: Context | None = None):
+        result = await _execute_tool(
+            "get_stream_properties",
+            lambda: _get_stream_properties(ctx, session_id=session_id, stream_id=stream_id),
+        )
+        if isinstance(result, types.CallToolResult):
+            return result
+        return ToolResult(structured_content=result, meta=get_ui_result_annotation(STREAM_PROPERTIES_UI_URI))
+
 
 def build_flowsheet_tools() -> list[types.Tool]:
+    stream_properties_tool = add_ui_metadata(
+        _tool("get_stream_properties", GET_STREAM_PROPERTIES_DESCRIPTION, GetStreamPropertiesInput),
+        STREAM_PROPERTIES_UI_URI,
+    )
+    flowsheet_topology_tool = add_ui_metadata(
+        _tool("get_flowsheet_topology", GET_FLOWSHEET_TOPOLOGY_DESCRIPTION, ListObjectsInput),
+        FLOWSHEET_VIEWER_UI_URI,
+    )
     return [
         _tool("add_compound", ADD_COMPOUND_DESCRIPTION, AddCompoundInput),
         _tool("set_property_package", SET_PROPERTY_PACKAGE_DESCRIPTION, SetPropertyPackageInput),
@@ -205,6 +252,8 @@ def build_flowsheet_tools() -> list[types.Tool]:
             SET_BIP_DESCRIPTION,
             SetBinaryInteractionParameterInput,
         ),
+        stream_properties_tool,
+        flowsheet_topology_tool,
     ]
 
 
@@ -277,11 +326,30 @@ async def handle_flowsheet_tool(
             compound_b=arguments.get("compound_b") if arguments.get("compound_b") is not None else arguments.get("compound2"),
             interaction_value=arguments.get("interaction_value") if arguments.get("interaction_value") is not None else arguments.get("value"),
         ),
+        "get_stream_properties": lambda: _get_stream_properties(
+            ctx,
+            session_id=arguments.get("session_id"),
+            stream_id=arguments.get("stream_id"),
+        ),
+        "get_flowsheet_topology": lambda: _get_flowsheet_topology(
+            ctx,
+            session_id=arguments.get("session_id"),
+        ),
     }
     handler = handlers.get(tool_name)
     if handler is None:
         return _error_result(code="UNKNOWN_TOOL", message=f"Unknown tool: {tool_name}")
-    return await _execute_tool(tool_name, handler)
+    result = await _execute_tool(tool_name, handler)
+    if tool_name not in {"get_stream_properties", "get_flowsheet_topology"} or isinstance(
+        result, types.CallToolResult
+    ):
+        return result
+    resource_uri = (
+        STREAM_PROPERTIES_UI_URI
+        if tool_name == "get_stream_properties"
+        else FLOWSHEET_VIEWER_UI_URI
+    )
+    return _ui_success_result(result, resource_uri)
 
 
 async def _execute_tool(
@@ -308,6 +376,10 @@ def _get_service(ctx: Context | None):
     if service is None:
         raise _ServiceUnavailable("Flowsheet service is not configured.")
     return service
+
+
+def _get_session_client(ctx: Context | None):
+    return ctx.request_context.lifespan_context.session_client
 
 
 async def _add_compound(ctx: Context | None, *, session_id: str, compound_name: str) -> Dict[str, Any]:
@@ -439,6 +511,36 @@ async def _flash_stream(ctx: Context | None, *, session_id: str, stream_id: str)
     service = _get_service(ctx)
     payload = FlashStreamInput.model_validate({"session_id": session_id, "stream_id": stream_id})
     return (await service.flash_stream(payload)).model_dump()
+
+
+async def _get_stream_properties(
+    ctx: Context | None, *, session_id: str, stream_id: str
+) -> Dict[str, Any]:
+    payload = GetStreamPropertiesInput.model_validate(
+        {"session_id": session_id, "stream_id": stream_id}
+    )
+    session_client = _get_session_client(ctx)
+    results = await session_client.get_calculation_results(
+        payload.session_id,
+        object_id=payload.stream_id,
+    )
+    streams = results.get("stream_results", [])
+    if streams:
+        return streams[0]
+    return {"stream_id": payload.stream_id, "message": "No stream results available."}
+
+
+async def _get_flowsheet_topology(ctx: Context | None, *, session_id: str) -> Dict[str, Any]:
+    return await _list_objects(ctx, session_id=session_id)
+
+
+def _ui_success_result(payload: Dict[str, Any], resource_uri: str) -> types.CallToolResult:
+    message = payload.get("name") or payload.get("stream_id") or "Stream properties"
+    return types.CallToolResult(
+        content=[types.TextContent(type="text", text=str(message))],
+        structuredContent=payload,
+        _meta=get_ui_result_annotation(resource_uri),
+    )
 
 
 async def _set_binary_interaction_parameter(

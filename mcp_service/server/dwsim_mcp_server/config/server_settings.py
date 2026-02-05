@@ -80,6 +80,36 @@ class ServerSettings(BaseSettings):
         validation_alias="DWSIM_SAMPLE_CASES_PATH",
         description="Path to sample cases metadata directory.",
     )
+    apps_path: str = Field(
+        "./apps/templates",
+        validation_alias="DWSIM_APPS_PATH",
+        description="Path to MCP UI app templates directory.",
+    )
+    apps_cache_enabled: bool = Field(
+        True,
+        validation_alias="DWSIM_APPS_CACHE_ENABLED",
+        description="Enable caching for app templates and app.json metadata.",
+    )
+    apps_cache_ttl_seconds: int = Field(
+        300,
+        validation_alias="DWSIM_APPS_CACHE_TTL_SECONDS",
+        description="Time-to-live for app cache entries in seconds.",
+    )
+    apps_default_csp_connect_domains: list[str] = Field(
+        default_factory=list,
+        validation_alias="DWSIM_APPS_DEFAULT_CSP_CONNECT_DOMAINS",
+        description="Default connect-src CSP domains for apps.",
+    )
+    apps_default_csp_resource_domains: list[str] = Field(
+        default_factory=list,
+        validation_alias="DWSIM_APPS_DEFAULT_CSP_RESOURCE_DOMAINS",
+        description="Default script/style/img CSP domains for apps.",
+    )
+    apps_default_csp_frame_domains: list[str] = Field(
+        default_factory=list,
+        validation_alias="DWSIM_APPS_DEFAULT_CSP_FRAME_DOMAINS",
+        description="Default frame-src CSP domains for apps.",
+    )
     max_resource_size_kb: int = Field(
         1024,
         validation_alias="DWSIM_MAX_RESOURCE_SIZE_KB",

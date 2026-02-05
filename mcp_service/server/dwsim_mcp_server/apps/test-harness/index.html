@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DWSIM MCP App Test Harness</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f1ec;
+        --panel: #ffffff;
+        --text: #1c2127;
+        --muted: #5c6874;
+        --border: #d8cfc4;
+        --accent: #c5612f;
+        --accent-soft: rgba(197, 97, 47, 0.14);
+        font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+      }
+
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #121518;
+        --panel: #1d2126;
+        --text: #f4f5f7;
+        --muted: #a1aab4;
+        --border: #2c3238;
+        --accent: #f39a67;
+        --accent-soft: rgba(243, 154, 103, 0.18);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        min-height: 100vh;
+      }
+
+      .panel {
+        padding: 20px;
+        border-right: 1px solid var(--border);
+        background: var(--panel);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .panel h1 {
+        font-size: 1.2rem;
+        margin: 0;
+      }
+
+      .panel p {
+        color: var(--muted);
+        margin: 0;
+        font-size: 0.9rem;
+      }
+
+      .control-group {
+        display: grid;
+        gap: 8px;
+      }
+
+      label {
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      select,
+      button {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 8px 10px;
+        background: var(--panel);
+        color: var(--text);
+        font-size: 0.9rem;
+      }
+
+      button {
+        cursor: pointer;
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        font-weight: 600;
+      }
+
+      button.secondary {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+
+      .iframe-wrap {
+        padding: 20px;
+      }
+
+      iframe {
+        width: 100%;
+        height: calc(100vh - 40px);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: #fff;
+      }
+
+      .log {
+        background: #0f1215;
+        color: #d8dee4;
+        border-radius: 10px;
+        padding: 10px;
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        font-size: 0.75rem;
+        height: 160px;
+        overflow-y: auto;
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .panel {
+          border-right: none;
+          border-bottom: 1px solid var(--border);
+        }
+
+        iframe {
+          height: 70vh;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="panel">
+        <h1>DWSIM MCP App Harness</h1>
+        <p>Load an app in the iframe and send mock tool results.</p>
+
+        <div class="control-group">
+          <label for="app-select">App</label>
+          <select id="app-select">
+            <option value="simulation-results">simulation-results</option>
+            <option value="stream-properties">stream-properties</option>
+            <option value="flowsheet-viewer">flowsheet-viewer</option>
+            <option value="sensitivity-analysis">sensitivity-analysis</option>
+            <option value="diagnostics">diagnostics</option>
+          </select>
+          <button id="load-app">Load App</button>
+        </div>
+
+        <div class="control-group">
+          <label for="mock-select">Mock Data</label>
+          <select id="mock-select">
+            <option value="simulation-result-converged.json">simulation-result-converged</option>
+            <option value="simulation-result-failed.json">simulation-result-failed</option>
+            <option value="stream-properties.json">stream-properties</option>
+            <option value="flowsheet-topology.json">flowsheet-topology</option>
+            <option value="sensitivity-2d.json">sensitivity-2d (multi-output)</option>
+            <option value="sensitivity-3d.json">sensitivity-3d (surface)</option>
+            <option value="diagnostics.json">diagnostics</option>
+          </select>
+          <button id="send-mock">Send Tool Result</button>
+          <label style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+            <input type="checkbox" id="auto-send" checked />
+            Auto-send on app load
+          </label>
+        </div>
+
+        <div class="control-group">
+          <label>Theme</label>
+          <button id="toggle-theme" class="secondary">Toggle Theme</button>
+        </div>
+
+        <div class="control-group">
+          <label>Message Log</label>
+          <div id="log" class="log"></div>
+        </div>
+      </aside>
+
+      <section class="iframe-wrap">
+        <iframe id="app-frame" title="MCP App Preview"></iframe>
+      </section>
+    </div>
+
+    <script src="./mock-bridge.js"></script>
+    <script>
+      (function () {
+        "use strict";
+
+        // Embedded mock data (avoids CORS issues when opening as file://)
+        var MOCK_DATA = {
+          "simulation-result-converged.json": {
+            "status": "converged",
+            "convergence_state": "Converged",
+            "elapsed_ms": 1420.5,
+            "stream_results": [
+              {
+                "id": "stream-001",
+                "name": "Feed",
+                "temperature_k": 298.15,
+                "pressure_pa": 101325.0,
+                "total_molar_flow_mol_per_s": 12.4,
+                "phases": [
+                  {
+                    "phase_label": "Liquid",
+                    "phase_fraction": 0.95,
+                    "composition": [
+                      { "compound": "water", "mole_fraction": 0.98 },
+                      { "compound": "ethanol", "mole_fraction": 0.02 }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "stream-002",
+                "name": "Vapor Outlet",
+                "temperature_k": 356.2,
+                "pressure_pa": 101000.0,
+                "total_molar_flow_mol_per_s": 4.8,
+                "phases": [
+                  {
+                    "phase_label": "Vapor",
+                    "phase_fraction": 1.0,
+                    "composition": [
+                      { "compound": "methane", "mole_fraction": 0.72 },
+                      { "compound": "ethane", "mole_fraction": 0.28 }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "messages": [
+              "Converged in 12 iterations.",
+              "Energy balance within 0.3%."
+            ],
+            "mass_balance_valid": true,
+            "mass_balance_error_percent": 0.31
+          },
+          "simulation-result-failed.json": {
+            "status": "failed",
+            "convergence_state": "Error",
+            "elapsed_ms": 5200.0,
+            "stream_results": [
+              {
+                "id": "stream-001",
+                "name": "Feed",
+                "temperature_k": 310.0,
+                "pressure_pa": 101325.0,
+                "total_molar_flow_mol_per_s": 10.0,
+                "phases": []
+              }
+            ],
+            "messages": [
+              "Solver failed: flash calculation did not converge.",
+              "Check property package and BIP settings.",
+              "Mass balance could not be validated."
+            ],
+            "mass_balance_valid": false,
+            "mass_balance_error_percent": 12.8
+          },
+          "stream-properties.json": {
+            "id": "stream-002",
+            "name": "Vapor Outlet",
+            "temperature_k": 365.4,
+            "pressure_pa": 100800.0,
+            "total_molar_flow_mol_per_s": 6.3,
+            "phases": [
+              {
+                "phase_label": "Vapor",
+                "phase_fraction": 0.72,
+                "composition": [
+                  { "compound": "methane", "mole_fraction": 0.6 },
+                  { "compound": "ethane", "mole_fraction": 0.25 },
+                  { "compound": "propane", "mole_fraction": 0.15 }
+                ]
+              },
+              {
+                "phase_label": "Liquid",
+                "phase_fraction": 0.28,
+                "composition": [
+                  { "compound": "methane", "mole_fraction": 0.2 },
+                  { "compound": "ethane", "mole_fraction": 0.35 },
+                  { "compound": "propane", "mole_fraction": 0.45 }
+                ]
+              }
+            ]
+          },
+          "flowsheet-topology.json": {
+            "streams": [
+              { "id": "FEED", "name": "Feed", "description": "Mixed inlet stream" },
+              { "id": "S-VAP", "name": "Vapor Out", "description": "Vapor phase outlet" },
+              { "id": "S-HC", "name": "Light Liquid", "description": "Hydrocarbon liquid phase" },
+              { "id": "S-AQ", "name": "Heavy Liquid", "description": "Aqueous phase outlet" },
+              { "id": "S-VAP-COOL", "name": "Cooled Vapor", "description": "Vapor after cooling" },
+              { "id": "S-HC-PUMP", "name": "Pumped HC", "description": "HC after pump" },
+              { "id": "S-AQ-PUMP", "name": "Pumped Water", "description": "Water after pump" }
+            ],
+            "units": [
+              { "id": "SEP-01", "name": "V-100", "unit_type": "ThreePhaseSeparator", "description": "Three-phase separator vessel" },
+              { "id": "COOL-01", "name": "E-100", "unit_type": "Cooler", "description": "Vapor cooler" },
+              { "id": "PUMP-01", "name": "P-100", "unit_type": "Pump", "description": "HC transfer pump" },
+              { "id": "PUMP-02", "name": "P-101", "unit_type": "Pump", "description": "Water transfer pump" }
+            ],
+            "connections": [
+              { "source_id": "FEED", "target_id": "SEP-01", "port_name": "Inlet" },
+              { "source_id": "SEP-01", "target_id": "S-VAP", "port_name": "VaporOutlet" },
+              { "source_id": "SEP-01", "target_id": "S-HC", "port_name": "LiquidOutlet1" },
+              { "source_id": "SEP-01", "target_id": "S-AQ", "port_name": "LiquidOutlet2" },
+              { "source_id": "S-VAP", "target_id": "COOL-01", "port_name": "Inlet" },
+              { "source_id": "COOL-01", "target_id": "S-VAP-COOL", "port_name": "Outlet" },
+              { "source_id": "S-HC", "target_id": "PUMP-01", "port_name": "Inlet" },
+              { "source_id": "PUMP-01", "target_id": "S-HC-PUMP", "port_name": "Outlet" },
+              { "source_id": "S-AQ", "target_id": "PUMP-02", "port_name": "Inlet" },
+              { "source_id": "PUMP-02", "target_id": "S-AQ-PUMP", "port_name": "Outlet" }
+            ]
+          },
+          "diagnostics.json": {
+            "uptime_seconds": 86400,
+            "active_sessions": 3,
+            "memory": {
+              "rss_bytes": 524288000,
+              "limit_bytes": 1073741824,
+              "recovery_threshold_bytes": 805306368,
+              "breached": false
+            },
+            "error_count": 2,
+            "metrics_text": "dwsim_sessions_active 3\ndwsim_memory_rss_bytes 524288000\n",
+            "sessions": [
+              {
+                "session_id": "session-abc",
+                "state": "active",
+                "remaining_lifetime_seconds": 4200
+              },
+              {
+                "session_id": "session-def",
+                "state": "active",
+                "remaining_lifetime_seconds": 1800
+              }
+            ]
+          },
+          "sensitivity-2d.json": {
+            "study_type": "sensitivity",
+            "variable": {
+              "name": "Feed Temperature",
+              "parameter": "feed_temperature_k",
+              "min": 280,
+              "max": 380,
+              "unit": "K"
+            },
+            "outputs": [
+              { "name": "vapor_fraction", "unit": "-" },
+              { "name": "liquid_hc_fraction", "unit": "-" },
+              { "name": "liquid_aq_fraction", "unit": "-" },
+              { "name": "energy_duty_kw", "unit": "kW" }
+            ],
+            "results": [
+              { "input_value": 280, "vapor_fraction": 0.02, "liquid_hc_fraction": 0.58, "liquid_aq_fraction": 0.40, "energy_duty_kw": -52.3 },
+              { "input_value": 290, "vapor_fraction": 0.05, "liquid_hc_fraction": 0.56, "liquid_aq_fraction": 0.39, "energy_duty_kw": -41.8 },
+              { "input_value": 300, "vapor_fraction": 0.09, "liquid_hc_fraction": 0.53, "liquid_aq_fraction": 0.38, "energy_duty_kw": -29.5 },
+              { "input_value": 310, "vapor_fraction": 0.14, "liquid_hc_fraction": 0.49, "liquid_aq_fraction": 0.37, "energy_duty_kw": -14.2 },
+              { "input_value": 320, "vapor_fraction": 0.21, "liquid_hc_fraction": 0.44, "liquid_aq_fraction": 0.35, "energy_duty_kw": 4.1 },
+              { "input_value": 330, "vapor_fraction": 0.29, "liquid_hc_fraction": 0.38, "liquid_aq_fraction": 0.33, "energy_duty_kw": 25.7 },
+              { "input_value": 340, "vapor_fraction": 0.38, "liquid_hc_fraction": 0.31, "liquid_aq_fraction": 0.31, "energy_duty_kw": 51.2 },
+              { "input_value": 350, "vapor_fraction": 0.48, "liquid_hc_fraction": 0.24, "liquid_aq_fraction": 0.28, "energy_duty_kw": 82.6 },
+              { "input_value": 360, "vapor_fraction": 0.58, "liquid_hc_fraction": 0.17, "liquid_aq_fraction": 0.25, "energy_duty_kw": 121.4 },
+              { "input_value": 370, "vapor_fraction": 0.68, "liquid_hc_fraction": 0.11, "liquid_aq_fraction": 0.21, "energy_duty_kw": 168.9 },
+              { "input_value": 380, "vapor_fraction": 0.78, "liquid_hc_fraction": 0.06, "liquid_aq_fraction": 0.16, "energy_duty_kw": 227.5 }
+            ]
+          },
+          "sensitivity-3d.json": {
+            "study_type": "parameter_sweep",
+            "variables": [
+              { "name": "Temperature (K)", "parameter": "temperature_k", "min": 300, "max": 380 },
+              { "name": "Pressure (kPa)", "parameter": "pressure_kpa", "min": 100, "max": 500 }
+            ],
+            "output_name": "Separation Efficiency (%)",
+            "optimization_direction": "maximize",
+            "grid": [
+              { "x": 300, "y": 100, "z": 62.5 },
+              { "x": 300, "y": 200, "z": 71.2 },
+              { "x": 300, "y": 300, "z": 75.8 },
+              { "x": 300, "y": 400, "z": 72.1 },
+              { "x": 300, "y": 500, "z": 65.3 },
+              { "x": 320, "y": 100, "z": 68.4 },
+              { "x": 320, "y": 200, "z": 78.9 },
+              { "x": 320, "y": 300, "z": 85.2 },
+              { "x": 320, "y": 400, "z": 82.7 },
+              { "x": 320, "y": 500, "z": 74.1 },
+              { "x": 340, "y": 100, "z": 72.1 },
+              { "x": 340, "y": 200, "z": 84.6 },
+              { "x": 340, "y": 300, "z": 94.8 },
+              { "x": 340, "y": 400, "z": 91.3 },
+              { "x": 340, "y": 500, "z": 81.5 },
+              { "x": 360, "y": 100, "z": 69.8 },
+              { "x": 360, "y": 200, "z": 81.2 },
+              { "x": 360, "y": 300, "z": 89.5 },
+              { "x": 360, "y": 400, "z": 86.1 },
+              { "x": 360, "y": 500, "z": 77.8 },
+              { "x": 380, "y": 100, "z": 64.2 },
+              { "x": 380, "y": 200, "z": 74.5 },
+              { "x": 380, "y": 300, "z": 80.1 },
+              { "x": 380, "y": 400, "z": 76.9 },
+              { "x": 380, "y": 500, "z": 70.2 }
+            ],
+            "optimum": {
+              "x": 340,
+              "y": 300,
+              "z": 94.8,
+              "description": "Maximum separation efficiency at T=340K, P=300kPa"
+            }
+          }
+        };
+
+        var iframe = document.getElementById("app-frame");
+        var appSelect = document.getElementById("app-select");
+        var mockSelect = document.getElementById("mock-select");
+        var log = document.getElementById("log");
+        var theme = "light";
+
+        var bridge = new MockAppBridge(iframe, {
+          onMessage: function (message) {
+            appendLog("FROM APP", message);
+          },
+        });
+
+        function appendLog(prefix, message) {
+          var entry = document.createElement("div");
+          entry.textContent = "[" + new Date().toLocaleTimeString() + "] " + prefix + ": " + message;
+          log.appendChild(entry);
+          log.scrollTop = log.scrollHeight;
+        }
+
+        // Map apps to their default mock data
+        var APP_TO_MOCK = {
+          "simulation-results": "simulation-result-converged.json",
+          "stream-properties": "stream-properties.json",
+          "flowsheet-viewer": "flowsheet-topology.json",
+          "sensitivity-analysis": "sensitivity-2d.json",
+          "diagnostics": "diagnostics.json"
+        };
+
+        function loadApp() {
+          var appName = appSelect.value;
+          iframe.src = "../templates/" + appName + "/index.html";
+          appendLog("SYSTEM", "Loaded app " + appName);
+
+          // Auto-select matching mock data
+          var defaultMock = APP_TO_MOCK[appName];
+          if (defaultMock && mockSelect.querySelector('option[value="' + defaultMock + '"]')) {
+            mockSelect.value = defaultMock;
+            appendLog("SYSTEM", "Auto-selected mock: " + defaultMock);
+          }
+
+          // Auto-send data after iframe loads
+          var autoSend = document.getElementById("auto-send");
+          if (autoSend && autoSend.checked) {
+            iframe.onload = function () {
+              setTimeout(function () {
+                sendMock();
+              }, 300); // Small delay to ensure app JS is initialized
+            };
+          }
+        }
+
+        function sendMock() {
+          var fileName = mockSelect.value;
+          var data = MOCK_DATA[fileName];
+          if (!data) {
+            appendLog("ERROR", "Mock data not found: " + fileName);
+            return;
+          }
+          if (!iframe.contentWindow) {
+            appendLog("ERROR", "Iframe not ready - click Load App first");
+            return;
+          }
+          bridge.sendToolResult({
+            content: [{ type: "text", text: "Mock tool result" }],
+            structuredContent: data,
+          });
+          appendLog("SYSTEM", "Sent mock data " + fileName + " (keys: " + Object.keys(data).join(", ") + ")");
+        }
+
+        function toggleTheme() {
+          theme = theme === "light" ? "dark" : "light";
+          document.documentElement.setAttribute("data-theme", theme);
+          bridge.sendHostContext({ theme: theme });
+          appendLog("SYSTEM", "Theme set to " + theme);
+        }
+
+        document.getElementById("load-app").addEventListener("click", loadApp);
+        document.getElementById("send-mock").addEventListener("click", sendMock);
+        document.getElementById("toggle-theme").addEventListener("click", toggleTheme);
+
+        loadApp();
+      })();
+    </script>
+  </body>
+</html>

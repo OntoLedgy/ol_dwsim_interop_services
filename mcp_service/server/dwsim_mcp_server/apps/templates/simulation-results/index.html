@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simulation Results</title>
+    <link rel="stylesheet" href="../../static/theme.css" />
+    <style>
+      .status-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 18px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        margin-bottom: 18px;
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .metric-card {
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        padding: 12px 14px;
+        background: var(--panel);
+      }
+
+      .metric-label {
+        color: var(--muted);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .metric-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-top: 6px;
+      }
+
+      .details-section {
+        display: grid;
+        gap: 12px;
+      }
+
+      details {
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        padding: 12px 14px;
+        background: var(--panel);
+      }
+
+      summary {
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .stream-list,
+      .unit-list,
+      .message-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .item-card {
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        padding: 10px 12px;
+        background: rgba(0, 0, 0, 0.02);
+      }
+
+      .item-title {
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+
+      .item-grid {
+        display: grid;
+        gap: 6px;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <div class="app-title">Simulation Results</div>
+        <div class="app-subtitle">DWSIM solver output and diagnostics</div>
+      </header>
+
+      <section class="status-card">
+        <div>
+          <div class="status-badge" data-status-badge>Awaiting results</div>
+          <div data-status-text class="app-subtitle">Run a simulation to see results.</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Elapsed</div>
+          <div class="metric-value" data-metric="elapsed">--</div>
+        </div>
+      </section>
+
+      <section class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-label">Convergence</div>
+          <div class="metric-value" data-metric="convergence">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Streams</div>
+          <div class="metric-value" data-metric="streams">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Mass Balance</div>
+          <div class="metric-value" data-metric="mass-balance">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Mass Error</div>
+          <div class="metric-value" data-metric="mass-error">--</div>
+        </div>
+      </section>
+
+      <section class="details-section">
+        <details open>
+          <summary>Stream Results</summary>
+          <div class="stream-list" data-stream-list>
+            <div class="empty-state">No stream data yet.</div>
+          </div>
+        </details>
+        <details>
+          <summary>Unit Operations</summary>
+          <div class="unit-list" data-unit-list>
+            <div class="empty-state">No unit operation data yet.</div>
+          </div>
+        </details>
+        <details>
+          <summary>Diagnostics</summary>
+          <div class="message-list" data-message-list>
+            <div class="empty-state">No diagnostics available.</div>
+          </div>
+        </details>
+      </section>
+    </main>
+
+    <script src="https://unpkg.com/@modelcontextprotocol/ext-apps/dist/index.umd.js"></script>
+    <script src="../../static/app-client.js"></script>
+    <script>
+      (function () {
+        "use strict";
+
+        var statusBadge = document.querySelector("[data-status-badge]");
+        var statusText = document.querySelector("[data-status-text]");
+        var metricElapsed = document.querySelector("[data-metric='elapsed']");
+        var metricConvergence = document.querySelector("[data-metric='convergence']");
+        var metricStreams = document.querySelector("[data-metric='streams']");
+        var metricMassBalance = document.querySelector("[data-metric='mass-balance']");
+        var metricMassError = document.querySelector("[data-metric='mass-error']");
+        var streamList = document.querySelector("[data-stream-list]");
+        var unitList = document.querySelector("[data-unit-list]");
+        var messageList = document.querySelector("[data-message-list]");
+
+        function setText(node, value) {
+          if (!node) return;
+          node.textContent = value;
+        }
+
+        function formatElapsed(ms) {
+          if (ms === null || ms === undefined) return "--";
+          if (ms < 1000) return ms.toFixed(0) + " ms";
+          return (ms / 1000).toFixed(2) + " s";
+        }
+
+        function renderMessages(messages) {
+          if (!messageList) return;
+          messageList.innerHTML = "";
+          if (!messages || !messages.length) {
+            messageList.innerHTML = "<div class='empty-state'>No diagnostics available.</div>";
+            return;
+          }
+          messages.forEach(function (msg) {
+            var card = document.createElement("div");
+            card.className = "item-card";
+            card.textContent = msg;
+            messageList.appendChild(card);
+          });
+        }
+
+        function renderStreams(streams) {
+          if (!streamList) return;
+          streamList.innerHTML = "";
+          if (!streams || !streams.length) {
+            streamList.innerHTML = "<div class='empty-state'>No stream data yet.</div>";
+            return;
+          }
+          streams.forEach(function (stream) {
+            var card = document.createElement("div");
+            card.className = "item-card";
+            var title = document.createElement("div");
+            title.className = "item-title";
+            title.textContent = stream.name || stream.id || "Stream";
+            card.appendChild(title);
+
+            var grid = document.createElement("div");
+            grid.className = "item-grid";
+            grid.innerHTML = [
+              "T: " + formatNumber(stream.temperature_k) + " K",
+              "P: " + formatNumber(stream.pressure_pa) + " Pa",
+              "Flow: " + formatNumber(stream.total_molar_flow_mol_per_s) + " mol/s",
+              "Phases: " + (stream.phases ? stream.phases.length : 0),
+            ]
+              .map(function (line) {
+                return "<div>" + line + "</div>";
+              })
+              .join("");
+            card.appendChild(grid);
+            streamList.appendChild(card);
+          });
+        }
+
+        function renderUnits(units) {
+          if (!unitList) return;
+          unitList.innerHTML = "";
+          if (!units || !units.length) {
+            unitList.innerHTML = "<div class='empty-state'>No unit operation data yet.</div>";
+            return;
+          }
+          units.forEach(function (unit) {
+            var card = document.createElement("div");
+            card.className = "item-card";
+            var title = document.createElement("div");
+            title.className = "item-title";
+            title.textContent = unit.name || unit.unit_id || "Unit";
+            card.appendChild(title);
+
+            var grid = document.createElement("div");
+            grid.className = "item-grid";
+            grid.innerHTML = [
+              "Type: " + (unit.unit_type || unit.type || "Unknown"),
+              "Inlets: " + (unit.inlet_streams ? unit.inlet_streams.length : 0),
+              "Outlets: " + (unit.outlet_streams ? unit.outlet_streams.length : 0),
+            ]
+              .map(function (line) {
+                return "<div>" + line + "</div>";
+              })
+              .join("");
+            card.appendChild(grid);
+            unitList.appendChild(card);
+          });
+        }
+
+        function formatNumber(value) {
+          if (value === null || value === undefined || Number.isNaN(value)) return "--";
+          return Number(value).toLocaleString(undefined, { maximumFractionDigits: 3 });
+        }
+
+        function renderResult(payload) {
+          if (!payload) {
+            setText(statusBadge, "Awaiting results");
+            setText(statusText, "Run a simulation to see results.");
+            return;
+          }
+
+          var status = payload.status || "unknown";
+          setText(statusBadge, status.toUpperCase());
+          setText(statusText, payload.convergence_state || "Status unavailable");
+
+          setText(metricElapsed, formatElapsed(payload.elapsed_ms));
+          setText(metricConvergence, payload.convergence_state || "--");
+          setText(metricStreams, payload.stream_results ? payload.stream_results.length : 0);
+
+          if (payload.mass_balance_valid === undefined || payload.mass_balance_valid === null) {
+            setText(metricMassBalance, "--");
+          } else {
+            setText(metricMassBalance, payload.mass_balance_valid ? "Valid" : "Invalid");
+          }
+
+          if (payload.mass_balance_error_percent === undefined || payload.mass_balance_error_percent === null) {
+            setText(metricMassError, "--");
+          } else {
+            setText(metricMassError, payload.mass_balance_error_percent.toFixed(2) + "%");
+          }
+
+          renderStreams(payload.stream_results);
+          renderUnits(payload.unit_results);
+          renderMessages(payload.messages);
+        }
+
+        function handleToolResult(result) {
+          if (!result) return;
+          var payload = result.structuredContent || result;
+          renderResult(payload);
+        }
+
+        function handleHostContext(changes) {
+          if (changes && changes.theme) {
+            window.DwsimApp.applyTheme(changes.theme);
+          }
+        }
+
+        window.DwsimApp.initialize({
+          onToolResult: handleToolResult,
+          onHostContextChanged: handleHostContext,
+          onInitialized: function (context) {
+            if (context && context.hostContext && context.hostContext.theme) {
+              window.DwsimApp.applyTheme(context.hostContext.theme);
+            }
+          },
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "stream-properties",
+  "title": "Stream Properties",
+  "description": "Visualize stream composition, phases, and thermodynamic properties.",
+  "version": "1.0.0",
+  "entryPoint": "index.html",
+  "csp": {
+    "connectDomains": ["https://cdn.plot.ly"],
+    "resourceDomains": ["https://cdn.plot.ly"]
+  }
+}

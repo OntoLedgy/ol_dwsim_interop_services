@@ -15,6 +15,7 @@ from .flowsheet_build import (  # noqa: F401
     DeleteObjectOutput,
     FlashStreamInput,
     FlashStreamOutput,
+    GetStreamPropertiesInput,
     ListObjectsInput,
     ListObjectsOutput,
     SetBinaryInteractionParameterInput,

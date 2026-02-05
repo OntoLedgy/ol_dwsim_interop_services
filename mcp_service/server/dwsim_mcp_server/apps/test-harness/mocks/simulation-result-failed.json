@@ -1,0 +1,22 @@
+{
+  "status": "failed",
+  "convergence_state": "Error",
+  "elapsed_ms": 5200.0,
+  "stream_results": [
+    {
+      "id": "stream-001",
+      "name": "Feed",
+      "temperature_k": 310.0,
+      "pressure_pa": 101325.0,
+      "total_molar_flow_mol_per_s": 10.0,
+      "phases": []
+    }
+  ],
+  "messages": [
+    "Solver failed: flash calculation did not converge.",
+    "Check property package and BIP settings.",
+    "Mass balance could not be validated."
+  ],
+  "mass_balance_valid": false,
+  "mass_balance_error_percent": 12.8
+}

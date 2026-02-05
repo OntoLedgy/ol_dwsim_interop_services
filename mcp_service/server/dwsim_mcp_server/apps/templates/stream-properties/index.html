@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stream Properties</title>
+    <link rel="stylesheet" href="../../static/theme.css" />
+    <style>
+      .layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .panel {
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        padding: 16px;
+      }
+
+      .panel h2 {
+        margin: 0 0 12px;
+        font-size: 1rem;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 8px 6px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      th {
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.75rem;
+      }
+
+      .charts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+      }
+
+      .chart {
+        min-height: 220px;
+      }
+
+      .empty-state {
+        padding: 14px;
+        background: var(--accent-soft);
+        border-radius: 10px;
+        color: var(--accent);
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <div class="app-title">Stream Properties</div>
+        <div class="app-subtitle">Thermodynamic state and phase distribution</div>
+      </header>
+
+      <div class="layout">
+        <section class="panel">
+          <h2>Stream Summary</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Property</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody id="property-table">
+              <tr>
+                <td colspan="2" class="empty-state">Awaiting stream data.</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="panel">
+          <h2>Composition & Phases</h2>
+          <div class="charts">
+            <div id="composition-chart" class="chart"></div>
+            <div id="phase-chart" class="chart"></div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://unpkg.com/@modelcontextprotocol/ext-apps/dist/index.umd.js"></script>
+    <script src="../../static/app-client.js"></script>
+    <script>
+      (function () {
+        "use strict";
+
+        var tableBody = document.getElementById("property-table");
+        var compositionChart = document.getElementById("composition-chart");
+        var phaseChart = document.getElementById("phase-chart");
+
+        function setTableRows(rows) {
+          tableBody.innerHTML = "";
+          if (!rows.length) {
+            tableBody.innerHTML = "<tr><td colspan='2' class='empty-state'>No stream data.</td></tr>";
+            return;
+          }
+          rows.forEach(function (row) {
+            var tr = document.createElement("tr");
+            var label = document.createElement("td");
+            var value = document.createElement("td");
+            label.textContent = row.label;
+            value.textContent = row.value;
+            tr.appendChild(label);
+            tr.appendChild(value);
+            tableBody.appendChild(tr);
+          });
+        }
+
+        function formatNumber(value, unit) {
+          if (value === null || value === undefined || Number.isNaN(value)) return "--";
+          var text = Number(value).toLocaleString(undefined, { maximumFractionDigits: 3 });
+          return unit ? text + " " + unit : text;
+        }
+
+        function buildComposition(phases) {
+          if (!phases || !phases.length) return null;
+          var composition = {};
+          phases.forEach(function (phase) {
+            var entries = phase.composition || [];
+            entries.forEach(function (entry) {
+              var name = entry.compound || entry.name || "Unknown";
+              var value = entry.mole_fraction || entry.moleFraction || entry.value || 0;
+              composition[name] = (composition[name] || 0) + Number(value);
+            });
+          });
+          var labels = Object.keys(composition);
+          if (!labels.length) return null;
+          var values = labels.map(function (label) { return composition[label]; });
+          return { labels: labels, values: values };
+        }
+
+        function renderComposition(phases) {
+          var data = buildComposition(phases);
+          if (!data) {
+            compositionChart.innerHTML = "<div class='empty-state'>No composition data.</div>";
+            return;
+          }
+          Plotly.newPlot(
+            compositionChart,
+            [
+              {
+                type: "pie",
+                labels: data.labels,
+                values: data.values,
+                textinfo: "label+percent",
+                hole: 0.4,
+              },
+            ],
+            {
+              margin: { t: 10, b: 10, l: 10, r: 10 },
+              paper_bgcolor: "transparent",
+              plot_bgcolor: "transparent",
+              showlegend: false,
+            },
+            { displayModeBar: false, responsive: true }
+          );
+        }
+
+        function renderPhases(phases) {
+          if (!phases || !phases.length) {
+            phaseChart.innerHTML = "<div class='empty-state'>No phase distribution.</div>";
+            return;
+          }
+          var labels = phases.map(function (phase) { return phase.phase_label || phase.label || "Phase"; });
+          var values = phases.map(function (phase) { return phase.phase_fraction || phase.fraction || 0; });
+          Plotly.newPlot(
+            phaseChart,
+            [
+              {
+                type: "bar",
+                x: labels,
+                y: values,
+                marker: { color: "#c5612f" },
+              },
+            ],
+            {
+              margin: { t: 10, b: 30, l: 30, r: 10 },
+              yaxis: { tickformat: ".0%" },
+              paper_bgcolor: "transparent",
+              plot_bgcolor: "transparent",
+            },
+            { displayModeBar: false, responsive: true }
+          );
+        }
+
+        function renderStream(stream) {
+          if (!stream) {
+            setTableRows([]);
+            renderComposition(null);
+            renderPhases(null);
+            return;
+          }
+          setTableRows([
+            { label: "Stream", value: stream.name || stream.id || "Unknown" },
+            { label: "Temperature", value: formatNumber(stream.temperature_k, "K") },
+            { label: "Pressure", value: formatNumber(stream.pressure_pa, "Pa") },
+            { label: "Total Molar Flow", value: formatNumber(stream.total_molar_flow_mol_per_s, "mol/s") },
+          ]);
+          renderComposition(stream.phases || []);
+          renderPhases(stream.phases || []);
+        }
+
+        function extractStream(payload) {
+          if (!payload) return null;
+          if (payload.id || payload.temperature_k) return payload;
+          if (payload.stream_results && payload.stream_results.length) return payload.stream_results[0];
+          return null;
+        }
+
+        function handleToolResult(result) {
+          var payload = result && (result.structuredContent || result);
+          renderStream(extractStream(payload));
+        }
+
+        function handleHostContext(changes) {
+          if (changes && changes.theme) {
+            window.DwsimApp.applyTheme(changes.theme);
+          }
+        }
+
+        window.DwsimApp.initialize({
+          onToolResult: handleToolResult,
+          onHostContextChanged: handleHostContext,
+          onInitialized: function (context) {
+            if (context && context.hostContext && context.hostContext.theme) {
+              window.DwsimApp.applyTheme(context.hostContext.theme);
+            }
+          },
+        });
+      })();
+    </script>
+  </body>
+</html>

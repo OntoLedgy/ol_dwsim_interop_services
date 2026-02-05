@@ -10,6 +10,7 @@ from dwsim_mcp_server.resources.base import (
 from dwsim_mcp_server.resources.docs import DocsProvider
 from dwsim_mcp_server.resources.samples import SamplesProvider
 from dwsim_mcp_server.resources.results import ResultsProvider
+from dwsim_mcp_server.resources.ui_resource_provider import UiResourceProvider
 from dwsim_mcp_server.resources.registry import register_resources
 
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
     "DocsProvider",
     "SamplesProvider",
     "ResultsProvider",
+    "UiResourceProvider",
     # Registration
     "register_resources",
 ]

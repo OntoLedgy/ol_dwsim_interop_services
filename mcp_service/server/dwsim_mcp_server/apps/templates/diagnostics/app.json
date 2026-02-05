@@ -1,0 +1,7 @@
+{
+  "name": "diagnostics",
+  "title": "Diagnostics",
+  "description": "Server diagnostics, sessions, and resource usage.",
+  "version": "1.0.0",
+  "entryPoint": "index.html"
+}

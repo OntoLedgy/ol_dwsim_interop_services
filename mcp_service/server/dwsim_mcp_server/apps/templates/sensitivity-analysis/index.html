@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sensitivity Analysis</title>
+    <link rel="stylesheet" href="../../static/theme.css" />
+    <style>
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .tab {
+        padding: 8px 16px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--panel);
+        color: var(--text);
+        cursor: pointer;
+        font-weight: 500;
+      }
+
+      .tab.active {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+      }
+
+      .chart-container {
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+
+      .chart {
+        width: 100%;
+        height: 400px;
+      }
+
+      .chart-3d {
+        height: 500px;
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .info-card {
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        padding: 12px;
+      }
+
+      .info-label {
+        color: var(--muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .info-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-top: 4px;
+      }
+
+      .optima-highlight {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 12px;
+        font-size: 0.85rem;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .legend-color {
+        width: 16px;
+        height: 3px;
+        border-radius: 2px;
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <div class="app-title">Sensitivity Analysis</div>
+        <div class="app-subtitle">Parameter sweeps and optimization visualization</div>
+      </header>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="2d">2D Analysis</button>
+        <button class="tab" data-tab="3d">3D Surface</button>
+      </div>
+
+      <section id="panel-2d">
+        <div class="info-grid" id="info-2d">
+          <div class="info-card">
+            <div class="info-label">Variable</div>
+            <div class="info-value" id="var-name">--</div>
+          </div>
+          <div class="info-card">
+            <div class="info-label">Range</div>
+            <div class="info-value" id="var-range">--</div>
+          </div>
+          <div class="info-card">
+            <div class="info-label">Steps</div>
+            <div class="info-value" id="var-steps">--</div>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <div id="chart-2d" class="chart"></div>
+        </div>
+      </section>
+
+      <section id="panel-3d" class="hidden">
+        <div class="info-grid" id="info-3d">
+          <div class="info-card">
+            <div class="info-label">X Variable</div>
+            <div class="info-value" id="var-x">--</div>
+          </div>
+          <div class="info-card">
+            <div class="info-label">Y Variable</div>
+            <div class="info-value" id="var-y">--</div>
+          </div>
+          <div class="info-card optima-highlight">
+            <div class="info-label">Optimum</div>
+            <div class="info-value" id="optimum-value">--</div>
+          </div>
+          <div class="info-card optima-highlight">
+            <div class="info-label">At Location</div>
+            <div class="info-value" id="optimum-location">--</div>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <div id="chart-3d" class="chart chart-3d"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://unpkg.com/@modelcontextprotocol/ext-apps/dist/index.umd.js"></script>
+    <script src="../../static/app-client.js"></script>
+    <script>
+      (function () {
+        "use strict";
+
+        var tabs = document.querySelectorAll(".tab");
+        var panel2d = document.getElementById("panel-2d");
+        var panel3d = document.getElementById("panel-3d");
+        var chart2d = document.getElementById("chart-2d");
+        var chart3d = document.getElementById("chart-3d");
+
+        // Info elements
+        var varName = document.getElementById("var-name");
+        var varRange = document.getElementById("var-range");
+        var varSteps = document.getElementById("var-steps");
+        var varX = document.getElementById("var-x");
+        var varY = document.getElementById("var-y");
+        var optimumValue = document.getElementById("optimum-value");
+        var optimumLocation = document.getElementById("optimum-location");
+
+        var currentData = null;
+
+        // Tab switching
+        tabs.forEach(function (tab) {
+          tab.addEventListener("click", function () {
+            tabs.forEach(function (t) { t.classList.remove("active"); });
+            tab.classList.add("active");
+
+            var tabId = tab.getAttribute("data-tab");
+            panel2d.classList.toggle("hidden", tabId !== "2d");
+            panel3d.classList.toggle("hidden", tabId !== "3d");
+
+            if (currentData) {
+              if (tabId === "2d") render2D(currentData);
+              if (tabId === "3d") render3D(currentData);
+            }
+          });
+        });
+
+        function getThemeColors() {
+          var isDark = document.documentElement.getAttribute("data-theme") === "dark";
+          return {
+            paper: isDark ? "#1d2126" : "#ffffff",
+            plot: isDark ? "#1d2126" : "#ffffff",
+            text: isDark ? "#f4f5f7" : "#1c2127",
+            grid: isDark ? "#2c3238" : "#e8e8e8",
+            colors: ["#c5612f", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899"]
+          };
+        }
+
+        function formatNumber(value) {
+          if (value === null || value === undefined) return "--";
+          if (Math.abs(value) < 0.01 || Math.abs(value) > 10000) {
+            return value.toExponential(3);
+          }
+          return value.toLocaleString(undefined, { maximumFractionDigits: 4 });
+        }
+
+        function render2D(data) {
+          var theme = getThemeColors();
+
+          // Handle single-variable sensitivity or multi-output
+          var variable = data.variable || {};
+          var results = data.results || [];
+          var outputs = data.outputs || [];
+
+          varName.textContent = variable.name || variable.parameter || "Parameter";
+          varRange.textContent = formatNumber(variable.min) + " - " + formatNumber(variable.max);
+          varSteps.textContent = results.length || "--";
+
+          // Build x values from results
+          var xValues = results.map(function (r) {
+            return r.input_value !== undefined ? r.input_value : r.x;
+          });
+
+          // Determine output names
+          var outputNames = outputs.length > 0
+            ? outputs.map(function (o) { return o.name || o.parameter; })
+            : Object.keys(results[0] || {}).filter(function (k) {
+                return k !== "input_value" && k !== "x" && k !== "step";
+              });
+
+          // Separate outputs by scale - fractions (0-1) vs other values
+          var fractionOutputs = [];
+          var otherOutputs = [];
+
+          outputNames.forEach(function (name) {
+            var values = results.map(function (r) {
+              return r[name] !== undefined ? r[name] : r.outputs ? r.outputs[name] : null;
+            }).filter(function (v) { return v !== null; });
+
+            var maxVal = Math.max.apply(null, values);
+            var minVal = Math.min.apply(null, values);
+
+            // If all values are between 0 and 1, treat as fraction
+            if (minVal >= 0 && maxVal <= 1.0) {
+              fractionOutputs.push(name);
+            } else {
+              otherOutputs.push(name);
+            }
+          });
+
+          // Build traces - fractions on y1, others on y2
+          var traces = [];
+          var colorIndex = 0;
+
+          fractionOutputs.forEach(function (outputName) {
+            var yValues = results.map(function (r) {
+              return r[outputName] !== undefined ? r[outputName] : r.outputs ? r.outputs[outputName] : null;
+            });
+
+            traces.push({
+              x: xValues,
+              y: yValues,
+              type: "scatter",
+              mode: "lines+markers",
+              name: outputName,
+              yaxis: "y",
+              line: { color: theme.colors[colorIndex % theme.colors.length], width: 2 },
+              marker: { size: 6 }
+            });
+            colorIndex++;
+          });
+
+          otherOutputs.forEach(function (outputName) {
+            var yValues = results.map(function (r) {
+              return r[outputName] !== undefined ? r[outputName] : r.outputs ? r.outputs[outputName] : null;
+            });
+
+            traces.push({
+              x: xValues,
+              y: yValues,
+              type: "scatter",
+              mode: "lines+markers",
+              name: outputName,
+              yaxis: "y2",
+              line: { color: theme.colors[colorIndex % theme.colors.length], width: 2, dash: "dot" },
+              marker: { size: 6, symbol: "square" }
+            });
+            colorIndex++;
+          });
+
+          var layout = {
+            paper_bgcolor: theme.paper,
+            plot_bgcolor: theme.plot,
+            font: { color: theme.text },
+            margin: { t: 30, b: 60, l: 60, r: 70 },
+            xaxis: {
+              title: variable.name || "Input Parameter",
+              gridcolor: theme.grid,
+              zerolinecolor: theme.grid
+            },
+            yaxis: {
+              title: fractionOutputs.length > 0 ? "Fraction (-)" : "Value",
+              gridcolor: theme.grid,
+              zerolinecolor: theme.grid,
+              range: fractionOutputs.length > 0 ? [0, 1] : undefined
+            },
+            yaxis2: otherOutputs.length > 0 ? {
+              title: otherOutputs.join(", "),
+              overlaying: "y",
+              side: "right",
+              gridcolor: theme.grid,
+              zerolinecolor: theme.grid,
+              showgrid: false
+            } : undefined,
+            legend: {
+              orientation: "h",
+              y: -0.2,
+              x: 0.5,
+              xanchor: "center"
+            },
+            hovermode: "x unified"
+          };
+
+          Plotly.newPlot(chart2d, traces, layout, { displayModeBar: true, responsive: true });
+        }
+
+        function render3D(data) {
+          var theme = getThemeColors();
+
+          // Handle 2-variable parameter sweep (surface plot)
+          var variables = data.variables || [];
+          var grid = data.grid || data.results || [];
+          var outputName = data.output_name || data.objective || "Output";
+
+          if (variables.length < 2) {
+            chart3d.innerHTML = "<div style='padding:20px;color:var(--muted);'>3D surface requires 2 input variables. Current data has " + variables.length + " variable(s).</div>";
+            return;
+          }
+
+          varX.textContent = variables[0].name || "X";
+          varY.textContent = variables[1].name || "Y";
+
+          // Build surface data
+          var xVals = [];
+          var yVals = [];
+          var zMatrix = [];
+
+          // Extract unique x and y values
+          var xSet = new Set();
+          var ySet = new Set();
+          grid.forEach(function (point) {
+            xSet.add(point.x !== undefined ? point.x : point.inputs ? point.inputs[0] : 0);
+            ySet.add(point.y !== undefined ? point.y : point.inputs ? point.inputs[1] : 0);
+          });
+
+          xVals = Array.from(xSet).sort(function (a, b) { return a - b; });
+          yVals = Array.from(ySet).sort(function (a, b) { return a - b; });
+
+          // Build z matrix and find optimum
+          var optimum = { value: null, x: null, y: null, isMax: true };
+
+          for (var j = 0; j < yVals.length; j++) {
+            var row = [];
+            for (var i = 0; i < xVals.length; i++) {
+              var point = grid.find(function (p) {
+                var px = p.x !== undefined ? p.x : p.inputs ? p.inputs[0] : null;
+                var py = p.y !== undefined ? p.y : p.inputs ? p.inputs[1] : null;
+                return Math.abs(px - xVals[i]) < 1e-9 && Math.abs(py - yVals[j]) < 1e-9;
+              });
+
+              var zVal = point ? (point.z !== undefined ? point.z : point.output !== undefined ? point.output : point.outputs ? point.outputs[outputName] : null) : null;
+              row.push(zVal);
+
+              // Track optimum (maximum by default, or check data.optimization_direction)
+              if (zVal !== null) {
+                var isMax = data.optimization_direction !== "minimize";
+                if (optimum.value === null ||
+                    (isMax && zVal > optimum.value) ||
+                    (!isMax && zVal < optimum.value)) {
+                  optimum = { value: zVal, x: xVals[i], y: yVals[j], isMax: isMax };
+                }
+              }
+            }
+            zMatrix.push(row);
+          }
+
+          optimumValue.textContent = formatNumber(optimum.value) + (optimum.isMax ? " (max)" : " (min)");
+          optimumLocation.textContent = "X=" + formatNumber(optimum.x) + ", Y=" + formatNumber(optimum.y);
+
+          var surfaceTrace = {
+            x: xVals,
+            y: yVals,
+            z: zMatrix,
+            type: "surface",
+            colorscale: "Viridis",
+            contours: {
+              z: {
+                show: true,
+                usecolormap: true,
+                highlightcolor: "#fff",
+                project: { z: true }
+              }
+            }
+          };
+
+          // Add marker for optimum point
+          var optimumTrace = {
+            x: [optimum.x],
+            y: [optimum.y],
+            z: [optimum.value],
+            type: "scatter3d",
+            mode: "markers",
+            marker: {
+              size: 10,
+              color: "#ff0000",
+              symbol: "diamond"
+            },
+            name: "Optimum"
+          };
+
+          var layout = {
+            paper_bgcolor: theme.paper,
+            font: { color: theme.text },
+            margin: { t: 30, b: 30, l: 30, r: 30 },
+            scene: {
+              xaxis: { title: variables[0].name || "X", gridcolor: theme.grid },
+              yaxis: { title: variables[1].name || "Y", gridcolor: theme.grid },
+              zaxis: { title: outputName, gridcolor: theme.grid },
+              camera: {
+                eye: { x: 1.5, y: 1.5, z: 1.2 }
+              }
+            }
+          };
+
+          Plotly.newPlot(chart3d, [surfaceTrace, optimumTrace], layout, { displayModeBar: true, responsive: true });
+        }
+
+        function handleToolResult(result) {
+          var payload = result && (result.structuredContent || result);
+          if (!payload) return;
+
+          currentData = payload;
+
+          // Determine which view to show based on data
+          var hasMultipleVariables = payload.variables && payload.variables.length >= 2;
+          var activeTab = document.querySelector(".tab.active").getAttribute("data-tab");
+
+          if (activeTab === "2d") {
+            render2D(payload);
+          } else if (activeTab === "3d") {
+            render3D(payload);
+          }
+        }
+
+        function handleHostContext(changes) {
+          if (changes && changes.theme) {
+            window.DwsimApp.applyTheme(changes.theme);
+            // Re-render charts with new theme
+            if (currentData) {
+              var activeTab = document.querySelector(".tab.active").getAttribute("data-tab");
+              if (activeTab === "2d") render2D(currentData);
+              if (activeTab === "3d") render3D(currentData);
+            }
+          }
+        }
+
+        window.DwsimApp.initialize({
+          onToolResult: handleToolResult,
+          onHostContextChanged: handleHostContext,
+          onInitialized: function (context) {
+            if (context && context.hostContext && context.hostContext.theme) {
+              window.DwsimApp.applyTheme(context.hostContext.theme);
+            }
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

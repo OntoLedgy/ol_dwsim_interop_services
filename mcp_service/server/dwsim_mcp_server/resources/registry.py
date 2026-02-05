@@ -16,6 +16,7 @@ from dwsim_mcp_server.resources.base import (
 from dwsim_mcp_server.resources.docs import DocsProvider
 from dwsim_mcp_server.resources.samples import SamplesProvider
 from dwsim_mcp_server.resources.results import ResultsProvider
+from dwsim_mcp_server.resources.ui_resource_provider import UiResourceProvider
 
 
 def register_resources(server: Server, dependencies: Any | None = None) -> None:
@@ -42,8 +43,12 @@ def _register_server_resources(server: Server, dependencies: Any) -> None:
     results_provider = ResultsProvider(
         session_client=dependencies.session_client,
     )
+    ui_provider = UiResourceProvider(
+        apps_path=getattr(settings, "apps_path", "./apps/templates"),
+        cache_enabled=getattr(settings, "apps_cache_enabled", True),
+    )
 
-    providers = [docs_provider, samples_provider, results_provider]
+    providers = [docs_provider, samples_provider, results_provider, ui_provider]
 
     @server.list_resource_templates()
     async def list_resource_templates() -> List[types.ResourceTemplate]:
@@ -77,8 +82,11 @@ def _register_server_resources(server: Server, dependencies: Any) -> None:
         from urllib.parse import urlparse
         parsed = urlparse(uri)
         scheme = parsed.netloc  # e.g., "docs", "cases", "session"
+        protocol = parsed.scheme  # e.g., "resource", "ui"
 
         try:
+            if protocol == "ui":
+                return await ui_provider.read_resource(uri)
             if scheme == "docs":
                 return await docs_provider.read_resource(uri)
             if scheme == "cases":
@@ -117,6 +125,7 @@ def _register_fastmcp_resources(server) -> None:
         samples_path="./cases/samples",
         case_storage_roots=[],
     )
+    _ui_provider = UiResourceProvider(apps_path="./apps/templates")
 
     @server.resource(
         "resource://docs",
@@ -168,6 +177,26 @@ def _register_fastmcp_resources(server) -> None:
         result = await _samples_provider.read_resource(
             f"resource://cases/{name}/flowsheet"
         )
+        return _extract_resource_content(result)
+
+    @server.resource(
+        "ui://dwsim/{app}",
+        name="UI App",
+        description="Load a DWSIM UI app by name (e.g., simulation-results)",
+        mime_type=UiResourceProvider.MIME_TYPE,
+    )
+    async def ui_app(app: str) -> str:
+        result = await _ui_provider.read_resource(f"ui://dwsim/{app}")
+        return _extract_resource_content(result)
+
+    @server.resource(
+        "ui://dwsim/{app}/{param}",
+        name="UI App (parameterized)",
+        description="Load a DWSIM UI app with an additional parameter segment",
+        mime_type=UiResourceProvider.MIME_TYPE,
+    )
+    async def ui_app_parameterized(app: str, param: str) -> str:
+        result = await _ui_provider.read_resource(f"ui://dwsim/{app}/{param}")
         return _extract_resource_content(result)
 
     # NOTE: Session resources require session_client from lifespan context.

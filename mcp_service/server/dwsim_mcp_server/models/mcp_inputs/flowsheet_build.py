@@ -212,6 +212,13 @@ class ListObjectsInput(BaseModel):
     session_id: str = Field(..., description="Session identifier", min_length=1)
 
 
+class GetStreamPropertiesInput(BaseModel):
+    """Input for get_stream_properties MCP tool."""
+
+    session_id: str = Field(..., description="Session identifier", min_length=1)
+    stream_id: str = Field(..., description="Stream identifier", min_length=1)
+
+
 class StreamSummary(BaseModel):
     """Summary of a stream object."""
 

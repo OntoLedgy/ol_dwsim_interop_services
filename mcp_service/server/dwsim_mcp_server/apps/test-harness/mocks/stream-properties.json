@@ -1,0 +1,27 @@
+{
+  "id": "stream-002",
+  "name": "Vapor Outlet",
+  "temperature_k": 365.4,
+  "pressure_pa": 100800.0,
+  "total_molar_flow_mol_per_s": 6.3,
+  "phases": [
+    {
+      "phase_label": "Vapor",
+      "phase_fraction": 0.72,
+      "composition": [
+        { "compound": "methane", "mole_fraction": 0.6 },
+        { "compound": "ethane", "mole_fraction": 0.25 },
+        { "compound": "propane", "mole_fraction": 0.15 }
+      ]
+    },
+    {
+      "phase_label": "Liquid",
+      "phase_fraction": 0.28,
+      "composition": [
+        { "compound": "methane", "mole_fraction": 0.2 },
+        { "compound": "ethane", "mole_fraction": 0.35 },
+        { "compound": "propane", "mole_fraction": 0.45 }
+      ]
+    }
+  ]
+}

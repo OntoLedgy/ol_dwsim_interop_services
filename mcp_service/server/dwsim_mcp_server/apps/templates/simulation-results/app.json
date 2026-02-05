@@ -1,0 +1,7 @@
+{
+  "name": "simulation-results",
+  "title": "Simulation Results",
+  "description": "Visualize DWSIM solver status, stream metrics, and diagnostics.",
+  "version": "1.0.0",
+  "entryPoint": "index.html"
+}
