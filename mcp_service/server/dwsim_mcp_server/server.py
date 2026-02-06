@@ -230,13 +230,13 @@ def _run_http_with_oauth(
             Route("/.well-known/oauth-authorization-server", oauth_authorization_server)
         )
 
-        # Token proxy endpoint for browser-based test harness
-        # This proxies client credentials to Clerk's token endpoint server-side
+        # Token proxy: exchanges auth code for tokens server-side (avoids CORS)
         async def token_proxy(request):
             import httpx
 
             try:
                 form_data = await request.form()
+                grant_type = form_data.get("grant_type", "authorization_code")
                 client_id = form_data.get("client_id")
                 client_secret = form_data.get("client_secret")
 
@@ -246,17 +246,29 @@ def _run_http_with_oauth(
                         status_code=400
                     )
 
-                # Get Clerk's token endpoint
                 token_url = f"{issuer}/oauth/token"
+                payload = {
+                    "grant_type": grant_type,
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                }
+
+                # Authorization code flow needs code + redirect_uri + code_verifier
+                if grant_type == "authorization_code":
+                    code = form_data.get("code")
+                    redirect_uri = form_data.get("redirect_uri")
+                    code_verifier = form_data.get("code_verifier")
+                    if code:
+                        payload["code"] = code
+                    if redirect_uri:
+                        payload["redirect_uri"] = redirect_uri
+                    if code_verifier:
+                        payload["code_verifier"] = code_verifier
 
                 async with httpx.AsyncClient() as client:
                     response = await client.post(
                         token_url,
-                        data={
-                            "grant_type": "client_credentials",
-                            "client_id": client_id,
-                            "client_secret": client_secret,
-                        },
+                        data=payload,
                         headers={"Content-Type": "application/x-www-form-urlencoded"},
                     )
                     return JSONResponse(
@@ -270,6 +282,38 @@ def _run_http_with_oauth(
                 )
 
         routes.append(Route("/oauth/token", token_proxy, methods=["POST"]))
+
+        # OAuth callback page: captures auth code from redirect and sends to opener
+        async def oauth_callback(request):
+            from starlette.responses import HTMLResponse
+            return HTMLResponse("""<!doctype html>
+<html><head><title>OAuth Callback</title></head>
+<body>
+<p>Completing login...</p>
+<script>
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get("code");
+  var error = params.get("error");
+  var state = params.get("state");
+  if (window.opener) {
+    window.opener.postMessage({
+      type: "oauth-callback",
+      code: code,
+      error: error,
+      state: state
+    }, "*");
+    window.close();
+  } else {
+    document.body.textContent = code
+      ? "Auth code received but no opener window. Code: " + code
+      : "Error: " + (error || "unknown");
+  }
+})();
+</script>
+</body></html>""")
+
+        routes.append(Route("/oauth/callback", oauth_callback))
 
     # Mount MCP app
     routes.append(Mount("/", app=mcp_app))

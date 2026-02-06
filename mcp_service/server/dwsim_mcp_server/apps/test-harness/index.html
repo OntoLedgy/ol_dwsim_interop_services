@@ -286,7 +286,7 @@
             <input type="text" id="session-id" placeholder="Auto-filled on connect" readonly />
           </div>
           <div class="control-group">
-            <button id="live-connect">Connect (Create Session)</button>
+            <button id="live-connect">Login &amp; Connect</button>
             <button id="live-disconnect" class="secondary" disabled>Disconnect</button>
           </div>
           <div class="divider"></div>
@@ -622,8 +622,24 @@
           });
         });
 
-        // OAuth: get access token using token proxy on MCP server
-        // The MCP server proxies the request to Clerk to avoid browser CORS issues
+        // PKCE helpers
+        function generateCodeVerifier() {
+          var array = new Uint8Array(32);
+          crypto.getRandomValues(array);
+          return btoa(String.fromCharCode.apply(null, array))
+            .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        }
+
+        function generateCodeChallenge(verifier) {
+          var encoder = new TextEncoder();
+          var data = encoder.encode(verifier);
+          return crypto.subtle.digest("SHA-256", data).then(function (hash) {
+            return btoa(String.fromCharCode.apply(null, new Uint8Array(hash)))
+              .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+          });
+        }
+
+        // OAuth Authorization Code + PKCE flow
         function getAccessToken() {
           var serverUrl = serverUrlInput.value.trim();
           var clientId = clientIdInput.value.trim();
@@ -636,45 +652,101 @@
             return Promise.reject(new Error("Client ID and Client Secret are required"));
           }
 
-          // Use token proxy on MCP server (avoids CORS issues with Clerk)
           var baseUrl = serverUrl.replace(/\/mcp\/?$/, "");
-          var tokenProxyUrl = baseUrl + "/oauth/token";
+          var redirectUri = baseUrl + "/oauth/callback";
+          var codeVerifier = generateCodeVerifier();
+          var state = Math.random().toString(36).substring(2);
 
-          appendLog("AUTH", "Token proxy: " + tokenProxyUrl);
+          appendLog("AUTH", "Starting OAuth login...");
 
-          var body = new URLSearchParams();
-          body.append("grant_type", "client_credentials");
-          body.append("client_id", clientId);
-          body.append("client_secret", clientSecret);
+          return generateCodeChallenge(codeVerifier).then(function (codeChallenge) {
+            return new Promise(function (resolve, reject) {
+              // Discover auth server
+              fetch(baseUrl + "/.well-known/oauth-protected-resource")
+                .then(function (r) { return r.json(); })
+                .then(function (pr) {
+                  var authServer = (pr.authorization_servers || [])[0];
+                  if (!authServer) throw new Error("No authorization server found");
+                  authServer = authServer.replace(/\/$/, "");
 
-          return fetch(tokenProxyUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded"
-            },
-            body: body.toString()
-          })
-          .then(function (response) {
-            return response.json().then(function (json) {
-              appendLog("AUTH", "Response: " + JSON.stringify(json).substring(0, 200));
-              if (!response.ok || json.error) {
-                var errMsg = json.error_description || json.error || json.message || "Unknown error";
-                throw new Error("Token failed (" + response.status + "): " + errMsg);
-              }
-              return json;
-            }).catch(function (e) {
-              if (e.message && e.message.indexOf("Token failed") === 0) throw e;
-              return response.text().then(function (text) {
-                throw new Error("Token request failed: HTTP " + response.status + " - " + text);
-              });
+                  var authorizeUrl = authServer + "/oauth/authorize"
+                    + "?response_type=code"
+                    + "&client_id=" + encodeURIComponent(clientId)
+                    + "&redirect_uri=" + encodeURIComponent(redirectUri)
+                    + "&code_challenge=" + encodeURIComponent(codeChallenge)
+                    + "&code_challenge_method=S256"
+                    + "&state=" + encodeURIComponent(state)
+                    + "&scope=openid%20profile%20email";
+
+                  appendLog("AUTH", "Opening login popup...");
+
+                  // Open popup for login
+                  var popup = window.open(authorizeUrl, "oauth-login", "width=500,height=700,popup=yes");
+                  if (!popup) {
+                    throw new Error("Popup blocked - please allow popups for this page");
+                  }
+
+                  // Listen for callback message from popup
+                  function onMessage(event) {
+                    if (!event.data || event.data.type !== "oauth-callback") return;
+                    window.removeEventListener("message", onMessage);
+                    clearInterval(pollTimer);
+
+                    if (event.data.error) {
+                      reject(new Error("OAuth error: " + event.data.error));
+                      return;
+                    }
+                    if (event.data.state !== state) {
+                      reject(new Error("OAuth state mismatch"));
+                      return;
+                    }
+
+                    var authCode = event.data.code;
+                    appendLog("AUTH", "Got auth code, exchanging for token...");
+
+                    // Exchange code for token via proxy
+                    var tokenBody = new URLSearchParams();
+                    tokenBody.append("grant_type", "authorization_code");
+                    tokenBody.append("client_id", clientId);
+                    tokenBody.append("client_secret", clientSecret);
+                    tokenBody.append("code", authCode);
+                    tokenBody.append("redirect_uri", redirectUri);
+                    tokenBody.append("code_verifier", codeVerifier);
+
+                    fetch(baseUrl + "/oauth/token", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                      body: tokenBody.toString()
+                    })
+                    .then(function (r) { return r.json(); })
+                    .then(function (json) {
+                      if (json.error) {
+                        reject(new Error("Token error: " + (json.error_description || json.error)));
+                        return;
+                      }
+                      if (!json.access_token) {
+                        reject(new Error("No access_token in response"));
+                        return;
+                      }
+                      appendLog("AUTH", "Got access token (expires in " + (json.expires_in || "?") + "s)");
+                      resolve(json.access_token);
+                    })
+                    .catch(reject);
+                  }
+
+                  window.addEventListener("message", onMessage);
+
+                  // Poll to detect if popup was closed without completing
+                  var pollTimer = setInterval(function () {
+                    if (popup.closed) {
+                      clearInterval(pollTimer);
+                      window.removeEventListener("message", onMessage);
+                      reject(new Error("Login popup was closed"));
+                    }
+                  }, 1000);
+                })
+                .catch(reject);
             });
-          })
-          .then(function (json) {
-            if (!json.access_token) {
-              throw new Error("No access_token in response");
-            }
-            appendLog("AUTH", "Got access token (expires in " + (json.expires_in || "?") + "s)");
-            return json.access_token;
           });
         }
 
