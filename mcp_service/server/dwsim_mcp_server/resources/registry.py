@@ -119,13 +119,16 @@ def _register_server_resources(server: Server, dependencies: Any) -> None:
 
 def _register_fastmcp_resources(server) -> None:
     # Build providers once at registration time
-    # Note: These use default paths; for custom paths, use legacy Server resources
-    _docs_provider = DocsProvider(docs_path="./docs/resources")
+    # Use paths relative to the package directory, not CWD
+    from pathlib import Path
+
+    _pkg_root = Path(__file__).resolve().parent.parent
+    _docs_provider = DocsProvider(docs_path=str(_pkg_root / "docs" / "resources"))
     _samples_provider = SamplesProvider(
-        samples_path="./cases/samples",
+        samples_path=str(_pkg_root / "cases" / "samples"),
         case_storage_roots=[],
     )
-    _ui_provider = UiResourceProvider(apps_path="./apps/templates")
+    _ui_provider = UiResourceProvider(apps_path=str(_pkg_root / "apps" / "templates"))
 
     @server.resource(
         "resource://docs",
