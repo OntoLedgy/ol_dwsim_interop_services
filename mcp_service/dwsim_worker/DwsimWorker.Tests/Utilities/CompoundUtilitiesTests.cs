@@ -14,8 +14,8 @@ namespace DwsimWorker.Tests.Utilities
         public class CompoundAliasMapperTests
         {
             [Theory]
-            [InlineData("isobutane", "i-Butane")]
-            [InlineData("ISO-PENTANE", "i-Pentane")]
+            [InlineData("isobutane", "Isobutane")]
+            [InlineData("ISO-PENTANE", "Isopentane")]
             [InlineData("CO2", "Carbon Dioxide")]
             [InlineData("n-c6", "n-Hexane")]
             public void TryResolveAlias_KnownAliases_ReturnsCanonicalName(string alias, string expectedCanonical)
@@ -250,7 +250,7 @@ namespace DwsimWorker.Tests.Utilities
                     Assert.NotEmpty(result.Compounds);
                     Assert.All(result.Compounds, info => Assert.Contains("butane", info.Name, StringComparison.OrdinalIgnoreCase));
                     Assert.Contains(result.Compounds, info => info.Name == "n-Butane");
-                    Assert.Contains(result.Compounds, info => info.Name == "i-Butane");
+                    Assert.Contains(result.Compounds, info => info.Name == "Isobutane");
                     Assert.Equal(result.TotalCount, result.Compounds.Count);
                 }
             }

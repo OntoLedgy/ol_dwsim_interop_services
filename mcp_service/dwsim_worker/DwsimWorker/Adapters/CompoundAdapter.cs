@@ -42,8 +42,8 @@ namespace DwsimWorker.Adapters
 
         private static readonly string[] AlkaneCompounds =
         {
-            "Methane", "Ethane", "Propane", "n-Butane", "i-Butane", "Butane",
-            "n-Pentane", "i-Pentane", "Pentane", "n-Hexane", "Hexane",
+            "Methane", "Ethane", "Propane", "n-Butane", "Isobutane", "Butane",
+            "n-Pentane", "Isopentane", "Pentane", "n-Hexane", "Hexane",
             "n-Heptane", "Heptane", "n-Octane", "Octane", "n-Nonane", "n-Decane"
         };
 

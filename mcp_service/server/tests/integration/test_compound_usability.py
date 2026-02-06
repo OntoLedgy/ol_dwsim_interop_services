@@ -47,7 +47,7 @@ class _MockFlowsheetClient:
                 "formula": "CO2",
             },
             {
-                "name": "i-Butane",
+                "name": "Isobutane",
                 "category": "Hydrocarbon",
                 "aliases": ["isobutane"],
                 "formula": "C4H10",

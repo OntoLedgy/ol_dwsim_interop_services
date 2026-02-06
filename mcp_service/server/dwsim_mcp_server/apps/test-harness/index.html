@@ -1168,15 +1168,17 @@
           return (payload && payload[field]) || null;
         }
 
-        // Call a tool and throw on tool-level errors (isError: true)
+        // Call a tool and throw on tool-level errors (isError: true or error code in payload)
         async function scenarioToolCall(toolName, args) {
           var result = await mcpCall("tools/call", { name: toolName, arguments: args });
-          if (result && result.isError) {
-            var errPayload = extractPayload(result);
-            var msg = (errPayload && errPayload.message) || "Tool error";
+          var payload = extractPayload(result);
+          var hasError = (result && result.isError) ||
+                         (payload && payload.code && payload.code !== "SUCCESS");
+          if (hasError) {
+            var msg = (payload && payload.message) || "Tool error";
             throw new Error(toolName + " failed: " + msg);
           }
-          appendLog("SCENARIO", toolName + " -> " + JSON.stringify(extractPayload(result)).substring(0, 120));
+          appendLog("SCENARIO", toolName + " -> " + JSON.stringify(payload).substring(0, 120));
           return result;
         }
 

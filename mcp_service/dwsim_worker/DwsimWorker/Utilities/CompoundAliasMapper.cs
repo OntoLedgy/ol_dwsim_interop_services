@@ -8,10 +8,12 @@ namespace DwsimWorker.Utilities
         private static readonly IReadOnlyDictionary<string, string> AliasToCanonical =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "isobutane", "i-Butane" },
-                { "iso-butane", "i-Butane" },
-                { "isopentane", "i-Pentane" },
-                { "iso-pentane", "i-Pentane" },
+                { "isobutane", "Isobutane" },
+                { "iso-butane", "Isobutane" },
+                { "i-butane", "Isobutane" },
+                { "isopentane", "Isopentane" },
+                { "iso-pentane", "Isopentane" },
+                { "i-pentane", "Isopentane" },
                 { "co2", "Carbon Dioxide" },
                 { "n2", "Nitrogen" },
                 { "h2o", "Water" },
