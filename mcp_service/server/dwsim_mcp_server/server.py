@@ -330,6 +330,7 @@ def _run_http_with_oauth(
         allow_credentials=True,
         allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["*"],
+        expose_headers=["Mcp-Session-Id"],  # Browser must read this header
     )
 
     uvicorn.run(
