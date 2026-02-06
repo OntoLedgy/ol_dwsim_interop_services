@@ -750,14 +750,15 @@
           });
         }
 
-        // Live mode: JSON-RPC call helper
-        function mcpCall(method, params) {
+        // MCP transport session ID (from Streamable HTTP)
+        var mcpTransportSessionId = null;
+        var mcpRequestId = 0;
+
+        // Low-level MCP POST: handles session header and SSE responses
+        function mcpPost(body) {
           var url = serverUrlInput.value.trim();
           if (!url) {
             return Promise.reject(new Error("Server URL is required"));
-          }
-          if (!liveAccessToken) {
-            return Promise.reject(new Error("Not authenticated - click Connect first"));
           }
 
           var headers = {
@@ -765,15 +766,9 @@
             "Accept": "application/json, text/event-stream",
             "Authorization": "Bearer " + liveAccessToken
           };
-
-          var body = {
-            jsonrpc: "2.0",
-            id: Date.now(),
-            method: method,
-            params: params || {}
-          };
-
-          appendLog("REQUEST", method + " -> " + JSON.stringify(params || {}));
+          if (mcpTransportSessionId) {
+            headers["Mcp-Session-Id"] = mcpTransportSessionId;
+          }
 
           return fetch(url, {
             method: "POST",
@@ -781,22 +776,109 @@
             body: JSON.stringify(body)
           })
           .then(function (response) {
+            // Capture transport session ID from response
+            var sid = response.headers.get("Mcp-Session-Id");
+            if (sid) {
+              mcpTransportSessionId = sid;
+            }
+
             if (!response.ok) {
               if (response.status === 401) {
                 liveAccessToken = null;
                 setLiveStatus("disconnected");
                 throw new Error("Token expired - reconnect required");
               }
-              throw new Error("HTTP " + response.status + ": " + response.statusText);
+              return response.text().then(function (text) {
+                throw new Error("HTTP " + response.status + ": " + text.substring(0, 200));
+              });
             }
+
+            // 202 Accepted / 204 No Content = notification acknowledged
+            if (response.status === 202 || response.status === 204) {
+              return null;
+            }
+
+            var contentType = response.headers.get("Content-Type") || "";
+
+            // Handle SSE response (text/event-stream)
+            if (contentType.indexOf("text/event-stream") !== -1) {
+              return response.text().then(function (text) {
+                // Parse SSE events - find JSON-RPC responses from "data:" lines
+                var lines = text.split("\n");
+                var lastData = null;
+                for (var i = 0; i < lines.length; i++) {
+                  var line = lines[i].trim();
+                  if (line.indexOf("data:") === 0) {
+                    var data = line.substring(5).trim();
+                    if (data) lastData = data;
+                  }
+                }
+                if (lastData) {
+                  return JSON.parse(lastData);
+                }
+                throw new Error("No data in SSE response");
+              });
+            }
+
+            // Handle JSON response
             return response.json();
-          })
-          .then(function (json) {
+          });
+        }
+
+        // High-level MCP call: sends JSON-RPC request and extracts result
+        function mcpCall(method, params) {
+          if (!liveAccessToken) {
+            return Promise.reject(new Error("Not authenticated - click Connect first"));
+          }
+
+          mcpRequestId++;
+          var body = {
+            jsonrpc: "2.0",
+            id: mcpRequestId,
+            method: method,
+            params: params || {}
+          };
+
+          appendLog("REQUEST", method + " -> " + JSON.stringify(params || {}).substring(0, 100));
+
+          return mcpPost(body).then(function (json) {
             if (json.error) {
               throw new Error(json.error.message || JSON.stringify(json.error));
             }
-            appendLog("RESPONSE", JSON.stringify(json.result).substring(0, 200) + "...");
+            appendLog("RESPONSE", JSON.stringify(json.result).substring(0, 200));
             return json.result;
+          });
+        }
+
+        // Send a JSON-RPC notification (no id, no response expected)
+        function mcpNotify(method, params) {
+          var body = {
+            jsonrpc: "2.0",
+            method: method,
+            params: params || {}
+          };
+          appendLog("REQUEST", "NOTIFY " + method);
+          return mcpPost(body).then(function () {
+            return null; // notifications have no meaningful response
+          });
+        }
+
+        // Initialize the MCP protocol session
+        function mcpInitialize() {
+          appendLog("MCP", "Initializing MCP protocol...");
+
+          return mcpCall("initialize", {
+            protocolVersion: "2025-03-26",
+            capabilities: {},
+            clientInfo: { name: "dwsim-test-harness", version: "1.0.0" }
+          })
+          .then(function (result) {
+            appendLog("MCP", "Server: " + (result.serverInfo ? result.serverInfo.name : "unknown"));
+            // Send initialized notification
+            return mcpNotify("notifications/initialized", {});
+          })
+          .then(function () {
+            appendLog("MCP", "Protocol initialized");
           });
         }
 
@@ -805,14 +887,17 @@
           liveStatus.textContent = status.charAt(0).toUpperCase() + status.slice(1);
         }
 
-        // Connect: get token then create session
+        // Connect: get token, initialize MCP, then create DWSIM session
         connectBtn.addEventListener("click", function () {
           setLiveStatus("connecting");
 
           getAccessToken()
             .then(function (token) {
               liveAccessToken = token;
-              appendLog("LIVE", "Creating session...");
+              return mcpInitialize();
+            })
+            .then(function () {
+              appendLog("LIVE", "Creating DWSIM session...");
               return mcpCall("tools/call", { name: "create_session", arguments: {} });
             })
             .then(function (result) {
@@ -824,7 +909,6 @@
                   var parsed = JSON.parse(textContent.text);
                   liveSessionId = parsed.session_id;
                 } catch (e) {
-                  // Try structuredContent
                   if (result.structuredContent && result.structuredContent.session_id) {
                     liveSessionId = result.structuredContent.session_id;
                   }
@@ -841,12 +925,13 @@
                 disconnectBtn.disabled = false;
                 appendLog("LIVE", "Connected! Session: " + liveSessionId);
               } else {
-                throw new Error("No session_id in response");
+                throw new Error("No session_id in response: " + JSON.stringify(result).substring(0, 200));
               }
             })
             .catch(function (err) {
               setLiveStatus("error");
               liveAccessToken = null;
+              mcpTransportSessionId = null;
               appendLog("ERROR", err.message);
             });
         });
