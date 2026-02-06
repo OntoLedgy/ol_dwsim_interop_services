@@ -1153,19 +1153,31 @@
         }
 
         function extractPayload(result) {
-          if (result.structuredContent) return result.structuredContent;
-          var content = result.content || [];
+          if (result && result.structuredContent) return result.structuredContent;
+          var content = (result && result.content) || [];
           for (var i = 0; i < content.length; i++) {
             if (content[i].type === "text" && content[i].text) {
               try { return JSON.parse(content[i].text); } catch (e) { /* skip */ }
             }
           }
-          return result;
+          return result || {};
         }
 
         function extractField(result, field) {
           var payload = extractPayload(result);
-          return payload[field] || null;
+          return (payload && payload[field]) || null;
+        }
+
+        // Call a tool and throw on tool-level errors (isError: true)
+        async function scenarioToolCall(toolName, args) {
+          var result = await mcpCall("tools/call", { name: toolName, arguments: args });
+          if (result && result.isError) {
+            var errPayload = extractPayload(result);
+            var msg = (errPayload && errPayload.message) || "Tool error";
+            throw new Error(toolName + " failed: " + msg);
+          }
+          appendLog("SCENARIO", toolName + " -> " + JSON.stringify(extractPayload(result)).substring(0, 120));
+          return result;
         }
 
         async function runScenario(config) {
@@ -1173,7 +1185,7 @@
           try {
             // 1. Create DWSIM session
             sendScenarioProgress(0.05, "Creating DWSIM session...");
-            var sessionResult = await mcpCall("tools/call", { name: "create_session", arguments: {} });
+            var sessionResult = await scenarioToolCall("create_session", {});
             scenarioSessionId = extractField(sessionResult, "session_id");
             if (!scenarioSessionId) throw new Error("No session_id in create_session response");
             appendLog("SCENARIO", "Session: " + scenarioSessionId);
@@ -1183,9 +1195,8 @@
             var compounds = Object.keys(config.composition);
             for (var i = 0; i < compounds.length; i++) {
               var cName = compounds[i];
-              await mcpCall("tools/call", {
-                name: "add_compound",
-                arguments: { session_id: scenarioSessionId, compound_name: cName }
+              await scenarioToolCall("add_compound", {
+                session_id: scenarioSessionId, compound_name: cName
               });
               var compProgress = 0.1 + 0.15 * ((i + 1) / compounds.length);
               sendScenarioProgress(compProgress, "Added compound: " + cName);
@@ -1193,152 +1204,135 @@
 
             // 3. Set property package
             sendScenarioProgress(0.28, "Setting property package: " + config.property_package);
-            await mcpCall("tools/call", {
-              name: "set_property_package",
-              arguments: { session_id: scenarioSessionId, package_name: config.property_package }
+            await scenarioToolCall("set_property_package", {
+              session_id: scenarioSessionId, package_name: config.property_package
             });
             sendScenarioProgress(0.3, "Property package set");
 
             // 4. Add feed stream
             sendScenarioProgress(0.35, "Creating feed stream...");
-            var feedResult = await mcpCall("tools/call", {
-              name: "add_stream",
-              arguments: {
-                session_id: scenarioSessionId,
-                stream_name: "Feed",
-                stream_type: "Material",
-                is_source: true,
-                temperature: config.temperature_k,
-                pressure: config.pressure_pa,
-                molar_flow: config.molar_flow,
-                composition: config.composition
-              }
+            await scenarioToolCall("add_stream", {
+              session_id: scenarioSessionId,
+              stream_name: "Feed",
+              stream_type: "Material",
+              is_source: true,
+              temperature: config.temperature_k,
+              pressure: config.pressure_pa,
+              molar_flow: config.molar_flow,
+              composition: config.composition
             });
-            var feedId = extractField(feedResult, "stream_id") || "Feed";
             sendScenarioProgress(0.4, "Feed stream created");
 
-            // 5. Flash feed stream
-            sendScenarioProgress(0.42, "Flashing feed stream...");
-            await mcpCall("tools/call", {
-              name: "flash_stream",
-              arguments: { session_id: scenarioSessionId, stream_id: feedId }
+            // 5. Add outlet streams
+            sendScenarioProgress(0.42, "Creating outlet streams...");
+            await scenarioToolCall("add_stream", {
+              session_id: scenarioSessionId,
+              stream_name: "VaporOut",
+              stream_type: "Material",
+              is_source: false
             });
-            sendScenarioProgress(0.48, "Feed stream flashed");
+            await scenarioToolCall("add_stream", {
+              session_id: scenarioSessionId,
+              stream_name: "LiquidOut1",
+              stream_type: "Material",
+              is_source: false
+            });
+            await scenarioToolCall("add_stream", {
+              session_id: scenarioSessionId,
+              stream_name: "LiquidOut2",
+              stream_type: "Material",
+              is_source: false
+            });
+            sendScenarioProgress(0.5, "Outlet streams created");
 
-            // 6. Add outlet streams
-            sendScenarioProgress(0.5, "Creating outlet streams...");
-            var vapResult = await mcpCall("tools/call", {
-              name: "add_stream",
-              arguments: {
-                session_id: scenarioSessionId,
-                stream_name: "VaporOut",
-                stream_type: "Material",
-                is_source: false
-              }
+            // 6. Add separator unit
+            sendScenarioProgress(0.52, "Creating separator unit...");
+            await scenarioToolCall("add_unit", {
+              session_id: scenarioSessionId,
+              unit_name: "Separator",
+              unit_type: "separator"
             });
-            var vapId = extractField(vapResult, "stream_id") || "VaporOut";
+            sendScenarioProgress(0.55, "Separator created");
 
-            var liq1Result = await mcpCall("tools/call", {
-              name: "add_stream",
-              arguments: {
-                session_id: scenarioSessionId,
-                stream_name: "LiquidOut1",
-                stream_type: "Material",
-                is_source: false
-              }
+            // 7. List objects to get the actual IDs (S1, S2, U1, etc.)
+            sendScenarioProgress(0.57, "Resolving object IDs...");
+            var listResult = await scenarioToolCall("list_objects", {
+              session_id: scenarioSessionId
             });
-            var liq1Id = extractField(liq1Result, "stream_id") || "LiquidOut1";
+            var objects = extractPayload(listResult);
+            appendLog("SCENARIO", "Objects: " + JSON.stringify(objects).substring(0, 300));
 
-            var liq2Result = await mcpCall("tools/call", {
-              name: "add_stream",
-              arguments: {
-                session_id: scenarioSessionId,
-                stream_name: "LiquidOut2",
-                stream_type: "Material",
-                is_source: false
-              }
-            });
-            var liq2Id = extractField(liq2Result, "stream_id") || "LiquidOut2";
-            sendScenarioProgress(0.56, "Outlet streams created");
+            // Build ID lookup: name -> id
+            var streamMap = {};
+            var unitMap = {};
+            var streams = objects.streams || [];
+            var units = objects.units || [];
+            streams.forEach(function (s) { streamMap[s.name] = s.id; });
+            units.forEach(function (u) { unitMap[u.name] = u.id; });
 
-            // 7. Add separator unit
-            sendScenarioProgress(0.58, "Creating separator unit...");
-            var sepResult = await mcpCall("tools/call", {
-              name: "add_unit",
-              arguments: {
-                session_id: scenarioSessionId,
-                unit_name: "Separator",
-                unit_type: "separator"
-              }
-            });
-            var sepId = extractField(sepResult, "unit_id") || "Separator";
-            sendScenarioProgress(0.62, "Separator created");
+            var feedId = streamMap["Feed"];
+            var vapId = streamMap["VaporOut"];
+            var liq1Id = streamMap["LiquidOut1"];
+            var liq2Id = streamMap["LiquidOut2"];
+            var sepId = unitMap["Separator"];
 
-            // 8. Connect streams to separator
-            sendScenarioProgress(0.64, "Connecting streams...");
-            await mcpCall("tools/call", {
-              name: "connect",
-              arguments: {
-                session_id: scenarioSessionId,
-                source_id: feedId,
-                target_id: sepId,
-                port_name: "Inlet"
-              }
-            });
-            await mcpCall("tools/call", {
-              name: "connect",
-              arguments: {
-                session_id: scenarioSessionId,
-                source_id: sepId,
-                target_id: vapId,
-                port_name: "VaporOutlet"
-              }
-            });
-            await mcpCall("tools/call", {
-              name: "connect",
-              arguments: {
-                session_id: scenarioSessionId,
-                source_id: sepId,
-                target_id: liq1Id,
-                port_name: "LiquidOutlet1"
-              }
-            });
-            await mcpCall("tools/call", {
-              name: "connect",
-              arguments: {
-                session_id: scenarioSessionId,
-                source_id: sepId,
-                target_id: liq2Id,
-                port_name: "LiquidOutlet2"
-              }
-            });
-            sendScenarioProgress(0.72, "All streams connected");
+            if (!feedId || !vapId || !liq1Id || !liq2Id || !sepId) {
+              throw new Error(
+                "Could not resolve all IDs. Streams: " + JSON.stringify(streamMap) +
+                " Units: " + JSON.stringify(unitMap)
+              );
+            }
+            appendLog("SCENARIO", "IDs: Feed=" + feedId + " Vap=" + vapId + " Liq1=" + liq1Id + " Liq2=" + liq2Id + " Sep=" + sepId);
+            sendScenarioProgress(0.6, "IDs resolved: " + feedId + ", " + sepId);
 
-            // 9. Run simulation
-            sendScenarioProgress(0.75, "Running DWSIM solver...");
-            await mcpCall("tools/call", {
-              name: "run",
-              arguments: { session_id: scenarioSessionId }
+            // 8. Flash feed stream
+            sendScenarioProgress(0.62, "Flashing feed stream...");
+            await scenarioToolCall("flash_stream", {
+              session_id: scenarioSessionId, stream_id: feedId
             });
+            sendScenarioProgress(0.65, "Feed stream flashed");
+
+            // 9. Connect streams to separator
+            sendScenarioProgress(0.67, "Connecting streams...");
+            await scenarioToolCall("connect", {
+              session_id: scenarioSessionId,
+              source_id: feedId, target_id: sepId, port_name: "Inlet"
+            });
+            await scenarioToolCall("connect", {
+              session_id: scenarioSessionId,
+              source_id: sepId, target_id: vapId, port_name: "VaporOutlet"
+            });
+            await scenarioToolCall("connect", {
+              session_id: scenarioSessionId,
+              source_id: sepId, target_id: liq1Id, port_name: "LiquidOutlet1"
+            });
+            await scenarioToolCall("connect", {
+              session_id: scenarioSessionId,
+              source_id: sepId, target_id: liq2Id, port_name: "LiquidOutlet2"
+            });
+            sendScenarioProgress(0.75, "All streams connected");
+
+            // 10. Run simulation
+            sendScenarioProgress(0.78, "Running DWSIM solver...");
+            await scenarioToolCall("run", { session_id: scenarioSessionId });
             sendScenarioProgress(0.88, "Solver complete");
 
-            // 10. Get results
+            // 11. Get results
             sendScenarioProgress(0.9, "Retrieving results...");
-            var resultsResponse = await mcpCall("tools/call", {
-              name: "get_results",
-              arguments: { session_id: scenarioSessionId }
+            var resultsResponse = await scenarioToolCall("get_results", {
+              session_id: scenarioSessionId
             });
             var resultsPayload = extractPayload(resultsResponse);
             sendScenarioProgress(0.95, "Results retrieved");
 
-            // 11. Send results to app
+            // 12. Send results to app
             bridge.sendToolResult({
               content: [{ type: "text", text: "Simulation results" }],
               structuredContent: resultsPayload
             });
             appendLog("SCENARIO", "Simulation complete - results sent to app");
 
-            // 12. Close the scenario session (keep main connection alive)
+            // 13. Close the scenario session (keep main connection alive)
             await mcpCall("tools/call", {
               name: "close_session",
               arguments: { session_id: scenarioSessionId }

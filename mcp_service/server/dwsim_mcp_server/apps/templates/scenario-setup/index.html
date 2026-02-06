@@ -726,12 +726,11 @@
               payload.convergence_state +
               "</div></div>";
           }
-          if (payload.elapsed_ms !== undefined) {
+          if (payload.elapsed_ms != null) {
+            var ms = Number(payload.elapsed_ms);
             html +=
               '<div class="result-metric"><div class="label">Elapsed</div><div class="value">' +
-              (payload.elapsed_ms < 1000
-                ? payload.elapsed_ms.toFixed(0) + " ms"
-                : (payload.elapsed_ms / 1000).toFixed(2) + " s") +
+              (ms < 1000 ? ms.toFixed(0) + " ms" : (ms / 1000).toFixed(2) + " s") +
               "</div></div>";
           }
           if (payload.mass_balance_valid !== undefined) {
@@ -740,10 +739,10 @@
               (payload.mass_balance_valid ? "Valid" : "Invalid") +
               "</div></div>";
           }
-          if (payload.mass_balance_error_percent !== undefined) {
+          if (payload.mass_balance_error_percent != null) {
             html +=
               '<div class="result-metric"><div class="label">Mass Error</div><div class="value">' +
-              payload.mass_balance_error_percent.toFixed(3) +
+              Number(payload.mass_balance_error_percent).toFixed(3) +
               "%</div></div>";
           }
           html += "</div>";
