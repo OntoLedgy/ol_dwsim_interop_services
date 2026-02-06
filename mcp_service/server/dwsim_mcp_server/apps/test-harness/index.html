@@ -1255,33 +1255,32 @@
             sendScenarioProgress(0.55, "Separator created");
 
             // 7. List objects to get the actual IDs (S1, S2, U1, etc.)
+            //    Note: list_objects returns id==name (both are the auto-generated ID)
+            //    Streams are returned in creation order: Feed, VaporOut, LiquidOut1, LiquidOut2
             sendScenarioProgress(0.57, "Resolving object IDs...");
             var listResult = await scenarioToolCall("list_objects", {
               session_id: scenarioSessionId
             });
             var objects = extractPayload(listResult);
-            appendLog("SCENARIO", "Objects: " + JSON.stringify(objects).substring(0, 300));
+            appendLog("SCENARIO", "Objects: " + JSON.stringify(objects).substring(0, 400));
 
-            // Build ID lookup: name -> id
-            var streamMap = {};
-            var unitMap = {};
             var streams = objects.streams || [];
             var units = objects.units || [];
-            streams.forEach(function (s) { streamMap[s.name] = s.id; });
-            units.forEach(function (u) { unitMap[u.name] = u.id; });
 
-            var feedId = streamMap["Feed"];
-            var vapId = streamMap["VaporOut"];
-            var liq1Id = streamMap["LiquidOut1"];
-            var liq2Id = streamMap["LiquidOut2"];
-            var sepId = unitMap["Separator"];
-
-            if (!feedId || !vapId || !liq1Id || !liq2Id || !sepId) {
+            if (streams.length < 4 || units.length < 1) {
               throw new Error(
-                "Could not resolve all IDs. Streams: " + JSON.stringify(streamMap) +
-                " Units: " + JSON.stringify(unitMap)
+                "Expected 4 streams and 1 unit, got " + streams.length +
+                " streams and " + units.length + " units"
               );
             }
+
+            // Map by creation order (Feed=0, VaporOut=1, LiquidOut1=2, LiquidOut2=3)
+            var feedId = streams[0].id;
+            var vapId = streams[1].id;
+            var liq1Id = streams[2].id;
+            var liq2Id = streams[3].id;
+            var sepId = units[0].id;
+
             appendLog("SCENARIO", "IDs: Feed=" + feedId + " Vap=" + vapId + " Liq1=" + liq1Id + " Liq2=" + liq2Id + " Sep=" + sepId);
             sendScenarioProgress(0.6, "IDs resolved: " + feedId + ", " + sepId);
 
@@ -1293,6 +1292,7 @@
             sendScenarioProgress(0.65, "Feed stream flashed");
 
             // 9. Connect streams to separator
+            //    Convention: source_id is ALWAYS the stream, target_id is ALWAYS the unit
             sendScenarioProgress(0.67, "Connecting streams...");
             await scenarioToolCall("connect", {
               session_id: scenarioSessionId,
@@ -1300,15 +1300,15 @@
             });
             await scenarioToolCall("connect", {
               session_id: scenarioSessionId,
-              source_id: sepId, target_id: vapId, port_name: "VaporOutlet"
+              source_id: vapId, target_id: sepId, port_name: "VaporOutlet"
             });
             await scenarioToolCall("connect", {
               session_id: scenarioSessionId,
-              source_id: sepId, target_id: liq1Id, port_name: "LiquidOutlet1"
+              source_id: liq1Id, target_id: sepId, port_name: "LiquidOutlet1"
             });
             await scenarioToolCall("connect", {
               session_id: scenarioSessionId,
-              source_id: sepId, target_id: liq2Id, port_name: "LiquidOutlet2"
+              source_id: liq2Id, target_id: sepId, port_name: "LiquidOutlet2"
             });
             sendScenarioProgress(0.75, "All streams connected");
 
