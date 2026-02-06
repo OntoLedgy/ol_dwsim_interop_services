@@ -1,0 +1,899 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Scenario Setup</title>
+    <link rel="stylesheet" href="../../static/theme.css" />
+    <style>
+      .scenario-card {
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        padding: 18px;
+        margin-bottom: 18px;
+      }
+
+      .scenario-desc {
+        color: var(--muted);
+        font-size: 0.85rem;
+        margin-top: 8px;
+      }
+
+      .scenario-source {
+        color: var(--accent);
+        font-size: 0.75rem;
+        margin-top: 4px;
+        font-style: italic;
+      }
+
+      .form-section {
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        padding: 18px;
+        margin-bottom: 14px;
+      }
+
+      .form-section h3 {
+        margin: 0 0 14px 0;
+        font-size: 1rem;
+        font-weight: 600;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+      }
+
+      .form-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .form-field label {
+        font-size: 0.8rem;
+        color: var(--muted);
+        font-weight: 500;
+      }
+
+      .input-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .input-group input {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .unit {
+        font-size: 0.8rem;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      input[type="number"],
+      select {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 10px;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 0.9rem;
+        font-family: inherit;
+        width: 100%;
+      }
+
+      input[type="number"]:focus,
+      select:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: -1px;
+      }
+
+      .comp-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+      }
+
+      .comp-table th {
+        text-align: left;
+        padding: 6px 8px;
+        font-size: 0.8rem;
+        color: var(--muted);
+        border-bottom: 1px solid var(--border);
+        font-weight: 500;
+      }
+
+      .comp-table td {
+        padding: 4px 8px;
+      }
+
+      .comp-table tbody tr:hover {
+        background: var(--accent-soft);
+      }
+
+      .comp-table tfoot td {
+        padding: 8px;
+        border-top: 2px solid var(--border);
+      }
+
+      .comp-table select,
+      .comp-table input {
+        padding: 6px 8px;
+        font-size: 0.85rem;
+      }
+
+      .comp-table .fraction-input {
+        width: 100px;
+        text-align: right;
+        font-family: "JetBrains Mono", "Consolas", monospace;
+      }
+
+      .btn-remove {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--muted);
+        cursor: pointer;
+        padding: 4px 8px;
+        font-size: 0.9rem;
+        line-height: 1;
+      }
+
+      .btn-remove:hover {
+        background: #ef4444;
+        color: #fff;
+        border-color: #ef4444;
+      }
+
+      .action-bar {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+
+      .btn-run {
+        flex: 1;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 10px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        letter-spacing: 0.02em;
+      }
+
+      .btn-run:hover:not(:disabled) {
+        filter: brightness(1.1);
+      }
+
+      .btn-run:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .btn-secondary {
+        padding: 12px 20px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--text);
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .btn-add {
+        padding: 6px 12px;
+        border: 1px dashed var(--border);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 0.85rem;
+        cursor: pointer;
+        margin-top: 8px;
+      }
+
+      .btn-add:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .progress-section {
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        padding: 18px;
+        margin-bottom: 14px;
+      }
+
+      .progress-section h3 {
+        margin: 0 0 12px 0;
+        font-size: 1rem;
+      }
+
+      .progress-bar {
+        height: 8px;
+        background: var(--border);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 8px;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+        width: 0%;
+      }
+
+      .progress-msg {
+        font-size: 0.85rem;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+
+      .progress-log {
+        background: #0f1215;
+        color: #d8dee4;
+        border-radius: 8px;
+        padding: 10px;
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        font-size: 0.72rem;
+        max-height: 160px;
+        overflow-y: auto;
+      }
+
+      .results-section {
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        padding: 18px;
+        margin-bottom: 18px;
+      }
+
+      .results-section h3 {
+        margin: 0 0 14px 0;
+        font-size: 1rem;
+      }
+
+      .result-status {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        margin-bottom: 12px;
+      }
+
+      .result-status.converged {
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+      }
+
+      .result-status.failed {
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+      }
+
+      .result-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .result-metric {
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        padding: 10px 12px;
+      }
+
+      .result-metric .label {
+        font-size: 0.75rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .result-metric .value {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-top: 4px;
+      }
+
+      .stream-card {
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        padding: 10px 12px;
+        margin-bottom: 8px;
+        background: rgba(0, 0, 0, 0.02);
+      }
+
+      .stream-card strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .stream-props {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 4px;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .phase-info {
+        margin-top: 6px;
+        padding-top: 6px;
+        border-top: 1px solid var(--border);
+        font-size: 0.82rem;
+      }
+
+      .phase-info .phase-name {
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .comp-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 10px;
+        margin-top: 2px;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      .msg-item {
+        font-size: 0.85rem;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--border);
+        color: var(--muted);
+      }
+
+      .msg-item:last-child {
+        border-bottom: none;
+      }
+
+      .total-valid {
+        color: #10b981;
+      }
+
+      .total-invalid {
+        color: #ef4444;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <div class="app-title">Scenario Setup</div>
+        <div class="app-subtitle">Configure and run three-phase separator simulations</div>
+      </header>
+
+      <!-- Scenario Selector -->
+      <div class="scenario-card">
+        <div class="form-field">
+          <label for="scenario-select">Scenario</label>
+          <select id="scenario-select"></select>
+        </div>
+        <div id="scenario-desc" class="scenario-desc"></div>
+        <div id="scenario-source" class="scenario-source"></div>
+      </div>
+
+      <!-- Feed Conditions -->
+      <div class="form-section">
+        <h3>Feed Stream Conditions</h3>
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="temperature">Temperature</label>
+            <div class="input-group">
+              <input type="number" id="temperature" step="0.1" />
+              <span class="unit">&deg;C</span>
+            </div>
+          </div>
+          <div class="form-field">
+            <label for="pressure">Pressure</label>
+            <div class="input-group">
+              <input type="number" id="pressure" step="0.1" />
+              <span class="unit">bara</span>
+            </div>
+          </div>
+          <div class="form-field">
+            <label for="molar-flow">Molar Flow</label>
+            <div class="input-group">
+              <input type="number" id="molar-flow" step="0.1" />
+              <span class="unit">mol/s</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Composition -->
+      <div class="form-section">
+        <h3>Feed Composition</h3>
+        <table class="comp-table">
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th style="width:120px">Mole Fraction</th>
+              <th style="width:40px"></th>
+            </tr>
+          </thead>
+          <tbody id="comp-body"></tbody>
+          <tfoot>
+            <tr>
+              <td><strong>Total</strong></td>
+              <td id="comp-total" style="text-align:right;font-family:'JetBrains Mono','Consolas',monospace;font-weight:600;">0.0000</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+        <button id="add-comp-btn" class="btn-add">+ Add Component</button>
+      </div>
+
+      <!-- Property Package -->
+      <div class="form-section">
+        <h3>Thermodynamic Model</h3>
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="prop-pkg">Property Package</label>
+            <select id="prop-pkg">
+              <option value="Peng-Robinson">Peng-Robinson (hydrocarbons)</option>
+              <option value="SRK">SRK (gases)</option>
+              <option value="NRTL">NRTL (polar/non-ideal)</option>
+              <option value="UNIQUAC">UNIQUAC (activity coefficients)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="action-bar">
+        <button id="run-btn" class="btn-run">Run Simulation</button>
+        <button id="reset-btn" class="btn-secondary">Reset</button>
+      </div>
+
+      <!-- Progress -->
+      <div id="progress-section" class="progress-section" style="display:none;">
+        <h3>Simulation Progress</h3>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="progress-msg" id="progress-msg">Waiting...</div>
+        <div class="progress-log" id="progress-log"></div>
+      </div>
+
+      <!-- Results -->
+      <div id="results-section" class="results-section" style="display:none;"></div>
+    </main>
+
+    <script src="https://unpkg.com/@modelcontextprotocol/ext-apps/dist/index.umd.js"></script>
+    <script src="../../static/app-client.js"></script>
+    <script>
+      (function () {
+        "use strict";
+
+        // ── Predefined Scenarios ──────────────────────────────────────────
+
+        var SCENARIOS = {
+          "scenario-a": {
+            name: "Scenario A: Light Sweet Crude - Moderate GOR",
+            description:
+              "North Sea / Gulf of Mexico light crude benchmark. Standard three-phase separation of light sweet crude with moderate gas content (GOR 150 sm\u00b3/sm\u00b3, 15% water cut, API 38).",
+            source: "Confluence: SAKE / Scenario A (SCEN-A-001 v0.1-draft)",
+            temperature_c: 75,
+            pressure_bara: 45,
+            molar_flow: 100,
+            property_package: "Peng-Robinson",
+            composition: [
+              { compound: "Methane", fraction: 0.667 },
+              { compound: "Ethane", fraction: 0.0697 },
+              { compound: "Propane", fraction: 0.0434 },
+              { compound: "Isobutane", fraction: 0.0102 },
+              { compound: "N-butane", fraction: 0.017 },
+              { compound: "Isopentane", fraction: 0.0068 },
+              { compound: "N-pentane", fraction: 0.006 },
+              { compound: "N-hexane", fraction: 0.0043 },
+              { compound: "Carbon dioxide", fraction: 0.0213 },
+              { compound: "Nitrogen", fraction: 0.0043 },
+              { compound: "Water", fraction: 0.15 },
+            ],
+          },
+          custom: {
+            name: "Custom Configuration",
+            description: "Start with a minimal two-component feed and customise as needed.",
+            source: "",
+            temperature_c: 25,
+            pressure_bara: 1.01325,
+            molar_flow: 10,
+            property_package: "Peng-Robinson",
+            composition: [
+              { compound: "Methane", fraction: 0.5 },
+              { compound: "Water", fraction: 0.5 },
+            ],
+          },
+        };
+
+        // Common DWSIM compound names for the dropdown
+        var COMPOUNDS = [
+          "Methane",
+          "Ethane",
+          "Propane",
+          "Isobutane",
+          "N-butane",
+          "Isopentane",
+          "N-pentane",
+          "N-hexane",
+          "N-heptane",
+          "N-octane",
+          "N-nonane",
+          "N-decane",
+          "Carbon dioxide",
+          "Nitrogen",
+          "Hydrogen sulfide",
+          "Water",
+          "Oxygen",
+          "Hydrogen",
+          "Benzene",
+          "Toluene",
+          "Ethanol",
+          "Methanol",
+        ];
+
+        // ── DOM References ────────────────────────────────────────────────
+
+        var scenarioSelect = document.getElementById("scenario-select");
+        var scenarioDesc = document.getElementById("scenario-desc");
+        var scenarioSource = document.getElementById("scenario-source");
+        var tempInput = document.getElementById("temperature");
+        var pressureInput = document.getElementById("pressure");
+        var flowInput = document.getElementById("molar-flow");
+        var propPkgSelect = document.getElementById("prop-pkg");
+        var compBody = document.getElementById("comp-body");
+        var compTotal = document.getElementById("comp-total");
+        var addCompBtn = document.getElementById("add-comp-btn");
+        var runBtn = document.getElementById("run-btn");
+        var resetBtn = document.getElementById("reset-btn");
+        var progressSection = document.getElementById("progress-section");
+        var progressFill = document.getElementById("progress-fill");
+        var progressMsg = document.getElementById("progress-msg");
+        var progressLog = document.getElementById("progress-log");
+        var resultsSection = document.getElementById("results-section");
+
+        // ── Populate Scenario Dropdown ────────────────────────────────────
+
+        Object.keys(SCENARIOS).forEach(function (key) {
+          var opt = document.createElement("option");
+          opt.value = key;
+          opt.textContent = SCENARIOS[key].name;
+          scenarioSelect.appendChild(opt);
+        });
+
+        // ── Composition Table ─────────────────────────────────────────────
+
+        function addCompRow(compound, fraction) {
+          var tr = document.createElement("tr");
+
+          var td1 = document.createElement("td");
+          var sel = document.createElement("select");
+          COMPOUNDS.forEach(function (name) {
+            var opt = document.createElement("option");
+            opt.value = name;
+            opt.textContent = name;
+            if (name === compound) opt.selected = true;
+            sel.appendChild(opt);
+          });
+          td1.appendChild(sel);
+
+          var td2 = document.createElement("td");
+          var inp = document.createElement("input");
+          inp.type = "number";
+          inp.className = "fraction-input";
+          inp.step = "0.001";
+          inp.min = "0";
+          inp.max = "1";
+          inp.value = fraction;
+          inp.addEventListener("input", updateTotal);
+          td2.style.textAlign = "right";
+          td2.appendChild(inp);
+
+          var td3 = document.createElement("td");
+          var btn = document.createElement("button");
+          btn.className = "btn-remove";
+          btn.textContent = "\u00d7";
+          btn.addEventListener("click", function () {
+            tr.remove();
+            updateTotal();
+          });
+          td3.appendChild(btn);
+
+          tr.appendChild(td1);
+          tr.appendChild(td2);
+          tr.appendChild(td3);
+          compBody.appendChild(tr);
+        }
+
+        function updateTotal() {
+          var inputs = compBody.querySelectorAll(".fraction-input");
+          var total = 0;
+          inputs.forEach(function (inp) {
+            total += parseFloat(inp.value) || 0;
+          });
+          compTotal.textContent = total.toFixed(4);
+          var valid = Math.abs(total - 1.0) < 0.005;
+          compTotal.className = valid ? "total-valid" : "total-invalid";
+        }
+
+        function clearComposition() {
+          compBody.innerHTML = "";
+        }
+
+        // ── Load Scenario ─────────────────────────────────────────────────
+
+        function loadScenario(id) {
+          var s = SCENARIOS[id];
+          if (!s) return;
+
+          scenarioDesc.textContent = s.description;
+          scenarioSource.textContent = s.source || "";
+          tempInput.value = s.temperature_c;
+          pressureInput.value = s.pressure_bara;
+          flowInput.value = s.molar_flow;
+          propPkgSelect.value = s.property_package;
+
+          clearComposition();
+          s.composition.forEach(function (c) {
+            addCompRow(c.compound, c.fraction);
+          });
+          updateTotal();
+        }
+
+        // ── Read Form Config ──────────────────────────────────────────────
+
+        function getConfig() {
+          var rows = compBody.querySelectorAll("tr");
+          var composition = {};
+          rows.forEach(function (row) {
+            var compound = row.querySelector("select").value;
+            var fraction = parseFloat(row.querySelector(".fraction-input").value) || 0;
+            if (fraction > 0) {
+              composition[compound] = fraction;
+            }
+          });
+
+          return {
+            temperature_c: parseFloat(tempInput.value),
+            temperature_k: parseFloat(tempInput.value) + 273.15,
+            pressure_bara: parseFloat(pressureInput.value),
+            pressure_pa: parseFloat(pressureInput.value) * 100000,
+            molar_flow: parseFloat(flowInput.value),
+            composition: composition,
+            property_package: propPkgSelect.value,
+          };
+        }
+
+        // ── Progress Helpers ──────────────────────────────────────────────
+
+        function showProgress() {
+          progressSection.style.display = "";
+          resultsSection.style.display = "none";
+          progressFill.style.width = "0%";
+          progressLog.innerHTML = "";
+          progressMsg.textContent = "Starting...";
+        }
+
+        function logProgress(msg) {
+          var div = document.createElement("div");
+          div.textContent = "[" + new Date().toLocaleTimeString() + "] " + msg;
+          progressLog.appendChild(div);
+          progressLog.scrollTop = progressLog.scrollHeight;
+        }
+
+        function setProgress(fraction, msg) {
+          progressFill.style.width = Math.round(fraction * 100) + "%";
+          if (msg) progressMsg.textContent = msg;
+        }
+
+        // ── Results Rendering ─────────────────────────────────────────────
+
+        function renderResults(payload) {
+          resultsSection.style.display = "";
+          runBtn.disabled = false;
+          setProgress(1, "Complete");
+
+          var html = "<h3>Simulation Results</h3>";
+
+          // Status badge
+          var status = payload.status || "unknown";
+          html += '<div class="result-status ' + status + '">' + status.toUpperCase() + "</div>";
+
+          // Metrics row
+          html += '<div class="result-metrics">';
+          if (payload.convergence_state) {
+            html +=
+              '<div class="result-metric"><div class="label">Convergence</div><div class="value">' +
+              payload.convergence_state +
+              "</div></div>";
+          }
+          if (payload.elapsed_ms !== undefined) {
+            html +=
+              '<div class="result-metric"><div class="label">Elapsed</div><div class="value">' +
+              (payload.elapsed_ms < 1000
+                ? payload.elapsed_ms.toFixed(0) + " ms"
+                : (payload.elapsed_ms / 1000).toFixed(2) + " s") +
+              "</div></div>";
+          }
+          if (payload.mass_balance_valid !== undefined) {
+            html +=
+              '<div class="result-metric"><div class="label">Mass Balance</div><div class="value">' +
+              (payload.mass_balance_valid ? "Valid" : "Invalid") +
+              "</div></div>";
+          }
+          if (payload.mass_balance_error_percent !== undefined) {
+            html +=
+              '<div class="result-metric"><div class="label">Mass Error</div><div class="value">' +
+              payload.mass_balance_error_percent.toFixed(3) +
+              "%</div></div>";
+          }
+          html += "</div>";
+
+          // Stream results
+          if (payload.stream_results && payload.stream_results.length) {
+            html += "<h4>Streams</h4>";
+            payload.stream_results.forEach(function (stream) {
+              html += '<div class="stream-card">';
+              html += "<strong>" + (stream.name || stream.id || "Stream") + "</strong>";
+              html += '<div class="stream-props">';
+              html += "<div>T: " + fmtNum(stream.temperature_k) + " K</div>";
+              html += "<div>P: " + fmtNum(stream.pressure_pa) + " Pa</div>";
+              html += "<div>Flow: " + fmtNum(stream.total_molar_flow_mol_per_s) + " mol/s</div>";
+              html += "</div>";
+
+              if (stream.phases && stream.phases.length) {
+                stream.phases.forEach(function (phase) {
+                  html += '<div class="phase-info">';
+                  html +=
+                    '<span class="phase-name">' +
+                    phase.phase_label +
+                    "</span> (" +
+                    (phase.phase_fraction * 100).toFixed(1) +
+                    "%)";
+                  if (phase.composition && phase.composition.length) {
+                    html += '<div class="comp-list">';
+                    phase.composition.forEach(function (c) {
+                      html +=
+                        "<span>" + c.compound + ": " + (c.mole_fraction * 100).toFixed(2) + "%</span>";
+                    });
+                    html += "</div>";
+                  }
+                  html += "</div>";
+                });
+              }
+              html += "</div>";
+            });
+          }
+
+          // Messages
+          if (payload.messages && payload.messages.length) {
+            html += "<h4>Messages</h4>";
+            payload.messages.forEach(function (msg) {
+              html += '<div class="msg-item">' + escapeHtml(msg) + "</div>";
+            });
+          }
+
+          resultsSection.innerHTML = html;
+        }
+
+        function fmtNum(v) {
+          if (v === null || v === undefined || Number.isNaN(v)) return "--";
+          return Number(v).toLocaleString(undefined, { maximumFractionDigits: 3 });
+        }
+
+        function escapeHtml(str) {
+          var div = document.createElement("div");
+          div.textContent = str;
+          return div.innerHTML;
+        }
+
+        // ── Run Simulation ────────────────────────────────────────────────
+
+        function runSimulation() {
+          var config = getConfig();
+
+          // Validate composition
+          var total = 0;
+          Object.keys(config.composition).forEach(function (k) {
+            total += config.composition[k];
+          });
+          if (Math.abs(total - 1.0) > 0.01) {
+            alert("Composition must sum to 1.0 (currently " + total.toFixed(4) + ")");
+            return;
+          }
+
+          showProgress();
+          runBtn.disabled = true;
+          logProgress("Configuration ready. Requesting simulation run...");
+
+          // Send to parent (test harness) for orchestration
+          window.parent.postMessage(
+            {
+              type: "dwsim-run-scenario",
+              config: config,
+            },
+            "*"
+          );
+        }
+
+        // ── Handle Tool Results ───────────────────────────────────────────
+
+        function handleToolResult(result) {
+          var payload = result.structuredContent || result;
+
+          if (payload.type === "scenario-progress") {
+            setProgress(payload.progress, payload.message);
+            logProgress(payload.message);
+          } else if (payload.type === "scenario-error") {
+            logProgress("ERROR: " + payload.message);
+            setProgress(0, "Failed");
+            progressFill.style.background = "#ef4444";
+            runBtn.disabled = false;
+          } else {
+            // Final simulation results
+            logProgress("Results received.");
+            renderResults(payload);
+          }
+        }
+
+        // ── Event Listeners ───────────────────────────────────────────────
+
+        scenarioSelect.addEventListener("change", function () {
+          loadScenario(scenarioSelect.value);
+        });
+
+        addCompBtn.addEventListener("click", function () {
+          addCompRow("Methane", 0);
+          updateTotal();
+        });
+
+        runBtn.addEventListener("click", runSimulation);
+
+        resetBtn.addEventListener("click", function () {
+          loadScenario(scenarioSelect.value);
+          progressSection.style.display = "none";
+          resultsSection.style.display = "none";
+          progressFill.style.background = "";
+        });
+
+        // ── Initialize ────────────────────────────────────────────────────
+
+        window.DwsimApp.initialize({
+          onToolResult: handleToolResult,
+          onHostContextChanged: function (changes) {
+            if (changes && changes.theme) {
+              window.DwsimApp.applyTheme(changes.theme);
+            }
+          },
+          onInitialized: function (context) {
+            if (context && context.hostContext && context.hostContext.theme) {
+              window.DwsimApp.applyTheme(context.hostContext.theme);
+            }
+          },
+        });
+
+        // Load default scenario
+        loadScenario("scenario-a");
+      })();
+    </script>
+  </body>
+</html>

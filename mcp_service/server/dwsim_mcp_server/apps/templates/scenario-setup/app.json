@@ -1,0 +1,7 @@
+{
+  "name": "scenario-setup",
+  "title": "Scenario Setup",
+  "description": "Configure and run three-phase separator simulations with predefined or custom scenarios.",
+  "version": "1.0.0",
+  "entryPoint": "index.html"
+}
