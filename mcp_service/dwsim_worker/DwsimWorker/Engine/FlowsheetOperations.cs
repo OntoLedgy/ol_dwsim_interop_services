@@ -309,10 +309,17 @@ namespace DwsimWorker.Engine
             if (composition == null || composition.Count == 0)
                 throw new ArgumentException("Composition must be provided.", nameof(composition));
 
+            // Build case-insensitive lookup so caller doesn't need exact canonical casing
+            var ciComposition = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kvp in composition)
+            {
+                ciComposition[kvp.Key] = kvp.Value;
+            }
+
             var moleFractions = new List<double>(compounds.Count);
             foreach (var compound in compounds)
             {
-                if (!composition.TryGetValue(compound, out double fraction))
+                if (!ciComposition.TryGetValue(compound, out double fraction))
                 {
                     throw new ArgumentException($"Missing composition for compound '{compound}'.", nameof(composition));
                 }
