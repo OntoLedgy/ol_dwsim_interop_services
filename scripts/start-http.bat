@@ -3,6 +3,10 @@ REM DWSIM MCP Server - HTTP Mode Startup Script
 REM This script expects to be in the same directory as the repo folder
 REM or have DWSIM_MCP_ROOT environment variable set
 
+REM Disable QuickEdit mode for this console to prevent freezing when clicked.
+REM QuickEdit causes the process to pause when text is selected in the terminal.
+powershell -Command "$k='kernel32.dll';$s='[DllImport(\"'+$k+'\")]public static extern IntPtr GetStdHandle(int h);[DllImport(\"'+$k+'\")]public static extern bool GetConsoleMode(IntPtr h,out int m);[DllImport(\"'+$k+'\")]public static extern bool SetConsoleMode(IntPtr h,int m);';$t=Add-Type -M $s -N W -P;$h=$t::GetStdHandle(-10);$m=0;$t::GetConsoleMode($h,[ref]$m);$t::SetConsoleMode($h,$m -band -bnot 0x0040)" >NUL 2>&1
+
 REM Determine the root directory
 if defined DWSIM_MCP_ROOT (
     set "ROOT=%DWSIM_MCP_ROOT%"

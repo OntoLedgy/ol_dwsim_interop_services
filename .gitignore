@@ -158,3 +158,4 @@ mcp_service/server/nul
 mcp_service/server/.claude/settings.local.json
 .mcp.json
 .mcp.json
+.mcp.json

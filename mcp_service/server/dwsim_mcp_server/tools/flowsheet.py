@@ -418,18 +418,17 @@ async def _add_stream(
     composition: Dict[str, float] | None,
 ) -> Dict[str, Any]:
     service = _get_service(ctx)
-    payload = AddStreamInput.model_validate(
-        {
-            "session_id": session_id,
-            "stream_name": stream_name,
-            "stream_type": stream_type,
-            "is_source": is_source,
-            "temperature": temperature,
-            "pressure": pressure,
-            "molar_flow": molar_flow,
-            "composition": composition,
-        }
-    )
+    payload_data: Dict[str, Any] = {
+        "session_id": session_id,
+        "name": stream_name,
+        "is_source": is_source,
+        "temperature": temperature,
+        "pressure": pressure,
+        "molar_flow": molar_flow,
+    }
+    if composition is not None:
+        payload_data["composition"] = composition
+    payload = AddStreamInput.model_validate(payload_data)
     return (await service.add_stream(payload)).model_dump()
 
 
@@ -442,14 +441,14 @@ async def _add_unit(
     parameters: Dict[str, Any] | None,
 ) -> Dict[str, Any]:
     service = _get_service(ctx)
-    payload = AddUnitInput.model_validate(
-        {
-            "session_id": session_id,
-            "unit_name": unit_name,
-            "unit_type": unit_type,
-            "parameters": parameters,
-        }
-    )
+    payload_data: Dict[str, Any] = {
+        "session_id": session_id,
+        "name": unit_name,
+        "unit_type": unit_type,
+    }
+    if parameters is not None:
+        payload_data["parameters"] = parameters
+    payload = AddUnitInput.model_validate(payload_data)
     return (await service.add_unit(payload)).model_dump()
 
 
