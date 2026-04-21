@@ -1,15 +1,46 @@
 # DWSIM Interoperability Services
 
-A Model Context Protocol (MCP) server that exposes DWSIM's chemical process simulation engine to Large Language Model (LLM) agents through safe, composable tools and resources.
+The DWSIM simulator adapter for the Thermodynamics Agent Service architecture. Implements the `SimulatorAdapter` protocol defined by `ol_simulator_interop_services`, translating canonical thermodynamic requests into DWSIM-specific API calls.
+
+## Role in the Architecture
+
+This repository is one of several **adapter** implementations in a three-layer service topology:
+
+```
+LLM Agent / MCP Client
+        |
+        v
++--[ ol_thermodynamics_agent_services ]--+
+|   MCP tools, routing, provenance       |
++----------------------------------------+
+        |
+        v
++--[ ol_simulator_interop_services ]-----+
+|   canonical domain model, adapter      |
+|   protocol, registries                 |
++----------------------------------------+
+        |
+   +----+----+----------+---------+
+   v         v          v         v
+ [Rust]   [DWSIM]   [HYSYS]   [UniSim]
+ kernel   adapter   adapter    adapter
+            ^
+            |
+         this repo
+```
+
+This adapter communicates with a separate DWSIM server process over HTTP. It translates canonical types (`FlashProblem`, `PropertyPackageSpec`, `CanonicalComponent`, etc.) into DWSIM-specific representations and manages the DWSIM engine lifecycle.
+
+> **Note:** During Phase 1 migration, this repo also contains the original monolithic MCP server that is being factored into the three-layer architecture. The ~33 existing MCP tools continue to work end-to-end while the refactor progresses.
 
 ## Overview
 
-The DWSIM MCP Server bridges the gap between AI agents and professional chemical engineering simulation, enabling natural language-driven process design, analysis, and optimization. It provides a standardized MCP interface over DWSIM's .NET Framework engine with CAPE-OPEN interoperability.
+Bridges AI agents and DWSIM's chemical process simulation engine, enabling natural language-driven process design, analysis, and optimization. Provides CAPE-OPEN interoperability over DWSIM's .NET Framework engine.
 
 ## Architecture
 
 **Polyglot Architecture:**
-- **Python MCP Server** (`mcp_service/server/`): MCP façade using official MCP SDK
+- **Python MCP Server** (`mcp_service/server/`): MCP facade using official MCP SDK (being migrated to `ol_thermodynamics_agent_services`)
 - **.NET Framework Worker** (`mcp_service/dwsim_worker/`): DWSIM engine hosting and execution
 - **Shared Models** (`models/`): CAPE-OPEN and DWSIM domain models for interoperability
 - **IPC Communication**: JSON-RPC 2.0 over Named Pipes or pythonnet for direct interop
@@ -165,6 +196,18 @@ This will:
 4. Print your MCP configuration
 
 See [prebuilt/README.md](prebuilt/README.md) for details.
+
+## Related Repositories
+
+| Repository | Layer | Role |
+|------------|-------|------|
+| [`ol_thermodynamics_agent_services`](https://github.com/OntoLedgy/ol_thermodynamics_agent_services) | Top | MCP tool schemas, backend routing, provenance |
+| [`ol_simulator_interop_services`](https://github.com/OntoLedgy/ol_simulator_interop_services) | Middle | Canonical domain model, adapter protocol, registries |
+| `ol_thermodynamics_kernel` | Adapter (future) | Native Rust thermo kernel via PyO3 |
+
+## Architecture Reference
+
+- [Solution Architecture](https://ontoledgy.atlassian.net/wiki/spaces/ACE/pages/6425018388/Solution+Architecture) -- full architectural description on Confluence
 
 ## Documentation
 
