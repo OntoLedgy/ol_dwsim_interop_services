@@ -6,7 +6,7 @@ Python-based Model Context Protocol (MCP) server that provides a clean, typed in
 
 The MCP server acts as a façade layer that:
 - Implements MCP protocol using the official Python SDK
-- Exposes DWSIM capabilities as composable MCP tools (26 tools available)
+- Exposes DWSIM capabilities as composable MCP tools (35 tools available)
 - Uses pythonnet for in-process .NET interop with DWSIM assemblies
 - Provides structured logging and observability
 - Enforces safety and resource limits
@@ -128,7 +128,7 @@ Then run: `codex --mcp`
 After configuration:
 1. **Reload/Restart** your AI assistant
 2. **Ask**: "What DWSIM tools do you have available?"
-3. **You should see** 26 tools listed
+3. **You should see** 35 tools listed
 
 For detailed instructions, see [docs/resources/getting-started.md](../../docs/resources/getting-started.md)
 

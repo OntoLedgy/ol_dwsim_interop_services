@@ -1,0 +1,52 @@
+# Changelog
+
+All notable changes to the DWSIM Interop Services project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [Unreleased]
+
+### Added
+
+- **DwsimAdapter** implementing the SimulatorAdapter protocol for clean three-layer architecture integration
+- **OAuth authorization** with Clerk (authorization code flow with PKCE, client credentials, token proxy)
+- **Test harness** with live MCP server testing, scenario setup app sourcing from Confluence, and OAuth support
+- **MCP Apps backend** for interactive UI visualisations with real SensitivityStudyResult schema
+- **Flash calculation tools** with algorithm settings exposure via MCP
+- **Sensitivity analysis tools** with async/sync bridging and optimisation support
+- **NRTL binary interaction parameter** tools with input transformation layer
+- **Flowsheet export** functionality and auto-composition for outlet streams
+- **MCP resource providers** for docs, samples, and results
+- **HTTP transport mode** for network deployments with reverse proxy support
+- **Observability stack**: OpenTelemetry distributed tracing, metrics collection, diagnostics infrastructure, log export, correlation context enrichment
+- **Deployment automation**: Windows Server setup script, PowerShell install scripts (admin + user), `build.bat` with MSBuild auto-detection
+- **Compound usability features** including ChemSep database support and case-insensitive lookup
+- **Session management** with save/load case support
+- **CAPE-OPEN DTOs**, converters, and unit normalisation
+- **Resource limits** enforcement for Python runtime
+- **Pythonnet bridge** and worker resolver for .NET/Python interop
+
+### Changed
+
+- Migrated server bootstrap and tools to FastMCP (v2.x compatibility)
+- Switched from pip/poetry to uv for faster dependency management
+- Reframed project as DWSIM adapter in three-layer architecture
+- Consolidated DWSIM path configuration to single source
+- Moved deployment scripts to `scripts/` folder
+- Replaced Docker deployment approach with Windows-native deployment guide
+- Redesigned physical property model with type-safe architecture
+- Switched build backend from poetry to hatchling
+
+### Fixed
+
+- Flash calculation: configured GlobalSettings for headless mode, fixed success detection and data extraction
+- Compound handling: correct DWSIM names for isobutane, isopentane, H2S; case-insensitive composition key lookup
+- CORS configuration: exposed `Mcp-Session-Id` header, added CORS middleware for browser test harness
+- Server stability: prevent console freezing, correct field names in `add_stream`/`add_unit`
+- OAuth: discovery endpoint, required_scopes property, syntax error fix, scope requirement removal
+- Build: handle paths with parentheses, improve MSBuild detection, correct prebuilt path
+- Worker: .NET Framework 4.8 compatibility (use `IndexOf` instead of `Contains`), numeric indices for Vessel ports
+- Deployment: reliable session ID extraction, stale process cleanup, env var transport config
+- Resource providers: package-relative paths, context parameter compatibility
+- Calculation engine: solver initialisation, graphic object naming, UpdateInterface crash resolution, compound database loading from multiple sources
+- STA threading for DWSIM COM interop; serialised interop calls on single thread

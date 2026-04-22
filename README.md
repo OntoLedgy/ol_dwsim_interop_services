@@ -1,5 +1,7 @@
 # DWSIM Interoperability Services
 
+> **Windows only** — requires a DWSIM desktop installation (Windows 10/11 or Windows Server with Desktop Experience).
+
 The DWSIM simulator adapter for the Thermodynamics Agent Service architecture. Implements the `SimulatorAdapter` protocol defined by `ol_simulator_interop_services`, translating canonical thermodynamic requests into DWSIM-specific API calls.
 
 ## Role in the Architecture
@@ -31,7 +33,7 @@ LLM Agent / MCP Client
 
 This adapter communicates with a separate DWSIM server process over HTTP. It translates canonical types (`FlashProblem`, `PropertyPackageSpec`, `CanonicalComponent`, etc.) into DWSIM-specific representations and manages the DWSIM engine lifecycle.
 
-> **Note:** During Phase 1 migration, this repo also contains the original monolithic MCP server that is being factored into the three-layer architecture. The ~33 existing MCP tools continue to work end-to-end while the refactor progresses.
+> **Note:** During Phase 1 migration, this repo also contains the original monolithic MCP server that is being factored into the three-layer architecture. The 35 existing MCP tools continue to work end-to-end while the refactor progresses.
 
 ## Overview
 
@@ -43,7 +45,7 @@ Bridges AI agents and DWSIM's chemical process simulation engine, enabling natur
 - **Python MCP Server** (`mcp_service/server/`): MCP facade using official MCP SDK (being migrated to `ol_thermodynamics_agent_services`)
 - **.NET Framework Worker** (`mcp_service/dwsim_worker/`): DWSIM engine hosting and execution
 - **Shared Models** (`models/`): CAPE-OPEN and DWSIM domain models for interoperability
-- **IPC Communication**: JSON-RPC 2.0 over Named Pipes or pythonnet for direct interop
+- **In-Process Interop**: DwsimWorker .NET assemblies loaded in-process via pythonnet/CLR
 
 ## Project Structure
 
@@ -160,14 +162,15 @@ Copy-Item "$src\ThermoCS" "$dest\ThermoCS" -Recurse -Force
 
 ### Quick Start
 
+The DWSIM engine runs **in-process** via pythonnet/CLR -- no separate worker process is needed.
+
 ```bash
-# Start the MCP server
+# Verify installation
+python -m dwsim_mcp_server doctor
+
+# Start the MCP server (loads DwsimWorker assemblies in-process via pythonnet)
 cd mcp_service/server
 python -m dwsim_mcp_server
-
-# In another terminal, start the worker
-cd mcp_service/dwsim_worker/DwsimWorker/bin/Debug
-./DwsimWorker.exe
 ```
 
 ## Connecting to AI Assistants
@@ -211,8 +214,8 @@ See [prebuilt/README.md](prebuilt/README.md) for details.
 
 ## Documentation
 
-- [API Documentation](docs/api/) - MCP tool reference and API specifications
-- [User Guides](docs/guides/) - Quickstart, configuration, troubleshooting
+- [MCP Tool Reference](docs/mcp/mcp-tools.md) - MCP tool reference and API specifications
+- [Getting Started & Guides](docs/resources/) - Quickstart, configuration, troubleshooting
 - [Architecture](docs/architecture/) - System design, security, observability
 
 ## Development
@@ -238,7 +241,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines and code stand
 
 ## License
 
-This project is licensed under GPLv3 - see [LICENSE](LICENSE) file for details.
+This project is licensed under **AGPL-3.0-or-later** - see [LICENSE](LICENSE) for the full text and [NOTICE](NOTICE) for copyright and attribution.
+
+**Why AGPL?** This MCP server is network-served (HTTP/SSE). AGPL Section 13 ensures that modifications to a hosted instance must also have their source made available, closing the "SaaS loophole" in plain GPL. GPLv3 Section 13 explicitly permits combining GPLv3 code (DWSIM) with AGPLv3 code.
 
 DWSIM is licensed under GPLv3. See the [DWSIM repository](https://github.com/DanWBR/dwsim) for more information.
 

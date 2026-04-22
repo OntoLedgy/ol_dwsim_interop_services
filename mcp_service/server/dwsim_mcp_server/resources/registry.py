@@ -207,7 +207,7 @@ def _register_fastmcp_resources(server) -> None:
     # These resources are available via the legacy Server path when dependencies
     # are provided. For FastMCP, use the get_results tool instead.
     #
-    # TODO: Implement session resources for FastMCP when FastMCP supports
+    # Session resources for FastMCP are blocked until FastMCP supports
     # accessing lifespan context from resource handlers.
 
 

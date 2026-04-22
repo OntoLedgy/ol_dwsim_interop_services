@@ -21,4 +21,4 @@ def register_all_tools(mcp) -> None:
     register_export_tools(mcp)
     register_compound_tools(mcp)
     register_diagnostics_tools(mcp)
-    get_logger(__name__).info("tools_registered", tool_count=33)
+    get_logger(__name__).info("tools_registered", tool_count=35)

@@ -1,0 +1,16 @@
+DWSIM Interoperability Services
+Copyright (c) 2024-2026 OntoLedgy Ltd.
+
+This project is licensed under the GNU Affero General Public License v3.0
+or later (AGPL-3.0-or-later). See the LICENSE file for the full licence text.
+
+This software builds upon DWSIM, an open-source chemical process simulator
+licensed under GPLv3. See https://github.com/DanWBR/dwsim for details.
+
+GPLv3 Section 13 explicitly permits combining GPLv3 code with AGPLv3 code.
+The combined work is distributed under AGPLv3.
+
+AGPL-3.0 was chosen over GPL-3.0 because this software is primarily served
+over a network (MCP over HTTP/SSE). AGPL Section 13 ensures that modifications
+to a network-served instance must also have their source made available,
+closing the "SaaS loophole" present in plain GPL.

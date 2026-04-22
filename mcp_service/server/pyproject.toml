@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Model Context Protocol server for DWSIM chemical process simulation"
 authors = [{name = "OntoLedgy AI", email = "development@ontoledgy.ai"}]
 requires-python = ">=3.11,<3.13"
+license = {text = "AGPL-3.0-or-later"}
 dependencies = [
     "mcp>=1.0.0",
     "fastmcp>=2.0.0",
