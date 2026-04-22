@@ -10,13 +10,13 @@ from typing import Protocol, TypeVar, TypedDict, cast, runtime_checkable
 
 from ol_simulator_interop_services.domain.errors import AdapterCapabilityError, PropertyPackageNotFoundError
 from ol_simulator_interop_services.domain.models import (
-    CanonicalComponent,
     Composition,
     FlashProblem,
     FlashResult,
     NamedValue,
     PhaseEnvelope,
     PhaseEnvelopePoint,
+    PhaseKind,
     PropertyBundle,
     PropertyPackageDescriptor,
     PropertyPackageMetadata,
@@ -109,8 +109,15 @@ class HasSessionManager(Protocol):
     """Session-manager surface used by pythonnet fallbacks."""
 
     @property
-    def session_manager(self) -> object:
+    def session_manager(self) -> SessionManagerLike:
         """Return the underlying .NET SessionManager."""
+
+
+class SessionManagerLike(Protocol):
+    """Subset of SessionManager used by the adapter."""
+
+    def GetSession(self, guid: object) -> object:
+        """Resolve a session context from the session manager."""
 
 
 @runtime_checkable
@@ -803,7 +810,7 @@ def _normalise_scalar(value: object) -> str | int | float | bool:
     return str(value)
 
 
-def _phase_kind_from_label(phase_label: str):
+def _phase_kind_from_label(phase_label: str) -> PhaseKind:
     from dwsim_mcp_server.adapter.translators import dwsim_phase_label_to_kind
 
     return dwsim_phase_label_to_kind(phase_label)

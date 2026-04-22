@@ -103,8 +103,10 @@ def dwsim_result_to_flash_result(
         phases = (_build_fallback_phase(raw_result, fallback_composition),)
 
     overall_payload: dict[str, float] = {}
-    overall_payload["temperature_k"] = raw_result.get("temperature_k", 0.0)
-    overall_payload["pressure_pa"] = raw_result.get("pressure_pa", 0.0)
+    if "temperature_k" in raw_result:
+        overall_payload["temperature_k"] = raw_result["temperature_k"]
+    if "pressure_pa" in raw_result:
+        overall_payload["pressure_pa"] = raw_result["pressure_pa"]
     overall_payload.update(raw_result.get("overall_properties", {}))
 
     return FlashResult(
