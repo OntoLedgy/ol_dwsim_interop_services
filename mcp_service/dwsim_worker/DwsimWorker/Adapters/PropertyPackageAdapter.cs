@@ -437,8 +437,13 @@ namespace DwsimWorker.Adapters
 
         private static (HashSet<string> supportedPackages, Dictionary<string, string> canonicalNames) LoadPropertyPackageInventory()
         {
+            // Resolve next to DwsimWorker.dll, not AppDomain.CurrentDomain.BaseDirectory,
+            // so the TOML is found when the assembly is hosted by pythonnet
+            // (BaseDirectory points to python.exe's directory in that case).
+            var assemblyDirectory = Path.GetDirectoryName(
+                typeof(PropertyPackageAdapter).Assembly.Location);
             var inventoryPath = Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory,
+                assemblyDirectory ?? AppDomain.CurrentDomain.BaseDirectory,
                 PropertyPackageInventoryFileName);
 
             if (!File.Exists(inventoryPath))
