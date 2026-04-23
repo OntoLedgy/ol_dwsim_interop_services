@@ -352,3 +352,63 @@ def test_flash_result_from_dto_aliases_capeopen_property_keys_to_canonical():
     )
     # CAPE-OPEN keys are preserved alongside the canonical ones.
     assert phase_properties["density"] == 996.33
+
+
+def test_dwsim_result_to_flash_result_deduplicates_spurious_liquid2_phase():
+    # DIS-34: DWSIM's CAPE-OPEN binding reports Liquid2 as a copy of
+    # Liquid1 (same fraction, same composition) when no LLE actually
+    # occurs. Without dedupe, phase fractions sum to > 1.0 and
+    # FlashResult validation fails.
+    parameter_source_registry = InMemoryParameterSourceRegistry()
+    raw_result = {
+        "calculation_type": "TP",
+        "temperature_k": 350.0,
+        "pressure_pa": 101325.0,
+        "converged": True,
+        "phases": [
+            {
+                "phase_label": "Liquid1",
+                "phase_fraction": 0.19269616,
+                "composition": [
+                    {"compound": "Ethanol", "mole_fraction": 0.004336},
+                    {"compound": "Water", "mole_fraction": 0.995664},
+                ],
+                "properties": {"density_kg_per_m3": 959.4},
+            },
+            {
+                "phase_label": "Vapor",
+                "phase_fraction": 0.80730384,
+                "composition": [
+                    {"compound": "Ethanol", "mole_fraction": 0.618306},
+                    {"compound": "Water", "mole_fraction": 0.381694},
+                ],
+                "properties": {"density_kg_per_m3": 0.811},
+            },
+            {
+                "phase_label": "Liquid2",
+                "phase_fraction": 0.19269616,
+                "composition": [
+                    {"compound": "Ethanol", "mole_fraction": 0.004336},
+                    {"compound": "Water", "mole_fraction": 0.995664},
+                ],
+                "properties": {"density_kg_per_m3": 959.4},
+            },
+        ],
+    }
+
+    result = dwsim_result_to_flash_result(
+        raw_result,
+        provenance=Provenance(
+            backend_id="dwsim",
+            property_package_spec=PropertyPackageSpec(
+                model_id="peng-robinson",
+                parameter_source_id="builtin-source",
+                revision="builtin",
+            ),
+            wall_time_seconds=0.1,
+        ),
+        fallback_composition=_composition(),
+    )
+
+    assert len(result.phases) == 2
+    assert sum(phase.fraction for phase in result.phases) == pytest.approx(1.0, abs=1e-6)

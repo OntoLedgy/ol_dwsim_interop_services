@@ -133,7 +133,9 @@ def dwsim_result_to_flash_result(
 
     phases = tuple(
         dwsim_phase_to_canonical(phase_payload)
-        for phase_payload in raw_result.get("phases", [])
+        for phase_payload in _deduplicate_spurious_liquid_phases(
+            raw_result.get("phases", [])
+        )
     )
     if not phases:
         phases = (_build_fallback_phase(raw_result, fallback_composition),)
@@ -324,6 +326,36 @@ def _alias_capeopen_keys_to_canonical(*, properties: dict[str, float]) -> None:
     for capeopen_key, canonical_key in _CAPEOPEN_PROPERTY_KEY_TO_CANONICAL_KEY:
         if capeopen_key in properties:
             properties.setdefault(canonical_key, float(properties[capeopen_key]))
+
+
+def _deduplicate_spurious_liquid_phases(
+    phase_payloads: list[DwsimPhaseDict],
+) -> list[DwsimPhaseDict]:
+    # DWSIM's CAPE-OPEN binding reports phase slots for Liquid1 and Liquid2
+    # even when only one real liquid phase exists (Liquid2 is emitted as a
+    # copy of Liquid1 with identical fraction and composition). That makes
+    # phase fractions sum to > 1.0 and fails FlashResult validation. Drop
+    # later phases whose (fraction, composition) signature already appeared.
+    seen_signatures: set[tuple[float, tuple[tuple[str, float], ...]]] = set()
+    deduplicated: list[DwsimPhaseDict] = []
+    for phase_payload in phase_payloads:
+        signature = _phase_payload_signature(phase_payload)
+        if signature in seen_signatures:
+            continue
+        seen_signatures.add(signature)
+        deduplicated.append(phase_payload)
+    return deduplicated
+
+
+def _phase_payload_signature(
+    phase_payload: DwsimPhaseDict,
+) -> tuple[float, tuple[tuple[str, float], ...]]:
+    phase_fraction = float(phase_payload.get("phase_fraction", 0.0))
+    composition_entries = tuple(
+        (str(entry.get("compound", "")), float(entry.get("mole_fraction", 0.0)))
+        for entry in phase_payload.get("composition", [])
+    )
+    return phase_fraction, composition_entries
 
 
 def _derive_molar_properties_from_specific(*, properties: dict[str, float]) -> None:
