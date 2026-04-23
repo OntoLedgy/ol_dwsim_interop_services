@@ -57,8 +57,10 @@ def test_seed_dwsim_property_packages_registers_expected_catalog():
     descriptors = property_package_registry.list_registered_property_packages()
 
     display_names = {descriptor.display_name for descriptor in descriptors}
+    model_ids = {descriptor.spec.model_id for descriptor in descriptors}
 
-    assert len(registered_packages) == 6
+    # DIS-35: lock the canonical property-package seed to the worker-supported inventory.
+    assert len(registered_packages) == 4
+    assert model_ids == {"peng-robinson", "srk", "nrtl", "unifac"}
     assert "Peng-Robinson" in display_names
-    assert "Lee-Kesler-Plocker" in display_names
-    assert "Steam Tables (IAPWS-IF97)" in display_names
+    assert "UNIFAC" in display_names

@@ -77,6 +77,13 @@ _COMMON_FLASH_TYPES = (
     FlashCalculationType.PRESSURE_VAPOR_FRACTION,
 )
 
+DWSIM_WORKER_SUPPORTED_PROPERTY_PACKAGE_MODEL_IDS: frozenset[str] = frozenset(
+    {"peng-robinson", "srk", "nrtl", "unifac"}
+)
+DWSIM_WORKER_SUPPORTED_PROPERTY_PACKAGE_DISPLAY_NAMES: frozenset[str] = frozenset(
+    {"Peng-Robinson", "SRK", "NRTL", "UNIFAC"}
+)
+
 SEEDED_DWSIM_PROPERTY_PACKAGES: tuple[SeededPropertyPackage, ...] = (
     SeededPropertyPackage(
         model_id="peng-robinson",
@@ -97,26 +104,10 @@ SEEDED_DWSIM_PROPERTY_PACKAGES: tuple[SeededPropertyPackage, ...] = (
         supported_flash_calculations=_COMMON_FLASH_TYPES,
     ),
     SeededPropertyPackage(
-        model_id="uniquac",
-        display_name="UNIQUAC",
-        description="Activity-coefficient model for strongly non-ideal liquid mixtures.",
+        model_id="unifac",
+        display_name="UNIFAC",
+        description="Predictive activity-coefficient model for non-ideal liquid mixtures.",
         supported_flash_calculations=_COMMON_FLASH_TYPES,
-    ),
-    SeededPropertyPackage(
-        model_id="lee-kesler-plocker",
-        display_name="Lee-Kesler-Plocker",
-        description="Corresponding-states package for light hydrocarbons and gases.",
-        supported_flash_calculations=_COMMON_FLASH_TYPES,
-    ),
-    SeededPropertyPackage(
-        model_id="steam-tables",
-        display_name="Steam Tables (IAPWS-IF97)",
-        description="Water/steam property package based on the IAPWS-IF97 formulation.",
-        supported_flash_calculations=(
-            FlashCalculationType.TEMPERATURE_PRESSURE,
-            FlashCalculationType.PRESSURE_ENTHALPY,
-            FlashCalculationType.PRESSURE_ENTROPY,
-        ),
     ),
 )
 
