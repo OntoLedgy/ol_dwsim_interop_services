@@ -95,4 +95,5 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 markers = [
     "integration: marks integration tests that may require DWSIM worker/interop",
+    "live_dwsim: live DWSIM integration tests requiring DwsimWorker.dll (skipped unless -m live_dwsim)",
 ]
