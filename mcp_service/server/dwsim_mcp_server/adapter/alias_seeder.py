@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
+import tomllib
 
 from ol_simulator_interop_services.domain.models import (
     CanonicalComponent,
@@ -22,6 +24,9 @@ DWSIM_BACKEND_ID = "dwsim"
 DWSIM_PARAMETER_SOURCE_NAME = "DWSIM Built-in Databank"
 DWSIM_PARAMETER_SOURCE_LOCATOR = "dwsim://built-in-databank"
 DWSIM_PARAMETER_SOURCE_REVISION = "builtin"
+_PROPERTY_PACKAGES_TOML_PATH = (
+    Path(__file__).resolve().parents[4] / "shared" / "property_packages.toml"
+)
 
 
 @dataclass(frozen=True)
@@ -69,46 +74,242 @@ SEEDED_DWSIM_COMPONENTS_BY_CAS_NUMBER = {
     component.cas_number: component for component in SEEDED_DWSIM_COMPONENTS
 }
 
-_COMMON_FLASH_TYPES = (
-    FlashCalculationType.TEMPERATURE_PRESSURE,
-    FlashCalculationType.PRESSURE_ENTHALPY,
-    FlashCalculationType.PRESSURE_ENTROPY,
-    FlashCalculationType.TEMPERATURE_PRESSURE_VAPOR_FRACTION,
-    FlashCalculationType.PRESSURE_VAPOR_FRACTION,
-)
+def _load_seeded_property_packages() -> tuple[SeededPropertyPackage, ...]:
+    inventory_document = _load_property_packages_inventory_document()
+    seeded_property_packages: list[SeededPropertyPackage] = []
+    seen_lookup_keys: set[str] = set()
+    seen_model_ids: set[str] = set()
+    seen_display_names: set[str] = set()
 
-DWSIM_WORKER_SUPPORTED_PROPERTY_PACKAGE_MODEL_IDS: frozenset[str] = frozenset(
-    {"peng-robinson", "srk", "nrtl", "unifac"}
-)
-DWSIM_WORKER_SUPPORTED_PROPERTY_PACKAGE_DISPLAY_NAMES: frozenset[str] = frozenset(
-    {"Peng-Robinson", "SRK", "NRTL", "UNIFAC"}
-)
+    for package_index, package_document in enumerate(inventory_document):
+        model_id = _require_string_field(
+            package_document=package_document,
+            field_name="model_id",
+            package_index=package_index,
+        )
+        display_name = _require_string_field(
+            package_document=package_document,
+            field_name="display_name",
+            package_index=package_index,
+        )
+        description = _require_string_field(
+            package_document=package_document,
+            field_name="description",
+            package_index=package_index,
+        )
+        aliases = _require_aliases(
+            package_document=package_document,
+            package_index=package_index,
+        )
+        supported_flash_calculations = _require_supported_flash_calculations(
+            package_document=package_document,
+            package_index=package_index,
+        )
 
-SEEDED_DWSIM_PROPERTY_PACKAGES: tuple[SeededPropertyPackage, ...] = (
-    SeededPropertyPackage(
-        model_id="peng-robinson",
-        display_name="Peng-Robinson",
-        description="Cubic equation of state for hydrocarbon and gas-processing systems.",
-        supported_flash_calculations=_COMMON_FLASH_TYPES,
-    ),
-    SeededPropertyPackage(
-        model_id="srk",
-        display_name="SRK",
-        description="Soave-Redlich-Kwong cubic equation of state.",
-        supported_flash_calculations=_COMMON_FLASH_TYPES,
-    ),
-    SeededPropertyPackage(
-        model_id="nrtl",
-        display_name="NRTL",
-        description="Activity-coefficient model for highly non-ideal liquid systems.",
-        supported_flash_calculations=_COMMON_FLASH_TYPES,
-    ),
-    SeededPropertyPackage(
-        model_id="unifac",
-        display_name="UNIFAC",
-        description="Predictive activity-coefficient model for non-ideal liquid mixtures.",
-        supported_flash_calculations=_COMMON_FLASH_TYPES,
-    ),
+        _require_unique_lookup_key(
+            seen_lookup_keys=seen_lookup_keys,
+            lookup_key=display_name,
+            field_name="display_name",
+            package_index=package_index,
+        )
+        for alias in aliases:
+            _require_unique_lookup_key(
+                seen_lookup_keys=seen_lookup_keys,
+                lookup_key=alias,
+                field_name="aliases",
+                package_index=package_index,
+            )
+        _require_unique_value(
+            seen_values=seen_model_ids,
+            value=model_id,
+            field_name="model_id",
+            package_index=package_index,
+        )
+        _require_unique_value(
+            seen_values=seen_display_names,
+            value=display_name,
+            field_name="display_name",
+            package_index=package_index,
+        )
+
+        seeded_property_packages.append(
+            SeededPropertyPackage(
+                model_id=model_id,
+                display_name=display_name,
+                description=description,
+                supported_flash_calculations=supported_flash_calculations,
+            )
+        )
+
+    return tuple(seeded_property_packages)
+
+
+def _load_worker_supported_model_ids_and_display_names(
+    *, seeded_property_packages: tuple[SeededPropertyPackage, ...]
+) -> tuple[frozenset[str], frozenset[str]]:
+    worker_supported_model_ids: set[str] = set()
+    worker_supported_display_names: set[str] = set()
+    for seeded_property_package in seeded_property_packages:
+        worker_supported_model_ids.add(seeded_property_package.model_id)
+        worker_supported_display_names.add(seeded_property_package.display_name)
+    return (
+        frozenset(worker_supported_model_ids),
+        frozenset(worker_supported_display_names),
+    )
+
+
+def _load_property_packages_inventory_document() -> list[dict[str, object]]:
+    try:
+        with _PROPERTY_PACKAGES_TOML_PATH.open("rb") as property_packages_file:
+            parsed_document = tomllib.load(property_packages_file)
+    except FileNotFoundError as error:
+        raise RuntimeError(
+            f"DIS-37 property-package inventory missing at "
+            f"{_PROPERTY_PACKAGES_TOML_PATH}"
+        ) from error
+    except tomllib.TOMLDecodeError as error:
+        raise RuntimeError(
+            f"DIS-37 property-package inventory is malformed at "
+            f"{_PROPERTY_PACKAGES_TOML_PATH}: {error}"
+        ) from error
+
+    packages = parsed_document.get("packages")
+    if not isinstance(packages, list):
+        raise RuntimeError(
+            "DIS-37 property-package inventory is malformed at "
+            f"{_PROPERTY_PACKAGES_TOML_PATH}: expected a top-level 'packages' list"
+        )
+
+    inventory_document: list[dict[str, object]] = []
+    for package_index, package_document in enumerate(packages):
+        if not isinstance(package_document, dict):
+            raise RuntimeError(
+                "DIS-37 property-package inventory is malformed at "
+                f"{_PROPERTY_PACKAGES_TOML_PATH}: package #{package_index} must be a table"
+            )
+        inventory_document.append(package_document)
+    return inventory_document
+
+
+def _require_string_field(
+    *,
+    package_document: dict[str, object],
+    field_name: str,
+    package_index: int,
+) -> str:
+    value = package_document.get(field_name)
+    if not isinstance(value, str) or not value.strip():
+        raise RuntimeError(
+            "DIS-37 property-package inventory is malformed at "
+            f"{_PROPERTY_PACKAGES_TOML_PATH}: package #{package_index} field "
+            f"'{field_name}' must be a non-empty string"
+        )
+    return value
+
+
+def _require_aliases(
+    *,
+    package_document: dict[str, object],
+    package_index: int,
+) -> tuple[str, ...]:
+    aliases = package_document.get("aliases")
+    if not isinstance(aliases, list):
+        raise RuntimeError(
+            "DIS-37 property-package inventory is malformed at "
+            f"{_PROPERTY_PACKAGES_TOML_PATH}: package #{package_index} field "
+            "'aliases' must be a list"
+        )
+
+    normalized_aliases: list[str] = []
+    for alias_index, alias in enumerate(aliases):
+        if not isinstance(alias, str) or not alias.strip():
+            raise RuntimeError(
+                "DIS-37 property-package inventory is malformed at "
+                f"{_PROPERTY_PACKAGES_TOML_PATH}: package #{package_index} alias "
+                f"#{alias_index} must be a non-empty string"
+            )
+        normalized_aliases.append(alias)
+    return tuple(normalized_aliases)
+
+
+def _require_supported_flash_calculations(
+    *,
+    package_document: dict[str, object],
+    package_index: int,
+) -> tuple[FlashCalculationType, ...]:
+    flash_calculation_names = package_document.get("supported_flash_calculations")
+    if not isinstance(flash_calculation_names, list):
+        raise RuntimeError(
+            "DIS-37 property-package inventory is malformed at "
+            f"{_PROPERTY_PACKAGES_TOML_PATH}: package #{package_index} field "
+            "'supported_flash_calculations' must be a list"
+        )
+
+    supported_flash_calculations: list[FlashCalculationType] = []
+    for flash_calculation_index, flash_calculation_name in enumerate(
+        flash_calculation_names
+    ):
+        if not isinstance(flash_calculation_name, str):
+            raise RuntimeError(
+                "DIS-37 property-package inventory is malformed at "
+                f"{_PROPERTY_PACKAGES_TOML_PATH}: package #{package_index} flash "
+                f"calculation #{flash_calculation_index} must be a string"
+            )
+        try:
+            supported_flash_calculations.append(
+                FlashCalculationType[flash_calculation_name]
+            )
+        except KeyError as error:
+            raise RuntimeError(
+                "DIS-37 property-package inventory is malformed at "
+                f"{_PROPERTY_PACKAGES_TOML_PATH}: package #{package_index} has "
+                "unknown FlashCalculationType "
+                f"'{flash_calculation_name}'"
+            ) from error
+    return tuple(supported_flash_calculations)
+
+
+def _require_unique_lookup_key(
+    *,
+    seen_lookup_keys: set[str],
+    lookup_key: str,
+    field_name: str,
+    package_index: int,
+) -> None:
+    normalized_lookup_key = lookup_key.casefold()
+    if normalized_lookup_key in seen_lookup_keys:
+        raise RuntimeError(
+            "DIS-37 property-package inventory is malformed at "
+            f"{_PROPERTY_PACKAGES_TOML_PATH}: duplicate lookup key "
+            f"'{lookup_key}' in field '{field_name}' for package #{package_index}"
+        )
+    seen_lookup_keys.add(normalized_lookup_key)
+
+
+def _require_unique_value(
+    *,
+    seen_values: set[str],
+    value: str,
+    field_name: str,
+    package_index: int,
+) -> None:
+    if value in seen_values:
+        raise RuntimeError(
+            "DIS-37 property-package inventory is malformed at "
+            f"{_PROPERTY_PACKAGES_TOML_PATH}: duplicate {field_name} "
+            f"'{value}' for package #{package_index}"
+        )
+    seen_values.add(value)
+
+
+SEEDED_DWSIM_PROPERTY_PACKAGES: tuple[
+    SeededPropertyPackage, ...
+] = _load_seeded_property_packages()
+(
+    DWSIM_WORKER_SUPPORTED_PROPERTY_PACKAGE_MODEL_IDS,
+    DWSIM_WORKER_SUPPORTED_PROPERTY_PACKAGE_DISPLAY_NAMES,
+) = _load_worker_supported_model_ids_and_display_names(
+    seeded_property_packages=SEEDED_DWSIM_PROPERTY_PACKAGES
 )
 
 SEEDED_DWSIM_PROPERTY_PACKAGES_BY_DISPLAY_NAME = {

@@ -74,6 +74,10 @@
     <None Include="App.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <Content Include="..\..\..\shared\property_packages.toml">
+      <Link>property_packages.toml</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="..\dwsim.config.json" Condition="Exists('..\dwsim.config.json')">
       <Link>dwsim.config.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

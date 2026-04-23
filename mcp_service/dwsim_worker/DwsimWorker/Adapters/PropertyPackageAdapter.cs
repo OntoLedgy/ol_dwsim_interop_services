@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Serilog;
 using DwsimWorker.Engine;
+using Tomlyn;
 
 namespace DwsimWorker.Adapters
 {
@@ -22,31 +24,20 @@ namespace DwsimWorker.Adapters
     /// </remarks>
     public sealed class PropertyPackageAdapter
     {
+        private const string PropertyPackageInventoryFileName = "property_packages.toml";
         private readonly ILogger _logger;
         private readonly FlowsheetContext _context;
         private string _currentPackageName;
 
-        // Supported property package names
-        private static readonly HashSet<string> SupportedPackages = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "Peng-Robinson",
-            "SRK",
-            "NRTL",
-            "UNIFAC",
-            "PR",  // Alias for Peng-Robinson
-            "Soave-Redlich-Kwong"  // Full name for SRK
-        };
+        private static readonly HashSet<string> SupportedPackages;
+        private static readonly Dictionary<string, string> CanonicalNames;
 
-        // Canonical names mapping (for normalization)
-        private static readonly Dictionary<string, string> CanonicalNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        static PropertyPackageAdapter()
         {
-            { "Peng-Robinson", "Peng-Robinson" },
-            { "PR", "Peng-Robinson" },
-            { "SRK", "SRK" },
-            { "Soave-Redlich-Kwong", "SRK" },
-            { "NRTL", "NRTL" },
-            { "UNIFAC", "UNIFAC" }
-        };
+            var inventory = LoadPropertyPackageInventory();
+            SupportedPackages = inventory.supportedPackages;
+            CanonicalNames = inventory.canonicalNames;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PropertyPackageAdapter"/> class.
@@ -442,6 +433,163 @@ namespace DwsimWorker.Adapters
                 _logger.Warning(ex, "Failed to set Binary Interaction Parameter for {Compound1}-{Compound2}",
                     compound1, compound2);
             }
+        }
+
+        private static (HashSet<string> supportedPackages, Dictionary<string, string> canonicalNames) LoadPropertyPackageInventory()
+        {
+            var inventoryPath = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                PropertyPackageInventoryFileName);
+
+            if (!File.Exists(inventoryPath))
+            {
+                throw new InvalidOperationException(
+                    $"DIS-37 property-package inventory missing at {inventoryPath}");
+            }
+
+            try
+            {
+                var inventoryText = File.ReadAllText(inventoryPath);
+                var inventoryDocument = Toml.ToModel<PropertyPackageInventoryDocument>(inventoryText);
+                if (inventoryDocument?.Packages == null)
+                {
+                    throw new InvalidOperationException("Expected top-level packages array");
+                }
+
+                var supportedPackages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var canonicalNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                for (var packageIndex = 0; packageIndex < inventoryDocument.Packages.Count; packageIndex++)
+                {
+                    var propertyPackage = inventoryDocument.Packages[packageIndex];
+                    if (propertyPackage == null)
+                    {
+                        throw new InvalidOperationException($"Package #{packageIndex} is null");
+                    }
+
+                    var canonicalDisplayName = RequireValue(
+                        value: propertyPackage.DisplayName,
+                        fieldName: "display_name",
+                        packageIndex: packageIndex);
+
+                    RequireValue(
+                        value: propertyPackage.ModelId,
+                        fieldName: "model_id",
+                        packageIndex: packageIndex);
+                    RequireValue(
+                        value: propertyPackage.Description,
+                        fieldName: "description",
+                        packageIndex: packageIndex);
+                    RequireFlashCalculations(
+                        flashCalculations: propertyPackage.SupportedFlashCalculations,
+                        packageIndex: packageIndex);
+
+                    AddLookupKey(
+                        supportedPackages: supportedPackages,
+                        canonicalNames: canonicalNames,
+                        lookupKey: canonicalDisplayName,
+                        canonicalDisplayName: canonicalDisplayName,
+                        fieldName: "display_name",
+                        packageIndex: packageIndex);
+
+                    if (propertyPackage.Aliases == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Package #{packageIndex} field 'aliases' must be present");
+                    }
+
+                    for (var aliasIndex = 0; aliasIndex < propertyPackage.Aliases.Count; aliasIndex++)
+                    {
+                        var alias = RequireValue(
+                            value: propertyPackage.Aliases[aliasIndex],
+                            fieldName: $"aliases[{aliasIndex}]",
+                            packageIndex: packageIndex);
+                        AddLookupKey(
+                            supportedPackages: supportedPackages,
+                            canonicalNames: canonicalNames,
+                            lookupKey: alias,
+                            canonicalDisplayName: canonicalDisplayName,
+                            fieldName: "aliases",
+                            packageIndex: packageIndex);
+                    }
+                }
+
+                return (supportedPackages, canonicalNames);
+            }
+            catch (Exception ex) when (!(ex is InvalidOperationException && ex.Message.StartsWith("DIS-37", StringComparison.Ordinal)))
+            {
+                throw new InvalidOperationException(
+                    $"DIS-37 property-package inventory is malformed at {inventoryPath}: {ex.Message}",
+                    ex);
+            }
+        }
+
+        private static string RequireValue(string value, string fieldName, int packageIndex)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException(
+                    $"Package #{packageIndex} field '{fieldName}' must be a non-empty string");
+            }
+
+            return value;
+        }
+
+        private static void AddLookupKey(
+            HashSet<string> supportedPackages,
+            Dictionary<string, string> canonicalNames,
+            string lookupKey,
+            string canonicalDisplayName,
+            string fieldName,
+            int packageIndex)
+        {
+            if (!supportedPackages.Add(lookupKey))
+            {
+                throw new InvalidOperationException(
+                    $"Duplicate lookup key '{lookupKey}' in field '{fieldName}' for package #{packageIndex}");
+            }
+
+            canonicalNames.Add(lookupKey, canonicalDisplayName);
+        }
+
+        private static void RequireFlashCalculations(
+            List<string> flashCalculations,
+            int packageIndex)
+        {
+            if (flashCalculations == null)
+            {
+                throw new InvalidOperationException(
+                    $"Package #{packageIndex} field 'supported_flash_calculations' must be present");
+            }
+
+            for (var flashCalculationIndex = 0; flashCalculationIndex < flashCalculations.Count; flashCalculationIndex++)
+            {
+                RequireValue(
+                    value: flashCalculations[flashCalculationIndex],
+                    fieldName: $"supported_flash_calculations[{flashCalculationIndex}]",
+                    packageIndex: packageIndex);
+            }
+        }
+
+        public sealed class PropertyPackageInventoryDocument
+        {
+            public List<PropertyPackageInventoryPackage> Packages { get; set; } =
+                new List<PropertyPackageInventoryPackage>();
+        }
+
+        public sealed class PropertyPackageInventoryPackage
+        {
+            public string ModelId { get; set; }
+
+            public string DisplayName { get; set; }
+
+            public List<string> Aliases { get; set; } =
+                new List<string>();
+
+            public string Description { get; set; }
+
+            public List<string> SupportedFlashCalculations { get; set; } =
+                new List<string>();
         }
     }
 }

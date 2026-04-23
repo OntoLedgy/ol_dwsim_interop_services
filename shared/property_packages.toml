@@ -1,0 +1,56 @@
+# Single source of truth for DWSIM property-package inventory.
+# Both Python (dwsim_mcp_server.adapter.alias_seeder) and the .NET worker
+# (DwsimWorker.Adapters.PropertyPackageAdapter) load this file at startup.
+# See DIS-37.
+
+[[packages]]
+model_id = "peng-robinson"
+display_name = "Peng-Robinson"
+aliases = ["PR"]
+description = "Cubic equation of state for hydrocarbon and gas-processing systems."
+supported_flash_calculations = [
+  "TEMPERATURE_PRESSURE",
+  "PRESSURE_ENTHALPY",
+  "PRESSURE_ENTROPY",
+  "TEMPERATURE_PRESSURE_VAPOR_FRACTION",
+  "PRESSURE_VAPOR_FRACTION",
+]
+
+[[packages]]
+model_id = "srk"
+display_name = "SRK"
+aliases = ["Soave-Redlich-Kwong"]
+description = "Soave-Redlich-Kwong cubic equation of state."
+supported_flash_calculations = [
+  "TEMPERATURE_PRESSURE",
+  "PRESSURE_ENTHALPY",
+  "PRESSURE_ENTROPY",
+  "TEMPERATURE_PRESSURE_VAPOR_FRACTION",
+  "PRESSURE_VAPOR_FRACTION",
+]
+
+[[packages]]
+model_id = "nrtl"
+display_name = "NRTL"
+aliases = []
+description = "Activity-coefficient model for highly non-ideal liquid systems."
+supported_flash_calculations = [
+  "TEMPERATURE_PRESSURE",
+  "PRESSURE_ENTHALPY",
+  "PRESSURE_ENTROPY",
+  "TEMPERATURE_PRESSURE_VAPOR_FRACTION",
+  "PRESSURE_VAPOR_FRACTION",
+]
+
+[[packages]]
+model_id = "unifac"
+display_name = "UNIFAC"
+aliases = []
+description = "Predictive activity-coefficient model for non-ideal liquid mixtures."
+supported_flash_calculations = [
+  "TEMPERATURE_PRESSURE",
+  "PRESSURE_ENTHALPY",
+  "PRESSURE_ENTROPY",
+  "TEMPERATURE_PRESSURE_VAPOR_FRACTION",
+  "PRESSURE_VAPOR_FRACTION",
+]

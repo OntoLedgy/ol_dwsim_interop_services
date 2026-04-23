@@ -160,6 +160,10 @@ Copy-Item "$src\ThermoCS" "$dest\ThermoCS" -Recurse -Force
 
 - Default paths in the worker/test configs now point to [mcp_service/dwsim_worker/dwsim_binaries/x64/Debug](mcp_service/dwsim_worker/dwsim_binaries/x64/Debug). For machine-specific installs, copy [mcp_service/dwsim_worker/dwsim.config.json.sample](mcp_service/dwsim_worker/dwsim.config.json.sample) to `mcp_service/dwsim_worker/dwsim.config.json` and set `dwsim_path` to your DWSIM build folder (gitignored).
 
+### Adding a property package
+
+Edit [shared/property_packages.toml](shared/property_packages.toml), then rebuild with `./build.bat`. Both the Python adapter and the .NET worker load that file at runtime, so additions and removals happen in one place.
+
 ### Quick Start
 
 The DWSIM engine runs **in-process** via pythonnet/CLR -- no separate worker process is needed.
