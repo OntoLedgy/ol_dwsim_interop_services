@@ -304,3 +304,51 @@ def test_flash_result_from_dto_projects_density_from_named_scalar_attribute():
     assert raw_result["phases"][0]["properties"]["density_kg_per_m3"] > 0.0
     assert phase.density_kg_per_m3 > 0.0
     assert phase.properties.get("density") is not None
+
+
+def test_flash_result_from_dto_aliases_capeopen_property_keys_to_canonical():
+    # DIS-34: DWSIM's CapeOpenConverter emits camelCase CAPE-OPEN keys
+    # (density, enthalpy, viscosity, molecularWeight, entropy) in
+    # PhaseDto.Properties. The translator must alias these onto canonical
+    # keys (density_kg_per_m3 etc.) and derive molar_enthalpy/molar_entropy
+    # from the specific forms via molecular weight.
+    dto = SimpleNamespace(
+        CalculationType="TP",
+        TemperatureK=298.15,
+        PressurePa=101325.0,
+        Converged=True,
+        Phases=[
+            SimpleNamespace(
+                PhaseLabel="Liquid1",
+                PhaseFraction=1.0,
+                Composition=[
+                    SimpleNamespace(Compound="Water", MoleFraction=1.0),
+                ],
+                Properties={
+                    "density": 996.33,
+                    "enthalpy": -2537.04,
+                    "entropy": -6.834,
+                    "viscosity": 8.976e-4,
+                    "molecularWeight": 18.01528,
+                },
+            )
+        ],
+    )
+
+    raw_result = _flash_result_from_dto(dto)
+    phase_properties = raw_result["phases"][0]["properties"]
+
+    assert phase_properties["density_kg_per_m3"] == 996.33
+    assert phase_properties["viscosity_pa_s"] == 8.976e-4
+    assert phase_properties["molecular_weight_kg_per_kmol"] == 18.01528
+    assert phase_properties["enthalpy_kj_per_kg"] == -2537.04
+    assert phase_properties["entropy_kj_per_kg_k"] == -6.834
+    # Derived from specific × molecular_weight; 1 kJ/kmol == 1 J/mol.
+    assert phase_properties["molar_enthalpy_kj_per_kmol"] == pytest.approx(
+        -2537.04 * 18.01528
+    )
+    assert phase_properties["molar_entropy_kj_per_kmol_k"] == pytest.approx(
+        -6.834 * 18.01528
+    )
+    # CAPE-OPEN keys are preserved alongside the canonical ones.
+    assert phase_properties["density"] == 996.33

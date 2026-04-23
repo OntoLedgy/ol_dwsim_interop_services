@@ -86,6 +86,21 @@ _PROPERTY_MAP: dict[str, tuple[str, str | None, float]] = {
     "activity_coefficient": ("activity_coefficient", None, 1.0),
 }
 
+_CAPEOPEN_PROPERTY_KEY_TO_CANONICAL_KEY: tuple[tuple[str, str], ...] = (
+    # DWSIM's CapeOpenConverter.GetDwsimPhaseProperties emits these
+    # camelCase CAPE-OPEN names in PhaseDto.Properties; map them onto
+    # canonical keys (see _PROPERTY_MAP above) so downstream consumers
+    # like _require_density and dwsim_properties_to_property_bundle see
+    # the same keys the stream path produces. Units match the canonical
+    # suffix: density in kg/m^3, viscosity in Pa*s, molecularWeight in
+    # kg/kmol, enthalpy in kJ/kg, entropy in kJ/(kg*K).
+    ("density", "density_kg_per_m3"),
+    ("viscosity", "viscosity_pa_s"),
+    ("molecularWeight", "molecular_weight_kg_per_kmol"),
+    ("enthalpy", "enthalpy_kj_per_kg"),
+    ("entropy", "entropy_kj_per_kg_k"),
+)
+
 _PHASE_SCALAR_PROPERTY_ATTRIBUTE_BY_KEY: tuple[tuple[str, str], ...] = (
     ("molar_flow_mol_per_s", "MolarFlowMolPerSec"),
     ("mass_flow_kg_per_s", "MassFlowKgPerSec"),
@@ -241,6 +256,8 @@ def build_phase_properties_from_dto(phase: object) -> dict[str, float]:
         key: float(value)
         for key, value in _iter_mapping(getattr(phase, "Properties", {}))
     }
+    _alias_capeopen_keys_to_canonical(properties=properties)
+    _derive_molar_properties_from_specific(properties=properties)
     _set_missing_phase_scalar_properties(phase=phase, properties=properties)
     return properties
 
@@ -301,6 +318,30 @@ def _set_missing_phase_scalar_properties(
         if scalar_value is None:
             continue
         properties.setdefault(property_key, float(scalar_value))
+
+
+def _alias_capeopen_keys_to_canonical(*, properties: dict[str, float]) -> None:
+    for capeopen_key, canonical_key in _CAPEOPEN_PROPERTY_KEY_TO_CANONICAL_KEY:
+        if capeopen_key in properties:
+            properties.setdefault(canonical_key, float(properties[capeopen_key]))
+
+
+def _derive_molar_properties_from_specific(*, properties: dict[str, float]) -> None:
+    molecular_weight = properties.get("molecular_weight_kg_per_kmol")
+    if molecular_weight is None or molecular_weight <= 0.0:
+        return
+    specific_enthalpy = properties.get("enthalpy_kj_per_kg")
+    if specific_enthalpy is not None:
+        properties.setdefault(
+            "molar_enthalpy_kj_per_kmol",
+            specific_enthalpy * molecular_weight,
+        )
+    specific_entropy = properties.get("entropy_kj_per_kg_k")
+    if specific_entropy is not None:
+        properties.setdefault(
+            "molar_entropy_kj_per_kmol_k",
+            specific_entropy * molecular_weight,
+        )
 
 
 def _build_fallback_phase(
