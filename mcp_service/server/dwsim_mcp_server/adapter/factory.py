@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import sys
 from dataclasses import dataclass
 from typing import Any
 
@@ -19,7 +21,6 @@ from dwsim_mcp_server.adapter.alias_seeder import (
 from dwsim_mcp_server.adapter.dwsim_adapter import DwsimAdapter
 from dwsim_mcp_server.ipc.clr_loader import load_dwsim_worker
 from dwsim_mcp_server.ipc.session_client import SessionClient, _create_logger, _parse_guid
-from dwsim_mcp_server.observability import get_logger
 
 
 @dataclass(frozen=True)
@@ -47,8 +48,11 @@ def _build_session_client(config: DwsimAdapterConfig) -> SessionClient:
 
 
 def _log_property_package_alignment(adapter: DwsimAdapter) -> None:
-    logger = get_logger(__name__)
-
+    # Emit directly to stderr as one JSON line. Project-wide configure_logging
+    # routes structlog through a PrintLoggerFactory that writes to stdout,
+    # which corrupts the MCP stdio transport (Claude Desktop parses every
+    # stdout line as JSON-RPC). Stderr is always safe regardless of
+    # downstream logging configuration.
     try:
         seeded_model_ids = {
             seeded_package.model_id for seeded_package in SEEDED_DWSIM_PROPERTY_PACKAGES
@@ -58,31 +62,28 @@ def _log_property_package_alignment(adapter: DwsimAdapter) -> None:
         )
         runtime_loaded_model_ids = _load_runtime_property_package_model_ids(adapter._session_client)
     except Exception as exc:
-        logger.info(
-            "dwsim_property_package_alignment_unavailable",
+        _emit_alignment_event_to_stderr(
+            event="dwsim_property_package_alignment_unavailable",
             reason=str(exc),
         )
         return
 
-    seeded_not_supported = sorted(seeded_model_ids - worker_supported_model_ids)
-    supported_not_seeded = sorted(worker_supported_model_ids - seeded_model_ids)
-    runtime_not_seeded = sorted(runtime_loaded_model_ids - seeded_model_ids)
-    seeded_not_runtime = sorted(seeded_model_ids - runtime_loaded_model_ids)
-    worker_not_runtime = sorted(worker_supported_model_ids - runtime_loaded_model_ids)
-    runtime_not_worker = sorted(runtime_loaded_model_ids - worker_supported_model_ids)
-
-    logger.info(
-        "dwsim_property_package_alignment",
+    _emit_alignment_event_to_stderr(
+        event="dwsim_property_package_alignment",
         seeded_model_ids=sorted(seeded_model_ids),
         worker_supported_model_ids=sorted(worker_supported_model_ids),
         runtime_loaded_model_ids=sorted(runtime_loaded_model_ids),
-        seeded_not_supported=seeded_not_supported,
-        supported_not_seeded=supported_not_seeded,
-        runtime_not_seeded=runtime_not_seeded,
-        seeded_not_runtime=seeded_not_runtime,
-        worker_not_runtime=worker_not_runtime,
-        runtime_not_worker=runtime_not_worker,
+        seeded_not_supported=sorted(seeded_model_ids - worker_supported_model_ids),
+        supported_not_seeded=sorted(worker_supported_model_ids - seeded_model_ids),
+        runtime_not_seeded=sorted(runtime_loaded_model_ids - seeded_model_ids),
+        seeded_not_runtime=sorted(seeded_model_ids - runtime_loaded_model_ids),
+        worker_not_runtime=sorted(worker_supported_model_ids - runtime_loaded_model_ids),
+        runtime_not_worker=sorted(runtime_loaded_model_ids - worker_supported_model_ids),
     )
+
+
+def _emit_alignment_event_to_stderr(**payload: Any) -> None:
+    print(json.dumps(payload), file=sys.stderr, flush=True)
 
 
 def _load_runtime_property_package_model_ids(session_client: SessionClient) -> set[str]:
@@ -123,3 +124,5 @@ def _require_success(result: Any, *, operation: str) -> None:
         return
     message = str(getattr(result, "Message", f"DWSIM operation failed: {operation}"))
     raise RuntimeError(message)
+
+
