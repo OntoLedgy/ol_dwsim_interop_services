@@ -4,13 +4,25 @@
 param(
     [string]$DwsimPath = "",
     [switch]$DownloadDwsim = $false,
-    [string]$DwsimReleaseUrl = "https://github.com/OntoLedgy/dwsim/releases/download/v9.0.5-mcp/dwsim_binaries.zip"
+    [string]$DwsimReleaseUrl = "https://github.com/OntoLedgy/dwsim/releases/download/v9.0.5-mcp/dwsim_binaries.zip",
+    [switch]$FetchPrebuiltDll,
+    [switch]$BuildFromSource,
+    [string]$WorkerReleaseUrl = "https://github.com/OntoLedgy/ol_dwsim_interop_services/releases/latest/download/DwsimWorker.zip"
 )
 
 Write-Host "====================================" -ForegroundColor Cyan
 Write-Host "DWSIM MCP Server Setup" -ForegroundColor Cyan
 Write-Host "====================================" -ForegroundColor Cyan
 Write-Host ""
+
+if ($FetchPrebuiltDll -and $BuildFromSource) {
+    Write-Host "Error: -FetchPrebuiltDll and -BuildFromSource are mutually exclusive. Choose one." -ForegroundColor Red
+    exit 1
+}
+
+if (-not $FetchPrebuiltDll.IsPresent -and -not $BuildFromSource.IsPresent) {
+    $FetchPrebuiltDll = $true
+}
 
 # Check if running from repo root
 if (-not (Test-Path "mcp_service")) {
@@ -59,12 +71,89 @@ New-Item -ItemType Directory -Path $dwsimBinDir -Force | Out-Null
 Write-Host "Created: $workerDir" -ForegroundColor Green
 Write-Host "Created: $dwsimBinDir" -ForegroundColor Green
 
+function Copy-LocalDwsimWorkerFallback {
+    param(
+        [string]$SourceDir,
+        [string]$DestinationDir
+    )
+
+    if (-not (Test-Path $SourceDir)) {
+        Write-Host "Warning: $SourceDir not found - you may need to build from source" -ForegroundColor Yellow
+        Write-Host "Run: cd mcp_service\dwsim_worker && .\build.bat" -ForegroundColor Yellow
+        return $false
+    }
+
+    Copy-Item "$SourceDir\*" $DestinationDir -Force
+    Write-Host "Copied DwsimWorker DLLs from local prebuilt fallback" -ForegroundColor Green
+    return $true
+}
+
+function Fetch-DwsimWorkerAsset {
+    param(
+        [string]$DestinationDir,
+        [string]$ReleaseUrl,
+        [string]$LocalFallbackDir
+    )
+
+    $targetDllPath = Join-Path $DestinationDir "DwsimWorker.dll"
+    if (Test-Path $targetDllPath) {
+        Write-Host "DwsimWorker.dll already present - skipping fetch/build" -ForegroundColor Green
+        return $true
+    }
+
+    $zipPath = Join-Path $env:TEMP "DwsimWorker.zip"
+    $extractDir = Join-Path $env:TEMP ("DwsimWorker_" + [guid]::NewGuid().ToString("N"))
+
+    try {
+        Write-Host "Fetching prebuilt DwsimWorker.zip from latest release..." -ForegroundColor Yellow
+        Write-Host "Downloading from: $ReleaseUrl" -ForegroundColor Cyan
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        $ProgressPreference = 'SilentlyContinue'
+        Invoke-WebRequest -Uri $ReleaseUrl -OutFile $zipPath -UseBasicParsing
+        $ProgressPreference = 'Continue'
+
+        New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
+        Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
+        Copy-Item (Join-Path $extractDir "*") $DestinationDir -Force
+
+        if (Test-Path $targetDllPath) {
+            Write-Host "Fetched prebuilt DwsimWorker DLLs" -ForegroundColor Green
+            return $true
+        }
+
+        throw "DwsimWorker.dll was not present after extracting $ReleaseUrl"
+    } catch {
+        $ProgressPreference = 'Continue'
+        Write-Host "Warning: Failed to fetch prebuilt DwsimWorker asset - $_" -ForegroundColor Yellow
+        Write-Host "Falling back to local prebuilt\DwsimWorker copy..." -ForegroundColor Yellow
+        return (Copy-LocalDwsimWorkerFallback -SourceDir $LocalFallbackDir -DestinationDir $DestinationDir)
+    } finally {
+        if (Test-Path $zipPath) {
+            Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path $extractDir) {
+            Remove-Item $extractDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+$distWorkerDir = "prebuilt\DwsimWorker"
+
+if (-not $BuildFromSource) {
+    Write-Host ""
+    Write-Host "Fetching prebuilt DwsimWorker DLLs..." -ForegroundColor Yellow
+    [void](Fetch-DwsimWorkerAsset -DestinationDir $workerDir -ReleaseUrl $WorkerReleaseUrl -LocalFallbackDir $distWorkerDir)
+}
+
 # Copy DwsimWorker DLLs from prebuilt folder
 Write-Host ""
 Write-Host "Copying DwsimWorker DLLs..." -ForegroundColor Yellow
 
-$distWorkerDir = "prebuilt\DwsimWorker"
-if (Test-Path $distWorkerDir) {
+$workerDllPath = Join-Path $workerDir "DwsimWorker.dll"
+if (Test-Path $workerDllPath) {
+    Write-Host "DwsimWorker.dll already present - skipping local copy" -ForegroundColor Green
+}
+elseif (Test-Path $distWorkerDir) {
     Copy-Item "$distWorkerDir\*" $workerDir -Force
     Write-Host "Copied DwsimWorker DLLs" -ForegroundColor Green
 } else {

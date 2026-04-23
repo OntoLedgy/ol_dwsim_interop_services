@@ -1,0 +1,94 @@
+name: Build DwsimWorker asset
+
+on:
+  push:
+    tags:
+      - "v*-beta"
+
+jobs:
+  build-and-release:
+    name: Build and release DwsimWorker
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      DWSIM_BINARIES_URL: https://github.com/OntoLedgy/dwsim/releases/download/v9.0.5-mcp/dwsim_binaries.zip
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json', '**/*.csproj', '**/*.sln', '**/nuget.config') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Cache DWSIM binaries
+        id: cache-dwsim
+        uses: actions/cache@v4
+        with:
+          path: mcp_service/dwsim_worker/dwsim_binaries
+          key: dwsim-binaries-v9.0.5-mcp
+
+      - name: Download DWSIM binaries
+        if: steps.cache-dwsim.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $targetDir = "mcp_service/dwsim_worker/dwsim_binaries/x64/Debug"
+          New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+          $zipPath = "$env:TEMP/dwsim_binaries.zip"
+          Invoke-WebRequest -Uri $env:DWSIM_BINARIES_URL -OutFile $zipPath
+          Expand-Archive -Path $zipPath -DestinationPath $targetDir -Force
+          Remove-Item $zipPath
+
+      - name: Create DWSIM config
+        shell: pwsh
+        run: |
+          $configPath = "mcp_service/dwsim_worker/DwsimWorker/dwsim.config.json"
+          $absolutePath = (Resolve-Path "mcp_service/dwsim_worker/dwsim_binaries/x64/Debug").Path -replace '\\', '/'
+          @{ dwsim_path = $absolutePath } | ConvertTo-Json | Set-Content $configPath
+
+      - name: Build
+        working-directory: mcp_service/dwsim_worker
+        shell: cmd
+        run: build.bat
+
+      - name: Package DwsimWorker.zip
+        shell: pwsh
+        run: |
+          $workerOutputDir = "mcp_service/dwsim_worker/DwsimWorker/bin/Debug"
+          $zipPath = "DwsimWorker.zip"
+          $filesToPackage = @(
+            (Join-Path $workerOutputDir "DwsimWorker.dll"),
+            (Join-Path $workerOutputDir "DwsimWorker.dll.config"),
+            (Join-Path $workerOutputDir "DwsimWorker.xml")
+          )
+
+          foreach ($file in $filesToPackage) {
+            if (-not (Test-Path $file)) {
+              throw "Required build output not found: $file"
+            }
+          }
+
+          if (Test-Path $zipPath) {
+            Remove-Item $zipPath -Force
+          }
+
+          Compress-Archive -Path $filesToPackage -DestinationPath $zipPath
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: Prebuilt DwsimWorker.dll for Route B beta testers. See DIS-28.
+          files: DwsimWorker.zip
+          prerelease: true
