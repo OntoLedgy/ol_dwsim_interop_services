@@ -377,61 +377,9 @@ def _phase_properties_to_dict(phase_key, phase, compound_names: List[str]) -> Di
         compound = compound_names[idx] if idx < len(compound_names) else f"component_{idx + 1}"
         composition.append({"compound": str(compound), "mole_fraction": float(fraction)})
 
-    properties = {}
-    molar_flow = getattr(phase, "MolarFlowMolPerSec", None)
-    if molar_flow is not None:
-        properties["molar_flow_mol_per_s"] = float(molar_flow)
-    mass_flow = getattr(phase, "MassFlowKgPerSec", None)
-    if mass_flow is not None:
-        properties["mass_flow_kg_per_s"] = float(mass_flow)
-    volumetric_flow = getattr(phase, "VolumetricFlowM3PerSec", None)
-    if volumetric_flow is not None:
-        properties["volumetric_flow_m3_per_s"] = float(volumetric_flow)
-    mass_fraction = getattr(phase, "MassFraction", None)
-    if mass_fraction is not None:
-        properties["mass_fraction"] = float(mass_fraction)
-    volumetric_fraction = getattr(phase, "VolumetricFraction", None)
-    if volumetric_fraction is not None:
-        properties["volumetric_fraction"] = float(volumetric_fraction)
-    density = getattr(phase, "DensityKgPerM3", None)
-    if density is not None:
-        properties["density_kg_per_m3"] = float(density)
-    viscosity = getattr(phase, "ViscosityPaS", None)
-    if viscosity is not None:
-        properties["viscosity_pa_s"] = float(viscosity)
-    molecular_weight = getattr(phase, "MolecularWeightKgPerKmol", None)
-    if molecular_weight is not None:
-        properties["molecular_weight_kg_per_kmol"] = float(molecular_weight)
-    enthalpy = getattr(phase, "EnthalpyKJPerKg", None)
-    if enthalpy is not None:
-        properties["enthalpy_kj_per_kg"] = float(enthalpy)
-    molar_enthalpy = getattr(phase, "MolarEnthalpyKJPerKmol", None)
-    if molar_enthalpy is not None:
-        properties["molar_enthalpy_kj_per_kmol"] = float(molar_enthalpy)
-    entropy = getattr(phase, "EntropyKJPerKgK", None)
-    if entropy is not None:
-        properties["entropy_kj_per_kg_k"] = float(entropy)
-    molar_entropy = getattr(phase, "MolarEntropyKJPerKmolK", None)
-    if molar_entropy is not None:
-        properties["molar_entropy_kj_per_kmol_k"] = float(molar_entropy)
-    gibbs_free_energy = getattr(phase, "GibbsFreeEnergy", None)
-    if gibbs_free_energy is not None:
-        properties["gibbs_free_energy"] = float(gibbs_free_energy)
-    helmholtz_energy = getattr(phase, "HelmholtzEnergy", None)
-    if helmholtz_energy is not None:
-        properties["helmholtz_energy"] = float(helmholtz_energy)
-    internal_energy = getattr(phase, "InternalEnergy", None)
-    if internal_energy is not None:
-        properties["internal_energy"] = float(internal_energy)
-    k_value = getattr(phase, "KValue", None)
-    if k_value is not None:
-        properties["k_value"] = float(k_value)
-    fugacity = getattr(phase, "Fugacity", None)
-    if fugacity is not None:
-        properties["fugacity"] = float(fugacity)
-    activity_coefficient = getattr(phase, "ActivityCoefficient", None)
-    if activity_coefficient is not None:
-        properties["activity_coefficient"] = float(activity_coefficient)
+    from dwsim_mcp_server.adapter.translators import build_phase_properties_from_dto
+
+    properties = build_phase_properties_from_dto(phase)
 
     return {
         "phase_label": phase_name,

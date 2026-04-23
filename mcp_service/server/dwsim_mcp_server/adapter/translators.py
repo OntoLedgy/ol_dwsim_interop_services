@@ -86,6 +86,27 @@ _PROPERTY_MAP: dict[str, tuple[str, str | None, float]] = {
     "activity_coefficient": ("activity_coefficient", None, 1.0),
 }
 
+_PHASE_SCALAR_PROPERTY_ATTRIBUTE_BY_KEY: tuple[tuple[str, str], ...] = (
+    ("molar_flow_mol_per_s", "MolarFlowMolPerSec"),
+    ("mass_flow_kg_per_s", "MassFlowKgPerSec"),
+    ("volumetric_flow_m3_per_s", "VolumetricFlowM3PerSec"),
+    ("mass_fraction", "MassFraction"),
+    ("volumetric_fraction", "VolumetricFraction"),
+    ("density_kg_per_m3", "DensityKgPerM3"),
+    ("viscosity_pa_s", "ViscosityPaS"),
+    ("molecular_weight_kg_per_kmol", "MolecularWeightKgPerKmol"),
+    ("enthalpy_kj_per_kg", "EnthalpyKJPerKg"),
+    ("molar_enthalpy_kj_per_kmol", "MolarEnthalpyKJPerKmol"),
+    ("entropy_kj_per_kg_k", "EntropyKJPerKgK"),
+    ("molar_entropy_kj_per_kmol_k", "MolarEntropyKJPerKmolK"),
+    ("gibbs_free_energy", "GibbsFreeEnergy"),
+    ("helmholtz_energy", "HelmholtzEnergy"),
+    ("internal_energy", "InternalEnergy"),
+    ("k_value", "KValue"),
+    ("fugacity", "Fugacity"),
+    ("activity_coefficient", "ActivityCoefficient"),
+)
+
 
 def dwsim_result_to_flash_result(
     raw_result: DwsimFlashResultDict,
@@ -213,6 +234,17 @@ def dwsim_properties_to_property_bundle(
     return PropertyBundle(properties=tuple(properties))
 
 
+def build_phase_properties_from_dto(phase: object) -> dict[str, float]:
+    """Project a DWSIM phase DTO into canonical property keys."""
+
+    properties = {
+        key: float(value)
+        for key, value in _iter_mapping(getattr(phase, "Properties", {}))
+    }
+    _set_missing_phase_scalar_properties(phase=phase, properties=properties)
+    return properties
+
+
 def _dwsim_composition_to_canonical(
     composition_entries: list[DwsimCompositionEntry],
 ) -> Composition:
@@ -242,6 +274,33 @@ def _require_density(raw_properties: Mapping[str, float]) -> float:
     if density is None or density <= 0.0:
         raise AdapterCapabilityError("DWSIM phase payload does not include a positive density")
     return density
+
+
+def _iter_mapping(mapping: object) -> list[tuple[str, object]]:
+    if isinstance(mapping, dict):
+        return [(str(key), value) for key, value in mapping.items()]
+
+    keys = getattr(mapping, "Keys", None)
+    if keys is not None:
+        return [(str(key), mapping[key]) for key in list(keys)]
+
+    items = getattr(mapping, "items", None)
+    if callable(items):
+        return [(str(key), value) for key, value in items()]
+
+    return []
+
+
+def _set_missing_phase_scalar_properties(
+    *,
+    phase: object,
+    properties: dict[str, float],
+) -> None:
+    for property_key, attribute_name in _PHASE_SCALAR_PROPERTY_ATTRIBUTE_BY_KEY:
+        scalar_value = getattr(phase, attribute_name, None)
+        if scalar_value is None:
+            continue
+        properties.setdefault(property_key, float(scalar_value))
 
 
 def _build_fallback_phase(

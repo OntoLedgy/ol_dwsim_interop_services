@@ -1,4 +1,5 @@
 import pytest
+from types import SimpleNamespace
 
 from ol_simulator_interop_services.domain.registries import (
     InMemoryComponentRegistry,
@@ -11,6 +12,7 @@ from ol_simulator_interop_services.domain.models import (
     CompositionEntry,
     FlashProblem,
     PressureEnthalpyCondition,
+    Provenance,
     PropertyPackageSpec,
     TemperaturePressureCondition,
 )
@@ -20,7 +22,8 @@ from dwsim_mcp_server.adapter.alias_seeder import (
     DWSIM_PARAMETER_SOURCE_NAME,
     DWSIM_PARAMETER_SOURCE_REVISION,
 )
-from dwsim_mcp_server.adapter.dwsim_adapter import DwsimAdapter
+from dwsim_mcp_server.adapter.dwsim_adapter import DwsimAdapter, _flash_result_from_dto
+from dwsim_mcp_server.adapter.translators import dwsim_result_to_flash_result
 
 
 class FakeSessionClient:
@@ -256,3 +259,48 @@ async def test_phase_envelope_translates_mock_points():
     assert envelope.points[0].phase_kinds[0].value == "liquid"
     assert envelope.points[0].phase_kinds[1].value == "vapor"
     assert session_client.phase_envelope_calls[0]["package_name"] == "Peng-Robinson"
+
+
+def test_flash_result_from_dto_projects_density_from_named_scalar_attribute():
+    dto = SimpleNamespace(
+        CalculationType="TP",
+        TemperatureK=310.0,
+        PressurePa=101325.0,
+        Converged=True,
+        Phases=[
+            SimpleNamespace(
+                PhaseLabel="Vapor",
+                PhaseFraction=1.0,
+                Composition=[
+                    SimpleNamespace(
+                        Compound="Methane",
+                        MoleFraction=1.0,
+                    )
+                ],
+                Properties={},
+                DensityKgPerM3=4.2,
+                ViscosityPaS=1.1e-5,
+            )
+        ],
+    )
+
+    raw_result = _flash_result_from_dto(dto)
+    result = dwsim_result_to_flash_result(
+        raw_result,
+        provenance=Provenance(
+            backend_id="dwsim",
+            property_package_spec=PropertyPackageSpec(
+                model_id="peng-robinson",
+                parameter_source_id="builtin-source",
+                revision="builtin",
+            ),
+            wall_time_seconds=0.1,
+        ),
+        fallback_composition=_composition(),
+    )
+
+    phase = result.phases[0]
+
+    assert raw_result["phases"][0]["properties"]["density_kg_per_m3"] > 0.0
+    assert phase.density_kg_per_m3 > 0.0
+    assert phase.properties.get("density") is not None

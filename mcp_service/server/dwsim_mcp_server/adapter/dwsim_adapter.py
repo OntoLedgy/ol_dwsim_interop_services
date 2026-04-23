@@ -46,6 +46,7 @@ from dwsim_mcp_server.adapter.alias_seeder import (
 from dwsim_mcp_server.adapter.translators import (
     DwsimFlashResultDict,
     DwsimPhaseEnvelopePointDict,
+    build_phase_properties_from_dto,
     composition_to_dwsim,
     dwsim_properties_to_property_bundle,
     dwsim_result_to_flash_result,
@@ -741,10 +742,7 @@ def _flash_result_from_dto(dto: object) -> DwsimFlashResultDict:
                 }
                 for component in list(getattr(phase, "Composition", []) or [])
             ],
-            "properties": {
-                key: float(value)
-                for key, value in _iter_mapping(getattr(phase, "Properties", {}))
-            },
+            "properties": build_phase_properties_from_dto(phase),
         }
         for phase in raw_phases
     ]
