@@ -5,12 +5,13 @@ on:
     tags:
       - "v*.*.*"
 
+env:
+  DWSIM_BINARIES_URL: https://github.com/OntoLedgy/dwsim/releases/download/v9.0.5-mcp/dwsim_binaries.zip
+
 jobs:
   build-csharp:
     name: Build (C#)
     runs-on: windows-latest
-    env:
-      DWSIM_BINARIES_URL: https://github.com/OntoLedgy/dwsim/releases/download/v9.0.5-mcp/dwsim_binaries.zip
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -108,6 +109,24 @@ jobs:
           path: mcp_service/dwsim_worker/DwsimWorker/bin/Debug
       - name: Package prebuilt binaries
         run: python scripts/package_prebuilt.py
+      - name: Create standalone DwsimWorker zip
+        shell: pwsh
+        run: |
+          $version = "${{ steps.validate-tag.outputs.version }}"
+          $sourceDir = "mcp_service/server/prebuilt/DwsimWorker"
+          $zipDir = "mcp_service/server/dist"
+          $zipPath = Join-Path $zipDir "DwsimWorker-$version.zip"
+
+          if (-not (Test-Path (Join-Path $sourceDir "property_packages.toml"))) {
+            throw "property_packages.toml not found in packaged worker payload."
+          }
+          if (Test-Path (Join-Path $sourceDir "dwsim.config.json")) {
+            throw "dwsim.config.json must not be included in the packaged worker payload."
+          }
+
+          New-Item -ItemType Directory -Path $zipDir -Force | Out-Null
+          if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+          Compress-Archive -Path (Join-Path $sourceDir "*") -DestinationPath $zipPath -CompressionLevel Optimal
       - name: Install build tooling
         working-directory: mcp_service/server
         run: |
@@ -121,6 +140,11 @@ jobs:
         with:
           name: python-wheel
           path: mcp_service/server/dist/*.whl
+      - name: Upload standalone DwsimWorker zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: dwsimworker-zip
+          path: mcp_service/server/dist/DwsimWorker-*.zip
 
   publish-pypi:
     name: Publish (PyPI)
@@ -154,18 +178,42 @@ jobs:
         with:
           name: python-wheel
           path: dist
+      - name: Download standalone DwsimWorker zip
+        uses: actions/download-artifact@v4
+        with:
+          name: dwsimworker-zip
+          path: dist
       - name: Create source zip
         run: |
           git archive --format=zip --output "dist/dwsim-mcp-server-${{ needs.build-python.outputs.version }}-source.zip" HEAD
       - name: Prepare release notes
+        shell: bash
         run: |
-          cat <<'EOF' > release-notes.md
+          dwsim_release_url="${DWSIM_BINARIES_URL%/dwsim_binaries.zip}"
+          dwsim_version="${dwsim_release_url##*/}"
+          wheel_file="$(basename dist/*.whl)"
+          source_file="dwsim-mcp-server-${{ needs.build-python.outputs.version }}-source.zip"
+          worker_zip="DwsimWorker-${{ needs.build-python.outputs.version }}.zip"
+          release_base_url="${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}"
+          setup_url="${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/mcp_service/dwsim_worker/SETUP.md"
+
+          cat <<EOF > release-notes.md
           ## DWSIM MCP Server ${{ needs.build-python.outputs.version }}
 
-          This release contains:
-          - Prebuilt DwsimWorker.dll packaged into the Python wheel
-          - Updated Python package published to PyPI
-          - Source archive for this tag
+          ### Compatibility
+          | Component | Version | Notes |
+          | --- | --- | --- |
+          | DWSIM MCP Server | `${{ needs.build-python.outputs.version }}` | Published from tag `${{ github.ref_name }}` |
+          | Compatible DWSIM build | [`${dwsim_version}`](${dwsim_release_url}) | Linked from `DWSIM_BINARIES_URL` |
+
+          ### Assets
+          - [`${wheel_file}`](${release_base_url}/${wheel_file}) - Python wheel with the prebuilt DwsimWorker payload bundled inside.
+          - [`${source_file}`](${release_base_url}/${source_file}) - Source archive for this tag.
+          - [`${worker_zip}`](${release_base_url}/${worker_zip}) - Standalone filtered worker binaries, including `property_packages.toml`.
+
+          ### How to install
+          - End users: follow [Installing from a release](${setup_url}#installing-from-a-release).
+          - Contributors: follow [Building from source](${setup_url}#building-from-source).
           EOF
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
@@ -174,3 +222,4 @@ jobs:
           files: |
             dist/*.whl
             dist/*-source.zip
+            dist/DwsimWorker-*.zip
