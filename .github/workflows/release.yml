@@ -161,7 +161,7 @@ jobs:
     if: needs.build-python.outputs.tag-valid == 'true'
     environment:
       name: pypi
-      url: https://pypi.org/project/dwsim-mcp-server/
+      url: https://pypi.org/project/ol-dwsim-mcp-server/
     permissions:
       id-token: write
     steps:
@@ -196,14 +196,14 @@ jobs:
           path: dist
       - name: Create source zip
         run: |
-          git archive --format=zip --output "dist/dwsim-mcp-server-${{ needs.build-python.outputs.version }}-source.zip" HEAD
+          git archive --format=zip --output "dist/ol-dwsim-mcp-server-${{ needs.build-python.outputs.version }}-source.zip" HEAD
       - name: Prepare release notes
         shell: bash
         run: |
           dwsim_release_url="${DWSIM_BINARIES_URL%/dwsim_binaries.zip}"
           dwsim_version="${dwsim_release_url##*/}"
           wheel_file="$(basename dist/*.whl)"
-          source_file="dwsim-mcp-server-${{ needs.build-python.outputs.version }}-source.zip"
+          source_file="ol-dwsim-mcp-server-${{ needs.build-python.outputs.version }}-source.zip"
           worker_zip="DwsimWorker-${{ needs.build-python.outputs.version }}.zip"
           release_base_url="${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}"
           setup_url="${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/mcp_service/dwsim_worker/SETUP.md"

@@ -1,4 +1,4 @@
-﻿"""CLI package for dwsim-mcp-server."""
+﻿"""CLI package for ol-dwsim-mcp-server."""
 
 from .main import app
 

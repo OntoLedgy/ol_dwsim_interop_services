@@ -15,7 +15,7 @@ def runner():
 
 
 class _FakeServiceManager:
-    SERVICE_NAME = "dwsim-mcp-server"
+    SERVICE_NAME = "ol-dwsim-mcp-server"
 
     def __init__(self, console=None) -> None:
         self.console = console

@@ -13,7 +13,7 @@ RELEASE_INFO_URI = "release://info"
 RELEASE_INFO_NAME = "Release Information"
 RELEASE_INFO_DESCRIPTION = (
     "Get the package, version, commit SHA, source URL, and license for "
-    "this running dwsim-mcp-server instance."
+    "this running ol-dwsim-mcp-server instance."
 )
 RELEASE_INFO_MIME_TYPE = "application/json"
 

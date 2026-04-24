@@ -15,7 +15,7 @@ from rich.console import Console
 class WindowsServiceManager:
     """Manage the dwsim-mcp server as a Windows service via NSSM."""
 
-    SERVICE_NAME = "dwsim-mcp-server"
+    SERVICE_NAME = "ol-dwsim-mcp-server"
 
     def __init__(self, console: Console | None = None) -> None:
         self._console = console or Console()

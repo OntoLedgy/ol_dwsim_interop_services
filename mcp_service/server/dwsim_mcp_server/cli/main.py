@@ -1,4 +1,4 @@
-﻿"""Typer CLI entry point for dwsim-mcp-server."""
+﻿"""Typer CLI entry point for ol-dwsim-mcp-server."""
 
 from __future__ import annotations
 

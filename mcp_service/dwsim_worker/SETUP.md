@@ -15,7 +15,7 @@ Choose **Building from source** if you are editing the worker, debugging the .NE
 
 Tagged releases publish three assets:
 
-1. A Python wheel for `dwsim-mcp-server`
+1. A Python wheel for `ol-dwsim-mcp-server`
 2. A source archive for the tag
 3. `DwsimWorker-<version>.zip`, containing the filtered worker build output
 
@@ -41,7 +41,7 @@ python -m pip install <downloaded-wheel-file.whl>
 Or install the tagged version from PyPI:
 
 ```cmd
-python -m pip install dwsim-mcp-server==<version>
+python -m pip install ol-dwsim-mcp-server==<version>
 ```
 
 #### Step 2: Point the package at DWSIM

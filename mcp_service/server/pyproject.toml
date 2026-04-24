@@ -1,5 +1,5 @@
 [project]
-name = "dwsim-mcp-server"
+name = "ol-dwsim-mcp-server"
 version = "0.1.0"
 description = "Model Context Protocol server for DWSIM chemical process simulation"
 authors = [{name = "OntoLedgy AI", email = "development@ontoledgy.ai"}]

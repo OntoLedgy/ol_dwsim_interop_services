@@ -1,6 +1,6 @@
 # Installation
 
-This guide covers Windows and development setup for dwsim-mcp-server.
+This guide covers Windows and development setup for ol-dwsim-mcp-server.
 
 > **Note:** DWSIM requires Windows with Desktop Experience (full GUI). See [Windows Deployment Guide](windows-deployment.md) for detailed platform requirements and server setup.
 
@@ -21,13 +21,13 @@ CLI commands available: `run`, `version`, `setup`, `doctor`, `init`, `service`.
 ### 1) Install the package
 
 ```powershell
-python -m pip install dwsim-mcp-server
+python -m pip install ol-dwsim-mcp-server
 ```
 
 Expected output (excerpt):
 
 ```text
-Requirement already satisfied: dwsim-mcp-server in ... (0.1.0)
+Requirement already satisfied: ol-dwsim-mcp-server in ... (0.1.0)
 ```
 
 ### 2) Download DWSIM binaries and create config
@@ -123,7 +123,7 @@ Expected output (excerpt):
 Updating dependencies
 Resolving dependencies...
 Writing lock file
-Installing the current project: dwsim-mcp-server (0.1.0)
+Installing the current project: ol-dwsim-mcp-server (0.1.0)
 ```
 
 ```powershell

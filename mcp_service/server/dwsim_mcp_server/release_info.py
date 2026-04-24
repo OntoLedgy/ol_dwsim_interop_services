@@ -1,11 +1,11 @@
-"""Release metadata for the running dwsim-mcp-server package."""
+"""Release metadata for the running ol-dwsim-mcp-server package."""
 
 from __future__ import annotations
 
 import os
 from importlib import import_module, metadata
 
-PACKAGE_NAME = "dwsim-mcp-server"
+PACKAGE_NAME = "ol-dwsim-mcp-server"
 SOURCE_URL = "https://github.com/OntoLedgy/ol_dwsim_interop_services"
 LICENSE = "AGPL-3.0-or-later"
 COMMIT_SHA_ENV_VAR = "DWSIM_MCP_COMMIT_SHA"

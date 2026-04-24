@@ -30,7 +30,7 @@ def create_mcp_server(
 ) -> FastMCP:
     auth_provider = _build_auth_provider(settings, auth_config)
     server = FastMCP(
-        name="dwsim-mcp-server",
+        name="ol-dwsim-mcp-server",
         lifespan=app_lifespan,
         auth=auth_provider,
     )

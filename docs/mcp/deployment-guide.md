@@ -154,8 +154,8 @@ CMD ["uv", "run", "python", "-m", "dwsim_mcp_server.server"]
 
 Build and run:
 ```bash
-docker build -t dwsim-mcp-server .
-docker run -p 8000:8000 --env-file .env dwsim-mcp-server
+docker build -t ol-dwsim-mcp-server .
+docker run -p 8000:8000 --env-file .env ol-dwsim-mcp-server
 ```
 
 ### Option D: Docker Compose
