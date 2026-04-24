@@ -35,9 +35,66 @@ Each tag publishes three assets on the [Releases page](https://github.com/OntoLe
 
 The DWSIM version each release links against is listed in the release notes as a compatibility row.
 
+### From a cloned checkout (pre-release testing)
+
+Before the first PyPI release, or for internal testers with repo access, run from a local clone. The server depends on the sibling [`ol_simulator_interop_services`](https://github.com/OntoLedgy/ol_simulator_interop_services) package; `uv` installs it as an editable local dependency via [`[tool.uv.sources]`](mcp_service/server/pyproject.toml) pointing at a sibling checkout.
+
+**1. Clone both repos side-by-side.** The relative path `../../../ol_simulator_interop_services` from `mcp_service/server/pyproject.toml` must resolve to the interop package's repo root:
+
+```powershell
+# A parent directory for both
+mkdir C:\dev\ontoledgy ; cd C:\dev\ontoledgy
+
+git clone https://github.com/OntoLedgy/ol_simulator_interop_services.git
+git clone https://github.com/OntoLedgy/ol_dwsim_interop_services.git
+```
+
+This gives you `C:\dev\ontoledgy\ol_simulator_interop_services` and `C:\dev\ontoledgy\ol_dwsim_interop_services` — the uv source path resolves correctly.
+
+**2. Set up the Python environment:**
+
+```powershell
+cd ol_dwsim_interop_services\mcp_service\server
+uv sync
+```
+
+`uv sync` installs all runtime deps plus an editable install of the local `ol-simulator-interop-services`. It also registers the `dwsim-mcp` entry point in `.venv\Scripts\`.
+
+**3. Build the .NET worker** (full .NET prerequisites listed under [Development](#development)):
+
+```powershell
+cd ..\dwsim_worker
+.\build.bat
+```
+
+**4. Configure DWSIM.** Copy [`mcp_service/dwsim_worker/dwsim.config.json.sample`](mcp_service/dwsim_worker/dwsim.config.json.sample) to `dwsim.config.json` (gitignored) and set `dwsim_path` to your DWSIM install or build folder — see [`mcp_service/dwsim_worker/SETUP.md`](mcp_service/dwsim_worker/SETUP.md) for detail.
+
+**5. Verify and run:**
+
+```powershell
+cd ..\server
+.\.venv\Scripts\dwsim-mcp.exe doctor
+.\.venv\Scripts\dwsim-mcp.exe run
+```
+
+**6. Point an MCP client at the checkout.** Use the absolute path to the venv's `dwsim-mcp.exe` rather than relying on PATH. Example Claude Desktop config:
+
+```json
+{
+  "mcpServers": {
+    "dwsim-dev": {
+      "command": "C:\\dev\\ontoledgy\\ol_dwsim_interop_services\\mcp_service\\server\\.venv\\Scripts\\dwsim-mcp.exe",
+      "args": ["run"]
+    }
+  }
+}
+```
+
+Edits to Python source are picked up immediately (editable install). Edits to `shared/property_packages.toml` or C# code require `build.bat` again so the new artifacts land in `DwsimWorker/bin/Debug/`.
+
 ### From source (contributors)
 
-See the [Development](#development) section below.
+For iterative development and contributions, see the [Development](#development) section below — it covers the same setup plus the test suites, linting, and release flow.
 
 ---
 
