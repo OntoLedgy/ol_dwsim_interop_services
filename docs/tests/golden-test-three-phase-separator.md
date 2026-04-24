@@ -211,9 +211,9 @@ If this test fails:
 
 ## Related Documentation
 
-- [Bug Fix: flash-calculation-failure](.spec-workflow/bugs/flash-calculation-failure.md)
-- [Threading Fix Report](threading-fix-report.md)
-- [MCP Tools Reference](api/mcp-tools.md)
+- [Bug Fix: flash-calculation-failure](../../.spec-workflow/bugs/flash-calculation-failure.md)
+- [Threading Fix Report](../architecture/threading-fix-report.md)
+- [MCP Tools Reference](../mcp/mcp-tools.md)
 
 ## Automation
 
