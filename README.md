@@ -12,11 +12,17 @@ Implements the `SimulatorAdapter` protocol defined by [`ol-simulator-interop-ser
 
 ### From PyPI (recommended for end users)
 
+Install via [`pipx`](https://pipx.pypa.io/) or [`uv tool`](https://docs.astral.sh/uv/guides/tools/) so the `dwsim-mcp` command lands on the system `PATH` — MCP clients like Claude Desktop need to be able to launch it without inheriting a venv:
+
 ```powershell
-pip install ol-dwsim-mcp-server
+pipx install ol-dwsim-mcp-server
+# or
+uv tool install ol-dwsim-mcp-server
 ```
 
-That pulls the prebuilt `DwsimWorker.dll` bundled with the wheel. You still need to provide a DWSIM installation yourself — the engine's own binaries can't be redistributed. Two paths:
+Plain `pip install ol-dwsim-mcp-server` into a venv also works, but you'll need to reference the venv's `dwsim-mcp.exe` by absolute path when configuring MCP clients (see [Connecting to AI assistants](#connecting-to-ai-assistants)).
+
+All three install modes pull the prebuilt `DwsimWorker.dll` bundled in the wheel. DWSIM's own engine binaries can't be redistributed — you supply those yourself:
 
 1. **Use an existing DWSIM install.** Set `DWSIM_PATH` to your DWSIM directory (e.g. `C:\Program Files\DWSIM9`) and run `dwsim-mcp run`.
 2. **Build DWSIM from source.** Clone [DanWBR/dwsim](https://github.com/DanWBR/dwsim), build, and point `DWSIM_PATH` at the build output.
@@ -35,9 +41,9 @@ Each tag publishes three assets on the [Releases page](https://github.com/OntoLe
 
 The DWSIM version each release links against is listed in the release notes as a compatibility row.
 
-### From a cloned checkout (pre-release testing)
+### From a cloned checkout (development)
 
-Before the first PyPI release, or for internal testers with repo access, run from a local clone. The server depends on the sibling [`ol_simulator_interop_services`](https://github.com/OntoLedgy/ol_simulator_interop_services) package; `uv` installs it as an editable local dependency via [`[tool.uv.sources]`](mcp_service/server/pyproject.toml) pointing at a sibling checkout.
+Run from a local clone if you're modifying the server, stress-testing before a release, or can't use `pipx`/`uv tool`. The server depends on the sibling [`ol_simulator_interop_services`](https://github.com/OntoLedgy/ol_simulator_interop_services) package; `uv` installs it as an editable local dependency via [`[tool.uv.sources]`](mcp_service/server/pyproject.toml) pointing at a sibling checkout.
 
 **1. Clone both repos side-by-side.** The relative path `../../../ol_simulator_interop_services` from `mcp_service/server/pyproject.toml` must resolve to the interop package's repo root:
 
@@ -77,24 +83,11 @@ cd ..\server
 .\.venv\Scripts\dwsim-mcp.exe run
 ```
 
-**6. Point an MCP client at the checkout.** Use the absolute path to the venv's `dwsim-mcp.exe` rather than relying on PATH. Example Claude Desktop config:
-
-```json
-{
-  "mcpServers": {
-    "dwsim-dev": {
-      "command": "C:\\dev\\ontoledgy\\ol_dwsim_interop_services\\mcp_service\\server\\.venv\\Scripts\\dwsim-mcp.exe",
-      "args": ["run"]
-    }
-  }
-}
-```
+**6. Point an MCP client at the checkout.** Use the absolute-path variant in [Connecting to AI assistants](#connecting-to-ai-assistants), with `command` set to `C:\dev\ontoledgy\ol_dwsim_interop_services\mcp_service\server\.venv\Scripts\dwsim-mcp.exe`.
 
 Edits to Python source are picked up immediately (editable install). Edits to `shared/property_packages.toml` or C# code require `build.bat` again so the new artifacts land in `DwsimWorker/bin/Debug/`.
 
-### From source (contributors)
-
-For iterative development and contributions, see the [Development](#development) section below — it covers the same setup plus the test suites, linting, and release flow.
+For deeper contributor workflow (tests, linting, release flow), see the [Development](#development) section below.
 
 ---
 
@@ -134,13 +127,28 @@ Prints package name, version, commit SHA, source URL, and license — the AGPL �
 | **VS Code Copilot** | `settings.json` or `mcp.json` |
 | **OpenAI Codex CLI** | `~/.codex/config.json` |
 
-Example Claude Desktop config:
+The config form depends on how you installed the server.
+
+**If installed with `pipx` or `uv tool install`** — `dwsim-mcp` is on PATH and Claude Desktop can launch it by name:
 
 ```json
 {
   "mcpServers": {
     "dwsim": {
       "command": "dwsim-mcp",
+      "args": ["run"]
+    }
+  }
+}
+```
+
+**If installed with `pip install` into a venv, or running from a cloned checkout** — use the absolute path to the venv's `dwsim-mcp.exe` so Claude Desktop's subprocess doesn't need a PATH entry or venv activation:
+
+```json
+{
+  "mcpServers": {
+    "dwsim": {
+      "command": "C:\\path\\to\\your\\.venv\\Scripts\\dwsim-mcp.exe",
       "args": ["run"]
     }
   }
