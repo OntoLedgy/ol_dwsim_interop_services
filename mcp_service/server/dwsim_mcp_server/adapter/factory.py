@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import json
-import sys
 from dataclasses import dataclass
-from typing import Any
 
 from ol_simulator_interop_services.domain.registries import (
     InMemoryComponentRegistry,
@@ -21,6 +18,7 @@ from dwsim_mcp_server.adapter.alias_seeder import (
 from dwsim_mcp_server.adapter.dwsim_adapter import DwsimAdapter
 from dwsim_mcp_server.ipc.clr_loader import load_dwsim_worker
 from dwsim_mcp_server.ipc.session_client import SessionClient, _create_logger, _parse_guid
+from dwsim_mcp_server.observability.stderr_events import emit_event_to_stderr
 
 
 @dataclass(frozen=True)
@@ -62,13 +60,13 @@ def _log_property_package_alignment(adapter: DwsimAdapter) -> None:
         )
         runtime_loaded_model_ids = _load_runtime_property_package_model_ids(adapter._session_client)
     except Exception as exc:
-        _emit_alignment_event_to_stderr(
+        emit_event_to_stderr(
             event="dwsim_property_package_alignment_unavailable",
             reason=str(exc),
         )
         return
 
-    _emit_alignment_event_to_stderr(
+    emit_event_to_stderr(
         event="dwsim_property_package_alignment",
         seeded_model_ids=sorted(seeded_model_ids),
         worker_supported_model_ids=sorted(worker_supported_model_ids),
@@ -80,10 +78,6 @@ def _log_property_package_alignment(adapter: DwsimAdapter) -> None:
         worker_not_runtime=sorted(worker_supported_model_ids - runtime_loaded_model_ids),
         runtime_not_worker=sorted(runtime_loaded_model_ids - worker_supported_model_ids),
     )
-
-
-def _emit_alignment_event_to_stderr(**payload: Any) -> None:
-    print(json.dumps(payload), file=sys.stderr, flush=True)
 
 
 def _load_runtime_property_package_model_ids(session_client: SessionClient) -> set[str]:
@@ -124,5 +118,4 @@ def _require_success(result: Any, *, operation: str) -> None:
         return
     message = str(getattr(result, "Message", f"DWSIM operation failed: {operation}"))
     raise RuntimeError(message)
-
 

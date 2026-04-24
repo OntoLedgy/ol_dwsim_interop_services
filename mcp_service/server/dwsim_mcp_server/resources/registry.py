@@ -14,6 +14,12 @@ from dwsim_mcp_server.resources.base import (
     ResourceInvalidStateError,
 )
 from dwsim_mcp_server.resources.docs import DocsProvider
+from dwsim_mcp_server.resources.release_info import (
+    RELEASE_INFO_URI,
+    get_release_info_resource,
+    get_release_info_result,
+    register_release_info_resource,
+)
 from dwsim_mcp_server.resources.samples import SamplesProvider
 from dwsim_mcp_server.resources.results import ResultsProvider
 from dwsim_mcp_server.resources.ui_resource_provider import UiResourceProvider
@@ -59,7 +65,7 @@ def _register_server_resources(server: Server, dependencies: Any) -> None:
 
     @server.list_resources()
     async def list_resources() -> List[types.Resource]:
-        resources: List[types.Resource] = []
+        resources: List[types.Resource] = [get_release_info_resource()]
 
         for provider in providers:
             try:
@@ -85,6 +91,8 @@ def _register_server_resources(server: Server, dependencies: Any) -> None:
         protocol = parsed.scheme  # e.g., "resource", "ui"
 
         try:
+            if uri == RELEASE_INFO_URI:
+                return get_release_info_result()
             if protocol == "ui":
                 return await ui_provider.read_resource(uri)
             if scheme == "docs":
@@ -95,7 +103,12 @@ def _register_server_resources(server: Server, dependencies: Any) -> None:
                 return await results_provider.read_resource(uri)
             raise ResourceNotFoundError(
                 f"Unknown resource scheme: '{scheme}'",
-                suggestions=["resource://docs", "resource://cases", "resource://session"],
+                suggestions=[
+                    RELEASE_INFO_URI,
+                    "resource://docs",
+                    "resource://cases",
+                    "resource://session",
+                ],
             )
         except ResourceNotFoundError as e:
             logger.warning("resource_not_found", uri=uri, message=e.message)
@@ -129,6 +142,7 @@ def _register_fastmcp_resources(server) -> None:
         case_storage_roots=[],
     )
     _ui_provider = UiResourceProvider(apps_path=str(_pkg_root / "apps" / "templates"))
+    register_release_info_resource(server)
 
     @server.resource(
         "resource://docs",

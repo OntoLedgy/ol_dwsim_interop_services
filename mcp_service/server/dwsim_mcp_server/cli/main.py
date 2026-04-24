@@ -6,13 +6,13 @@ import difflib
 import platform
 import shutil
 from pathlib import Path
-from importlib import metadata
 
 import typer
 from rich.console import Console
 from rich.syntax import Syntax
 from rich.table import Table
 
+from dwsim_mcp_server.release_info import get_release_info
 from dwsim_mcp_server import server
 from dwsim_mcp_server.cli.doctor import DoctorRunner
 from dwsim_mcp_server.cli.setup import SetupManager
@@ -114,18 +114,18 @@ def _get_dotnet_status() -> str:
 def version() -> None:
     """Show version information."""
     console = Console()
-    try:
-        package_version = metadata.version("dwsim-mcp-server")
-    except metadata.PackageNotFoundError:
-        package_version = "Unknown"
+    release_info = get_release_info()
 
     table = Table(show_header=False, pad_edge=False, box=None)
     table.add_column("Label", style="bold cyan")
     table.add_column("Value")
-    table.add_row("Package", package_version)
+    table.add_row("Package", f"{release_info['package']} {release_info['version']}")
     table.add_row("Python", platform.python_version())
     table.add_row("Platform", platform.platform())
     table.add_row(".NET/pythonnet", _get_dotnet_status())
+    table.add_row("Source", release_info["source_url"])
+    table.add_row("Commit", release_info["commit_sha"])
+    table.add_row("License", release_info["license"])
     console.print(table)
 
 

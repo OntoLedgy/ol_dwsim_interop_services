@@ -243,6 +243,14 @@ dotnet test
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines and code standards.
 
+## AGPL-3.0 source offer
+
+Every running `dwsim-mcp-server` instance exposes the exact source metadata for that deployment: package name, version, commit SHA, source repository URL, and license.
+
+Network clients can read that payload from the `release://info` MCP resource. The same information is also surfaced locally through `dwsim-mcp version` and through the single-line `dwsim_mcp_server_started` JSON event emitted to stderr at startup.
+
+See [LICENSE](LICENSE) for the full AGPL-3.0-or-later text.
+
 ## License
 
 This project is licensed under **AGPL-3.0-or-later** - see [LICENSE](LICENSE) for the full text and [NOTICE](NOTICE) for copyright and attribution.

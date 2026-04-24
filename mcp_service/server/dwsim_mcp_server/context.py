@@ -14,7 +14,9 @@ from dwsim_mcp_server.observability.metrics_server import (
     start_metrics_server,
     stop_metrics_server,
 )
+from dwsim_mcp_server.observability.stderr_events import emit_event_to_stderr
 from dwsim_mcp_server.observability.settings import ObservabilitySettings
+from dwsim_mcp_server.release_info import get_release_info
 from dwsim_mcp_server.service import FlowsheetService
 from dwsim_mcp_server.service.diagnostics_service import DiagnosticsService
 from dwsim_mcp_server.services import ThermodynamicsService
@@ -72,6 +74,10 @@ async def app_lifespan(server) -> AsyncIterator[AppContext]:
     session_client.start_monitoring()
     await start_seq_sink()
     logger.info("server_lifespan_started")
+    emit_event_to_stderr(
+        event="dwsim_mcp_server_started",
+        **get_release_info(),
+    )
 
     try:
         yield app_context
