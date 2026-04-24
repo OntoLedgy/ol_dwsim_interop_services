@@ -1,4 +1,4 @@
-# ol-dwsim-mcp-server
+# OntoLedgy DWSIM Interop Services
 
 > **Windows only** — runs DWSIM in-process via pythonnet. Requires a DWSIM build with the full Windows desktop runtime (Windows 10/11 or Windows Server with Desktop Experience).
 
