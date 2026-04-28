@@ -7,6 +7,7 @@ import json
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+import sys
 from collections import deque
 from typing import Deque, Dict, List, Optional
 
@@ -247,9 +248,13 @@ def _setup_file_handler() -> None:
 
 
 def configure_logging(log_level: str, *, json_format: bool = True) -> None:
-    """Configure stdlib logging and structlog."""
+    """Configure stdlib logging and structlog.
+
+    Stdio MCP reserves stdout for JSON-RPC messages, so human-readable and
+    structured diagnostics must go to stderr unless a file sink is configured.
+    """
     level = getattr(logging, log_level.upper(), logging.INFO)
-    logging.basicConfig(level=level, format="%(message)s")
+    logging.basicConfig(level=level, format="%(message)s", stream=sys.stderr)
     _setup_file_handler()
 
     processors = [
@@ -268,6 +273,7 @@ def configure_logging(log_level: str, *, json_format: bool = True) -> None:
     structlog.configure(
         processors=processors + [renderer],
         wrapper_class=structlog.make_filtering_bound_logger(level),
+        logger_factory=structlog.PrintLoggerFactory(file=sys.stderr),
         cache_logger_on_first_use=True,
     )
 

@@ -169,7 +169,7 @@ def main() -> None:
     if transport == "streamable-http":
         _run_http_with_oauth(server, settings, auth_config)
     else:
-        server.run(transport=transport)
+        server.run(transport=transport, show_banner=False)
 
 
 def _run_http_with_oauth(
