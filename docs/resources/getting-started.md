@@ -4,9 +4,9 @@ This guide walks you through connecting the DWSIM MCP Server to VS Code Copilot 
 
 ## Prerequisites
 
-- Windows with .NET Framework 4.8
-- Python 3.10+
-- VS Code with GitHub Copilot extension
+- Windows 10/11 or Windows Server with Desktop Experience, .NET Framework 4.8
+- Python 3.11 or 3.12
+- An MCP-capable client (Claude Desktop, VS Code Copilot, or OpenAI Codex CLI)
 - DWSIM binaries
 
 ## Installation
@@ -14,8 +14,8 @@ This guide walks you through connecting the DWSIM MCP Server to VS Code Copilot 
 ### 1. Clone and Setup (Windows / PowerShell)
 
 ```powershell
-git clone https://github.com/OntoLedgy/dwsim_interop_services.git
-cd dwsim_interop_services\mcp_service\server
+git clone https://github.com/OntoLedgy/ol_dwsim_interop_services.git
+cd ol_dwsim_interop_services\mcp_service\server
 uv sync
 ```
 
@@ -130,44 +130,39 @@ Add the DWSIM MCP server configuration:
 
 ### Option D: OpenAI Codex CLI
 
-For **Codex CLI**, create/edit the configuration file at:
+Codex CLI uses **TOML** (not JSON). Create or edit the configuration file at:
 
 **Windows:**
 ```
-%USERPROFILE%\.codex\config.json
+%USERPROFILE%\.codex\config.toml
 ```
 
 **macOS/Linux:**
 ```
-~/.codex/config.json
+~/.codex/config.toml
 ```
 
-Add the MCP server configuration:
+Append the MCP server entry as a TOML table:
 
-```json
-{
-  "mcpServers": {
-    "dwsim": {
-      "command": "uv",
-      "args": ["run", "dwsim-mcp"],
-      "cwd": "/path/to/dwsim_interop_services/mcp_service/server",
-      "env": {
-        "PYTHONPATH": "/path/to/dwsim_interop_services"
-      }
-    }
-  }
-}
+```toml
+[mcp_servers.dwsim]
+command = "uv"
+args = ["run", "dwsim-mcp", "run"]
+cwd = "C:\\path\\to\\ol_dwsim_interop_services\\mcp_service\\server"
+
+[mcp_servers.dwsim.env]
+PYTHONPATH = "C:\\path\\to\\ol_dwsim_interop_services"
 ```
 
-Then use Codex with MCP tools enabled:
-```bash
-codex --mcp
+If you installed via `pipx` or `uv tool install`, the entry simplifies to:
+
+```toml
+[mcp_servers.dwsim]
+command = "dwsim-mcp"
+args = ["run"]
 ```
 
-Or set the environment variable to always enable MCP:
-```bash
-export CODEX_MCP_ENABLED=1
-```
+Codex CLI picks up MCP servers automatically on next launch — no flag or environment variable needed.
 
 ---
 
@@ -210,8 +205,10 @@ You can use environment variable expansion where supported:
 
 ### Codex CLI
 
-```bash
-codex --mcp "List available DWSIM tools"
+Restart `codex` so it re-reads `config.toml`, then ask:
+
+```
+List available DWSIM tools
 ```
 
 ## Your First Simulation

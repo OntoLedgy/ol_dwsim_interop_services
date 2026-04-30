@@ -1,6 +1,6 @@
 # OntoLedgy DWSIM Interop Services
 
-> **Windows only** — runs DWSIM in-process via pythonnet. Requires a DWSIM build with the full Windows desktop runtime (Windows 10/11 or Windows Server with Desktop Experience).
+> **Windows only.** Runs DWSIM in-process via pythonnet, so it requires a DWSIM build with the full Windows desktop runtime (Windows 10/11 or Windows Server with Desktop Experience). macOS support is being explored. Linux is not currently supported.
 
 Exposes [DWSIM](https://dwsim.org) as a [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server. AI assistants and other MCP clients can call canonical thermodynamics operations — flash calculations, phase properties, compound lookups — against a live DWSIM engine. Licensed under **AGPL-3.0-or-later**.
 
@@ -121,15 +121,17 @@ Prints package name, version, commit SHA, source URL, and license — the AGPL �
 
 ## Connecting to AI assistants
 
-| Platform | Configuration file |
-|---|---|
-| **Claude Desktop** | `%APPDATA%\Claude\claude_desktop_config.json` |
-| **VS Code Copilot** | `settings.json` or `mcp.json` |
-| **OpenAI Codex CLI** | `~/.codex/config.json` |
+| Platform | Configuration file | Format |
+|---|---|---|
+| **Claude Desktop** | `%APPDATA%\Claude\claude_desktop_config.json` | JSON |
+| **VS Code Copilot** | `settings.json` or `mcp.json` | JSON |
+| **OpenAI Codex CLI** | `%USERPROFILE%\.codex\config.toml` (or `~/.codex/config.toml`) | TOML |
 
-The config form depends on how you installed the server.
+The config form depends on how you installed the server. Codex CLI uses TOML; Claude Desktop and VS Code use JSON.
 
-**If installed with `pipx` or `uv tool install`** — `dwsim-mcp` is on PATH and Claude Desktop can launch it by name:
+**If installed with `pipx` or `uv tool install`** — `dwsim-mcp` is on PATH and the host can launch it by name.
+
+Claude Desktop / VS Code Copilot (JSON):
 
 ```json
 {
@@ -142,7 +144,17 @@ The config form depends on how you installed the server.
 }
 ```
 
-**If installed with `pip install` into a venv, or running from a cloned checkout** — use the absolute path to the venv's `dwsim-mcp.exe` so Claude Desktop's subprocess doesn't need a PATH entry or venv activation:
+OpenAI Codex CLI (TOML, append to `~/.codex/config.toml`):
+
+```toml
+[mcp_servers.dwsim]
+command = "dwsim-mcp"
+args = ["run"]
+```
+
+**If installed with `pip install` into a venv, or running from a cloned checkout** — use the absolute path to the venv's `dwsim-mcp.exe` so the host's subprocess doesn't need a PATH entry or venv activation.
+
+Claude Desktop / VS Code Copilot (JSON):
 
 ```json
 {
@@ -153,6 +165,14 @@ The config form depends on how you installed the server.
     }
   }
 }
+```
+
+OpenAI Codex CLI (TOML):
+
+```toml
+[mcp_servers.dwsim]
+command = "C:\\path\\to\\your\\.venv\\Scripts\\dwsim-mcp.exe"
+args = ["run"]
 ```
 
 Detailed per-platform setup in [`docs/resources/getting-started.md`](docs/resources/getting-started.md).
@@ -340,7 +360,14 @@ See [LICENSE](LICENSE) for the full AGPL-3.0-or-later text.
 
 ## License
 
-This project is licensed under **AGPL-3.0-or-later** — see [LICENSE](LICENSE) for the full text and [NOTICE](NOTICE) for copyright and attribution.
+OntoLedgy's contributions in this repository are dual-licensed:
+
+1. **Open source** — **AGPL-3.0-or-later**. See [LICENSE](LICENSE) for the full text and [NOTICE](NOTICE) for copyright and attribution.
+2. **Commercial** — a separate proprietary license is available from OntoLedgy Ltd. **for OntoLedgy's contributions only**. See [COMMERCIAL.md](COMMERCIAL.md) for scope, exclusions, and terms.
+
+Copyright (c) 2018-2026 OntoLedgy Ltd.
+
+**Important — DWSIM scope.** This repository links to **DWSIM**, an upstream chemical process simulator licensed under **GPL-3.0** by its maintainers. DWSIM is **not** owned by OntoLedgy and **cannot** be relicensed by us. The commercial license offered here covers OntoLedgy's own code (the MCP server, the `DwsimWorker` glue source, and OntoLedgy-authored build/test/doc material) but does **not** relicense DWSIM or any compiled artifact (e.g. `DwsimWorker.dll`) to the extent it embeds or links DWSIM .NET assemblies. See [COMMERCIAL.md](COMMERCIAL.md) for the three practical paths to a fully proprietary deployment.
 
 **Why AGPL?** MCP servers are reachable by network clients (HTTP/SSE transports), and even stdio servers are often proxied over the network by their MCP hosts. AGPL §13 ensures that modifications to a network-reachable instance have their source made available to those users — closing the "SaaS loophole" in plain GPL. GPLv3 §13 explicitly permits combining GPLv3 code (DWSIM) with AGPLv3 code.
 

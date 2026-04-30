@@ -1,8 +1,14 @@
 DWSIM Interoperability Services
-Copyright (c) 2024-2026 OntoLedgy Ltd.
+Copyright (c) 2018-2026 OntoLedgy Ltd.
 
 This project is licensed under the GNU Affero General Public License v3.0
 or later (AGPL-3.0-or-later). See the LICENSE file for the full licence text.
+
+A separate commercial licence is available from OntoLedgy Ltd. for
+OntoLedgy's own contributions in this repository, under a dual-licensing
+model. See COMMERCIAL.md for terms, scope, and contact details. Note that
+the commercial licence does NOT relicense DWSIM itself, which remains
+GPL-3.0 from upstream.
 
 This software builds upon DWSIM, an open-source chemical process simulator
 licensed under GPLv3. See https://github.com/DanWBR/dwsim for details.

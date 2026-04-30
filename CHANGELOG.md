@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-04-30
+
+First public beta release. `pip install ol-dwsim-mcp-server` and `pipx install ol-dwsim-mcp-server` are now supported on Windows.
+
 ### Added
 
 - **DwsimAdapter** implementing the SimulatorAdapter protocol for clean three-layer architecture integration
@@ -50,3 +54,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Resource providers: package-relative paths, context parameter compatibility
 - Calculation engine: solver initialisation, graphic object naming, UpdateInterface crash resolution, compound database loading from multiple sources
 - STA threading for DWSIM COM interop; serialised interop calls on single thread
+
+[Unreleased]: https://github.com/OntoLedgy/ol_dwsim_interop_services/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/OntoLedgy/ol_dwsim_interop_services/releases/tag/v0.1.0
