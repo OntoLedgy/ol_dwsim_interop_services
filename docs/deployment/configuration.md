@@ -1,4 +1,10 @@
-﻿# Configuration Reference
+﻿<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
+# Configuration Reference
 
 This document enumerates all configuration settings used by the DWSIM MCP server, including environment variables and JSON configuration files. Values are read at startup and are **case-insensitive** for environment variables.
 

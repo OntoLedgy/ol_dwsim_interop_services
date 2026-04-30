@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Windows Deployment Guide
 
 This guide covers deploying the DWSIM MCP Server on Windows systems.

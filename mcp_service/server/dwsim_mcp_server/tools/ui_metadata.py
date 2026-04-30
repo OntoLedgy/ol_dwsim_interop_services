@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Utilities for adding UI metadata to MCP tools and results."""
 
 from __future__ import annotations

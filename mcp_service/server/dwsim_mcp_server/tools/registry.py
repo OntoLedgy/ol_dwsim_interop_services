@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Tool registration for FastMCP server."""
 
 from dwsim_mcp_server.observability import get_logger

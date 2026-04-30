@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Unit Operations
 
 DWSIM provides a comprehensive library of unit operations for building chemical process flowsheets. This guide covers the most commonly used operations and their key parameters.

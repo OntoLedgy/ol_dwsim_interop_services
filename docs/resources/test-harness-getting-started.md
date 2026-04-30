@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # DWSIM MCP Test Harness - Getting Started
 
 A browser-based environment for testing DWSIM MCP UI apps. Supports offline testing with mock data and live testing against a running MCP server.

@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # DWSIM MCP Server Documentation
 
 This documentation provides reference materials for using the DWSIM MCP Server to build and run chemical process simulations through LLM agents.

@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # DWSIM Worker
 
 .NET Framework console application that hosts the DWSIM simulation engine and communicates with the Python MCP server via JSON-RPC over Named Pipes.

@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Clerk OAuth Setup for DWSIM MCP Server
 
 This guide walks through configuring Clerk OAuth for the DWSIM MCP server,

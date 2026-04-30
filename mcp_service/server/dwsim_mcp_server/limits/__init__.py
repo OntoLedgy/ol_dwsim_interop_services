@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Resource limit enforcement utilities."""
 
 from dwsim_mcp_server.limits.memory_monitor import MemoryMonitor

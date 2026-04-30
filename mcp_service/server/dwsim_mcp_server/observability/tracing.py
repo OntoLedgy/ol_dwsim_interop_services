@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """OpenTelemetry tracing utilities for the DWSIM MCP server."""
 
 from __future__ import annotations

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Measurement combining value, quantity, and unit."""
 
 from pydantic import BaseModel, ValidationInfo, field_validator

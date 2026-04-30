@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Enumeration models for thermodynamics and flash calculations."""
 
 from .flash_calculation_types import FlashCalculationTypes

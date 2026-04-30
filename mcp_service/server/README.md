@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # DWSIM MCP Server
 
 Python-based Model Context Protocol (MCP) server that provides a clean, typed interface for LLM agents to interact with DWSIM chemical process simulation engine.

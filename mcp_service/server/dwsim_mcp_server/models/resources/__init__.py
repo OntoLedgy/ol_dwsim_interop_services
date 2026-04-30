@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Resource data models for MCP resource providers."""
 
 from dwsim_mcp_server.models.resources.resource_metadata import ResourceMetadata

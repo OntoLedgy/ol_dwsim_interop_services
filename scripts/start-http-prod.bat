@@ -1,3 +1,7 @@
+REM SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+REM
+REM SPDX-License-Identifier: AGPL-3.0-or-later
+
 @echo off
 REM DWSIM MCP Server - Production HTTP Mode (OAuth Required)
 REM This script requires .env.auth to be configured with Clerk credentials

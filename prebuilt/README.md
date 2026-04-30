@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # DWSIM MCP Server - Pre-built Distribution
 
 This folder contains pre-built DLLs for beta testers who don't want to build the C# interop layer.

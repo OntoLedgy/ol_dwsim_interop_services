@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Observability Guide
 
 This guide covers the observability infrastructure for the DWSIM MCP Server, including logging, distributed tracing, metrics, and diagnostics.

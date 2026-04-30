@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 # DWSIM MCP Server - Setup Script for Beta Testers
 # Run this script from the repository root
 

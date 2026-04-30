@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Getting Started with DWSIM MCP Server
 
 This guide walks you through connecting the DWSIM MCP Server to VS Code Copilot and running your first simulation.

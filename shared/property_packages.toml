@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 # Single source of truth for DWSIM property-package inventory.
 # Both Python (dwsim_mcp_server.adapter.alias_seeder) and the .NET worker
 # (DwsimWorker.Adapters.PropertyPackageAdapter) load this file at startup.

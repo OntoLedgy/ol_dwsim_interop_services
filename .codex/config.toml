@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 [mcp_servers.spec-workflow]
 command = "npx"
 args = ["-y", "@pimzino/spec-workflow-mcp@latest", "D:\\S\\C#\\dwsim_interop_services"]

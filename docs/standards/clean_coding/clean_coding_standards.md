@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Code Quality Guidelines
 
 This file provides guidance for making code changes in this repository. All contributions should follow Clean Code principles inspired by Robert C. Martin and established best practices for service-oriented architectures.

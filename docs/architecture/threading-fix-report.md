@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Threading Fix and Integration Test Investigation Report
 
 **Date**: 2026-01-15 (Updated 2026-01-22)

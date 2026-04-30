@@ -159,3 +159,6 @@ mcp_service/server/.claude/settings.local.json
 .mcp.json
 .mcp.json
 .mcp.json
+
+# Agent harness telemetry (do not track)
+.omx/

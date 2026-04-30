@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # OntoLedgy DWSIM Interop Services
 
 > **Windows only.** Runs DWSIM in-process via pythonnet, so it requires a DWSIM build with the full Windows desktop runtime (Windows 10/11 or Windows Server with Desktop Experience). macOS support is being explored. Linux is not currently supported.

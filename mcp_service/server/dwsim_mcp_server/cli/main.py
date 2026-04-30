@@ -1,4 +1,8 @@
-﻿"""Typer CLI entry point for ol-dwsim-mcp-server."""
+﻿# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+"""Typer CLI entry point for ol-dwsim-mcp-server."""
 
 from __future__ import annotations
 

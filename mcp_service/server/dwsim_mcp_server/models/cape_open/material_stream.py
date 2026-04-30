@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """MaterialStream model implementing CAPE-OPEN ICapeThermoMaterialObject interface."""
 
 from typing import Dict, List, Optional

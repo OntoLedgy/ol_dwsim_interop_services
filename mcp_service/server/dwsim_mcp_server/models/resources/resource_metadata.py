@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """ResourceMetadata model for MCP resource discovery."""
 
 from pydantic import BaseModel, ConfigDict, Field

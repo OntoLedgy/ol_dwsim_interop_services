@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Shared Models
 
 This directory contains all shared object models that facilitate interoperability between the Python MCP server, C# engine worker, LLM agents, and external systems.

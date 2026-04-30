@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 from ol_simulator_interop_services.domain.registries import (
     InMemoryComponentRegistry,
     InMemoryParameterSourceRegistry,

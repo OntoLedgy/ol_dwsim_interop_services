@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Override session-scoped DWSIM fixtures for adapter unit tests.
 
 Adapter tests mock the SessionClient and do not need DWSIM binaries.

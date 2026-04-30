@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Compounds Database
 
 DWSIM includes an extensive database of chemical compounds with physical and thermodynamic properties. This guide explains how to work with compounds in simulations.

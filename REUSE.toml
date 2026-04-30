@@ -1,0 +1,140 @@
+version = 1
+
+# ============================================================================
+# OntoLedgy-authored files conventionally excluded from in-source SPDX headers
+# ============================================================================
+#
+# Files declared here are still OntoLedgy-authored and covered by the
+# project's overall AGPL-3.0-or-later licence. They are excluded from
+# in-source headers either because:
+#   - they are governance / licence documents (their content IS the
+#     attribution surface);
+#   - they are dotfiles / config formats without a portable comment syntax
+#     (.env, JSON, .csproj, .sln);
+#   - they are generated or scratch artifacts (test_output*.txt,
+#     spec-workflow snapshots) that don't merit per-file headers.
+
+[[annotations]]
+path = [
+    ".gitignore",
+    ".env.example",
+    "pytest.ini",
+    "CHANGELOG.md",
+    "NOTICE",
+    "COMMERCIAL.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+]
+SPDX-FileCopyrightText = "Copyright (c) 2018-2026 OntoLedgy Ltd."
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+# Agent-tooling and AI-context configuration (Claude Code, spec-workflow-mcp,
+# Codex CLI). These are OntoLedgy's own project context, prompts, and
+# generated approval / snapshot artifacts.
+[[annotations]]
+path = [
+    ".claude/**",
+    ".spec-workflow/**",
+    ".codex/**",
+]
+SPDX-FileCopyrightText = "Copyright (c) 2018-2026 OntoLedgy Ltd."
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+# .NET project / solution / config files and ad-hoc test logs.
+[[annotations]]
+path = [
+    "**/*.sln",
+    "**/*.csproj",
+    "**/App.config",
+    "mcp_service/dwsim_worker/DwsimWorker.Tests/test_output*.txt",
+]
+SPDX-FileCopyrightText = "Copyright (c) 2018-2026 OntoLedgy Ltd."
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+# Server-internal config / packaging files (no comment syntax or sentinel files).
+[[annotations]]
+path = [
+    "mcp_service/server/.env",
+    "mcp_service/server/.gitignore",
+    "mcp_service/server/MANIFEST.in",
+    "mcp_service/server/uv.lock",
+    "mcp_service/server/dwsim_mcp_server/py.typed",
+    "mcp_service/server/tests/integration/output/**",
+    "mcp_service/dwsim_worker/dwsim.config.json.sample",
+    "mcp_service/dwsim_worker/DwsimWorker/dwsim.config.json.sample",
+]
+SPDX-FileCopyrightText = "Copyright (c) 2018-2026 OntoLedgy Ltd."
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+# OntoLedgy MCP web apps - HTML / CSS / JS / JSON assets and Jinja templates.
+[[annotations]]
+path = [
+    "mcp_service/server/dwsim_mcp_server/apps/**",
+    "mcp_service/server/dwsim_mcp_server/templates/**",
+    "mcp_service/server/dwsim_mcp_server/resources/**",
+]
+SPDX-FileCopyrightText = "Copyright (c) 2018-2026 OntoLedgy Ltd."
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+# Sample data files (synthetic test fixtures and reference cases authored by
+# OntoLedgy). Includes JSON cases, sample XML/db files, and TOML data tables.
+[[annotations]]
+path = [
+    "cases/**",
+    "docs/samples/**",
+    "shared/**.toml",
+]
+SPDX-FileCopyrightText = "Copyright (c) 2018-2026 OntoLedgy Ltd."
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+# ============================================================================
+# Third-party prebuilt binaries redistributed under their upstream licences
+# ============================================================================
+#
+# `prebuilt/DwsimWorker/` ships compiled artifacts so beta testers can run
+# without a local .NET build. The OntoLedgy-built outputs there carry
+# OntoLedgy's AGPL; redistributed third-party libraries keep their original
+# licences and copyright per upstream.
+
+# OntoLedgy-built DwsimWorker output and companion files.
+[[annotations]]
+path = [
+    "prebuilt/DwsimWorker/DwsimWorker.dll",
+    "prebuilt/DwsimWorker/DwsimWorker.xml",
+    "prebuilt/DwsimWorker/DwsimWorker.dll.config",
+    "prebuilt/DwsimWorker/manifest.json",
+]
+SPDX-FileCopyrightText = "Copyright (c) 2018-2026 OntoLedgy Ltd."
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+# Newtonsoft.Json - MIT (https://github.com/JamesNK/Newtonsoft.Json).
+[[annotations]]
+path = [
+    "prebuilt/DwsimWorker/Newtonsoft.Json.dll",
+    "prebuilt/DwsimWorker/Newtonsoft.Json.xml",
+]
+SPDX-FileCopyrightText = "Copyright (c) 2007 James Newton-King"
+SPDX-License-Identifier = "MIT"
+
+# Serilog and its sinks - Apache-2.0 (https://github.com/serilog/serilog).
+[[annotations]]
+path = [
+    "prebuilt/DwsimWorker/Serilog.dll",
+    "prebuilt/DwsimWorker/Serilog.Sinks.Console.dll",
+    "prebuilt/DwsimWorker/Serilog.Sinks.File.dll",
+]
+SPDX-FileCopyrightText = "Copyright (c) Serilog Contributors"
+SPDX-License-Identifier = "Apache-2.0"
+
+# .NET Framework runtime support libraries shipped by Microsoft - MIT.
+[[annotations]]
+path = [
+    "prebuilt/DwsimWorker/System.Buffers.dll",
+    "prebuilt/DwsimWorker/System.Diagnostics.DiagnosticSource.dll",
+    "prebuilt/DwsimWorker/System.Memory.dll",
+    "prebuilt/DwsimWorker/System.Numerics.Vectors.dll",
+    "prebuilt/DwsimWorker/System.Runtime.CompilerServices.Unsafe.dll",
+]
+SPDX-FileCopyrightText = "Copyright (c) .NET Foundation and Contributors"
+SPDX-License-Identifier = "MIT"

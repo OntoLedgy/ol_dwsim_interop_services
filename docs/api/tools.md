@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # DWSIM MCP Tool Reference
 
 Canonical reference for all tools exposed by the DWSIM MCP server. Every tool accepts and returns JSON over the MCP protocol.

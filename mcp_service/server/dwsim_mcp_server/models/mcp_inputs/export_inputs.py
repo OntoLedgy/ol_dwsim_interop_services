@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Pydantic models for export-related MCP tool inputs and outputs."""
 
 from typing import Any, Dict, List, Optional, Literal

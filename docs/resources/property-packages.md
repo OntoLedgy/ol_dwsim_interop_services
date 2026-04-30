@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Property Packages
 
 Property packages (also called thermodynamic models or equations of state) define how DWSIM calculates physical and thermodynamic properties. Choosing the right property package is critical for accurate simulation results.

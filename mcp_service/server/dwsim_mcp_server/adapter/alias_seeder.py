@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Seed canonical registries with DWSIM-specific aliases and defaults."""
 
 from __future__ import annotations

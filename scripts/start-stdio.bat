@@ -1,3 +1,7 @@
+REM SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+REM
+REM SPDX-License-Identifier: AGPL-3.0-or-later
+
 @echo off
 REM DWSIM MCP Server - STDIO Mode Startup Script
 REM This script expects to be in the same directory as the repo folder

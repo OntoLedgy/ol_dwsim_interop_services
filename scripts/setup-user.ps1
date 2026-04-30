@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 <#
 .SYNOPSIS
     Phase 2: Setup DWSIM MCP Server (NO Administrator required)
