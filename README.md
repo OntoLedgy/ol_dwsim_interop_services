@@ -354,7 +354,6 @@ Edit [`shared/property_packages.toml`](shared/property_packages.toml), then `.\b
 
 ## Architecture reference
 
-- [Solution Architecture on Confluence](https://ontoledgy.atlassian.net/wiki/spaces/ACE/pages/6425018388/Solution+Architecture) — full architectural description.
 - [`docs/mcp/mcp-tools.md`](docs/mcp/mcp-tools.md) — MCP tool reference and API specifications.
 - [`docs/resources/`](docs/resources/) — quickstart, configuration, troubleshooting.
 - [`docs/architecture/`](docs/architecture/) — system design, security, observability.
