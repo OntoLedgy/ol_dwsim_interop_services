@@ -62,6 +62,10 @@ def _resolve_from_environment() -> Optional[Path]:
 
 
 def _resolve_default_path() -> Path:
+    bundled = Path(__file__).resolve().parent.parent / "_prebuilt" / "DwsimWorker.dll"
+    if bundled.exists():
+        return bundled
+
     server_root = Path(__file__).resolve().parents[2]
     configuration = os.getenv("DWSIM_WORKER_CONFIGURATION", "Debug")
     return (
