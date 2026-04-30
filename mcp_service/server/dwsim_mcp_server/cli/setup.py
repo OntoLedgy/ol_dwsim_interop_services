@@ -45,7 +45,7 @@ class SetupManager:
             return None
 
         try:
-            payload = json.loads(config_path.read_text(encoding="utf-8"))
+            payload = json.loads(config_path.read_text(encoding="utf-8-sig"))
         except (json.JSONDecodeError, OSError):
             return None
 

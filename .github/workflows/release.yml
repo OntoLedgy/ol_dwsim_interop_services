@@ -49,7 +49,7 @@ jobs:
         run: |
           $configPath = "mcp_service/dwsim_worker/DwsimWorker/dwsim.config.json"
           $absolutePath = (Resolve-Path "mcp_service/dwsim_worker/dwsim_binaries/x64/Debug").Path -replace '\\', '/'
-          @{ dwsim_path = $absolutePath } | ConvertTo-Json | Set-Content $configPath
+          @{ dwsim_path = $absolutePath } | ConvertTo-Json | Set-Content -Path $configPath -Encoding utf8NoBOM
       - name: Build
         working-directory: mcp_service/dwsim_worker
         shell: cmd
