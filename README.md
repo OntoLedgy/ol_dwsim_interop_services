@@ -1,3 +1,18 @@
+<!--
+SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+
+This file is part of the OntoLedgy Thermodynamics Architecture and is
+dual-licensed:
+
+  1. Open source under the GNU Affero General Public License v3.0 or
+     later (AGPL-3.0-or-later). See the LICENSE file in the repository
+     root for the full licence text and NOTICE for attribution.
+  2. Commercial under a separate proprietary licence offered by
+     OntoLedgy Ltd. See COMMERCIAL.md for terms and contact details.
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # OntoLedgy DWSIM Interop Services
 
 > **Windows only.** Runs DWSIM in-process via pythonnet, so it requires a DWSIM build with the full Windows desktop runtime (Windows 10/11 or Windows Server with Desktop Experience). macOS support is being explored. Linux is not currently supported.
@@ -339,7 +354,6 @@ Edit [`shared/property_packages.toml`](shared/property_packages.toml), then `.\b
 
 ## Architecture reference
 
-- [Solution Architecture on Confluence](https://ontoledgy.atlassian.net/wiki/spaces/ACE/pages/6425018388/Solution+Architecture) — full architectural description.
 - [`docs/mcp/mcp-tools.md`](docs/mcp/mcp-tools.md) — MCP tool reference and API specifications.
 - [`docs/resources/`](docs/resources/) — quickstart, configuration, troubleshooting.
 - [`docs/architecture/`](docs/architecture/) — system design, security, observability.
