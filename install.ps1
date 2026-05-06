@@ -285,10 +285,9 @@ function Remove-ClaudeDwsimConfig {
         Write-Host "  Claude Code CLI not detected (skipping)" -ForegroundColor Gray
         return $false
     }
-    & claude mcp remove --scope user dwsim 2>$null
-    $exitCode = $LASTEXITCODE
-    if ($exitCode -ne 0) {
-        Write-Warn "Claude Code dwsim entry was not removed (exit code $exitCode). It may not be present."
+    try { & claude mcp remove --scope user dwsim *> $null } catch { }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warn "Claude Code dwsim entry was not removed (exit code $LASTEXITCODE). It may not be present."
         return $false
     }
     return $true
@@ -501,7 +500,8 @@ if ($SkipMcpConfig) {
         if (Test-CommandExists "claude") {
             Write-Host "  Configuring Claude Code..." -ForegroundColor Gray
             try {
-                & claude mcp remove --scope user dwsim *> $null
+                # Best-effort cleanup of any prior registration; ignore failure.
+                try { & claude mcp remove --scope user dwsim *> $null } catch { }
                 & claude mcp add --scope user dwsim -- dwsim-mcp run *> $null
                 $claudeExit = $LASTEXITCODE
                 if ($claudeExit -eq 0) {
