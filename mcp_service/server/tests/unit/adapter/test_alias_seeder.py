@@ -20,6 +20,7 @@ from ol_simulator_interop_services.domain.registries import (
 from dwsim_mcp_server.adapter.alias_seeder import (
     DWSIM_BACKEND_ID,
     DWSIM_PARAMETER_SOURCE_NAME,
+    _candidate_property_packages_toml_paths,
     seed_dwsim_component_aliases,
     seed_dwsim_parameter_source_aliases,
     seed_dwsim_property_packages,
@@ -77,3 +78,22 @@ def test_seed_dwsim_property_packages_registers_expected_catalog():
     assert model_ids == {"peng-robinson", "srk", "nrtl", "unifac"}
     assert "Peng-Robinson" in display_names
     assert "UNIFAC" in display_names
+
+
+def test_property_packages_toml_candidates_cover_installed_and_development_layouts():
+    # DIS-37: the inventory must resolve in both installed (uv tool install)
+    # and development checkouts. The installed candidate ships inside the
+    # package via the pyproject.toml `force-include` of `prebuilt/DwsimWorker`
+    # → `dwsim_mcp_server/_prebuilt/`. The development candidate sits at the
+    # repo-root `shared/` so a fresh clone works before the worker is built.
+    candidate_paths = _candidate_property_packages_toml_paths()
+
+    assert len(candidate_paths) == 2
+    installed_path, development_path = candidate_paths
+    assert installed_path.parts[-2:] == ("_prebuilt", "property_packages.toml")
+    assert "dwsim_mcp_server" in installed_path.parts
+    assert development_path.parts[-2:] == ("shared", "property_packages.toml")
+    # At least one candidate must exist in any environment that imported the
+    # module successfully — otherwise SEEDED_DWSIM_PROPERTY_PACKAGES would have
+    # raised at import time.
+    assert any(path.is_file() for path in candidate_paths)

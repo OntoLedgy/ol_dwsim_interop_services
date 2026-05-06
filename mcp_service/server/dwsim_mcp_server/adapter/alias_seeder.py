@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from importlib.resources import files as _resources_files
 from pathlib import Path
 import tomllib
 
@@ -37,9 +38,33 @@ DWSIM_BACKEND_ID = "dwsim"
 DWSIM_PARAMETER_SOURCE_NAME = "DWSIM Built-in Databank"
 DWSIM_PARAMETER_SOURCE_LOCATOR = "dwsim://built-in-databank"
 DWSIM_PARAMETER_SOURCE_REVISION = "builtin"
-_PROPERTY_PACKAGES_TOML_PATH = (
-    Path(__file__).resolve().parents[4] / "shared" / "property_packages.toml"
-)
+
+
+def _candidate_property_packages_toml_paths() -> tuple[Path, ...]:
+    # Installed wheels ship the TOML inside the package via the
+    # `prebuilt/DwsimWorker` force-include in pyproject.toml, so it is the
+    # install-location-independent location and is preferred. In a fresh dev
+    # checkout the worker may not yet have been published, so the canonical
+    # `shared/` copy is the dev-mode fallback.
+    installed_path = (
+        Path(str(_resources_files("dwsim_mcp_server")))
+        / "_prebuilt"
+        / "property_packages.toml"
+    )
+    development_path = (
+        Path(__file__).resolve().parents[4] / "shared" / "property_packages.toml"
+    )
+    return (installed_path, development_path)
+
+
+def _resolve_property_packages_toml_path() -> Path:
+    for candidate_path in _candidate_property_packages_toml_paths():
+        if candidate_path.is_file():
+            return candidate_path
+    return _candidate_property_packages_toml_paths()[0]
+
+
+_PROPERTY_PACKAGES_TOML_PATH = _resolve_property_packages_toml_path()
 
 
 @dataclass(frozen=True)
@@ -176,9 +201,11 @@ def _load_property_packages_inventory_document() -> list[dict[str, object]]:
         with _PROPERTY_PACKAGES_TOML_PATH.open("rb") as property_packages_file:
             parsed_document = tomllib.load(property_packages_file)
     except FileNotFoundError as error:
+        searched_paths = ", ".join(
+            str(path) for path in _candidate_property_packages_toml_paths()
+        )
         raise RuntimeError(
-            f"DIS-37 property-package inventory missing at "
-            f"{_PROPERTY_PACKAGES_TOML_PATH}"
+            f"DIS-37 property-package inventory missing — searched: {searched_paths}"
         ) from error
     except tomllib.TOMLDecodeError as error:
         raise RuntimeError(
