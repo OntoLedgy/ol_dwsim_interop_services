@@ -393,13 +393,19 @@ Write-Step "Step 2: Install ol-dwsim-mcp-server"
 
 try {
     if ($PackageManager -eq "uv") {
-        Invoke-Native -Description "uv tool install ol-dwsim-mcp-server" -ScriptBlock {
-            & uv tool install ol-dwsim-mcp-server
+        # --reinstall makes this idempotent on version: an existing tool
+        # install (e.g. v0.1.4) is replaced with the latest PyPI release
+        # rather than left in place by `uv tool install`'s default no-op
+        # behaviour. Costs one extra wheel download on a clean machine.
+        # See DIS-139.
+        Invoke-Native -Description "uv tool install --reinstall ol-dwsim-mcp-server" -ScriptBlock {
+            & uv tool install --reinstall ol-dwsim-mcp-server
         }
         Add-PathPrepend "$env:USERPROFILE\.local\bin"
     } else {
-        Invoke-Native -Description "pipx install ol-dwsim-mcp-server" -ScriptBlock {
-            & pipx install ol-dwsim-mcp-server
+        # --force is the pipx equivalent of uv's --reinstall. See DIS-139.
+        Invoke-Native -Description "pipx install --force ol-dwsim-mcp-server" -ScriptBlock {
+            & pipx install --force ol-dwsim-mcp-server
         }
     }
 
