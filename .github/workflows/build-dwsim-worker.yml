@@ -67,9 +67,10 @@ jobs:
       - name: Create DWSIM config
         shell: pwsh
         run: |
-          $configPath = "mcp_service/dwsim_worker/DwsimWorker/dwsim.config.json"
           $absolutePath = (Resolve-Path "mcp_service/dwsim_worker/dwsim_binaries/x64/Debug").Path -replace '\\', '/'
-          @{ dwsim_path = $absolutePath } | ConvertTo-Json | Set-Content $configPath
+          $config = @{ dwsim_path = $absolutePath } | ConvertTo-Json
+          # setup-dwsim-binaries.ps1 expects config at the dwsim_worker root
+          Set-Content "mcp_service/dwsim_worker/dwsim.config.json" $config
 
       - name: Build
         working-directory: mcp_service/dwsim_worker
