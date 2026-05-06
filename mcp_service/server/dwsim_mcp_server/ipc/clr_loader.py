@@ -74,9 +74,20 @@ def _inject_dwsim_path_env_var() -> None:
         )
         return
 
-    from dwsim_mcp_server.cli.setup import DwsimSetupService
+    # Defensive: a broken import or missing config must NOT abort worker loading
+    # — fall back to PathResolver's other strategies instead of raising.
+    try:
+        from dwsim_mcp_server.cli.setup import SetupManager
 
-    dwsim_path = DwsimSetupService().read_config_dwsim_path()
+        dwsim_path = SetupManager().read_config_dwsim_path()
+    except Exception as exc:  # pragma: no cover - diagnostic path
+        _logger.warning(
+            "Could not read DWSIM path from config (%s); falling back to "
+            "PathResolver strategies.",
+            exc,
+        )
+        return
+
     if dwsim_path is None:
         _logger.debug(
             "No DWSIM path in config; falling back to PathResolver strategies."
