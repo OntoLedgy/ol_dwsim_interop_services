@@ -1,0 +1,76 @@
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+#
+# This file is part of the OntoLedgy Thermodynamics Architecture and is
+# dual-licensed:
+#
+#   1. Open source under the GNU Affero General Public License v3.0 or
+#      later (AGPL-3.0-or-later). See the LICENSE file in the repository
+#      root for the full licence text and NOTICE for attribution.
+#   2. Commercial under a separate proprietary licence offered by
+#      OntoLedgy Ltd. See COMMERCIAL.md for terms and contact details.
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+name: Set up DWSIM build environment
+description: >
+  Installs .NET, MSBuild, restores NuGet cache, downloads cached DWSIM
+  binaries, and writes mcp_service/dwsim_worker/dwsim.config.json. Used
+  by every Windows job that runs build.bat.
+
+inputs:
+  dotnet-version:
+    description: .NET SDK version to install.
+    required: false
+    default: "8.0.x"
+  dwsim-binaries-url:
+    description: URL of the DWSIM binaries zip used by build.bat.
+    required: false
+    default: https://github.com/OntoLedgy/dwsim/releases/download/v9.0.5-mcp/dwsim_binaries.zip
+  dwsim-cache-key:
+    description: Cache key for the downloaded DWSIM binaries.
+    required: false
+    default: dwsim-binaries-v9.0.5-mcp
+
+runs:
+  using: composite
+  steps:
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+
+    - name: Set up MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Cache NuGet
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json', '**/*.csproj', '**/*.sln', '**/nuget.config') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Cache DWSIM binaries
+      id: cache-dwsim
+      uses: actions/cache@v4
+      with:
+        path: mcp_service/dwsim_worker/dwsim_binaries
+        key: ${{ inputs.dwsim-cache-key }}
+
+    - name: Download DWSIM binaries
+      if: steps.cache-dwsim.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: |
+        $targetDir = "mcp_service/dwsim_worker/dwsim_binaries/x64/Debug"
+        New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+        $zipPath = "$env:TEMP/dwsim_binaries.zip"
+        Invoke-WebRequest -Uri "${{ inputs.dwsim-binaries-url }}" -OutFile $zipPath
+        Expand-Archive -Path $zipPath -DestinationPath $targetDir -Force
+        Remove-Item $zipPath
+
+    - name: Create DWSIM config
+      shell: pwsh
+      run: |
+        $configPath = "mcp_service/dwsim_worker/dwsim.config.json"
+        $absolutePath = (Resolve-Path "mcp_service/dwsim_worker/dwsim_binaries/x64/Debug").Path -replace '\\', '/'
+        @{ dwsim_path = $absolutePath } | ConvertTo-Json | Set-Content -Path $configPath -Encoding utf8NoBOM
