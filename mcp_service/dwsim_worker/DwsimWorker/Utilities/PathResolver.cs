@@ -173,11 +173,20 @@ namespace DwsimWorker.Utilities
 
                 // Navigate up from bin/Debug to DwsimWorker, then to dwsim_worker
                 var workerDir = Path.GetFullPath(Path.Combine(assemblyDir, "..", "..", ".."));
-                var configPath = Path.Combine(workerDir, "dwsim.config.json");
-
-                if (!File.Exists(configPath))
+                // Probe multiple candidate locations for the config file:
+                // 1. Directly in workerDir (source-tree layout)
+                // 2. In workerDir/dwsim_worker (wheel-install layout)
+                var configCandidates = new[]
                 {
-                    Log.Debug("dwsim.config.json not found at {Path}", configPath);
+                    Path.Combine(workerDir, "dwsim.config.json"),
+                    Path.Combine(workerDir, "dwsim_worker", "dwsim.config.json"),
+                };
+
+                var configPath = configCandidates.FirstOrDefault(File.Exists);
+
+                if (configPath == null)
+                {
+                    Log.Debug("dwsim.config.json not found at any candidate path");
                     return null;
                 }
 
@@ -235,17 +244,26 @@ namespace DwsimWorker.Utilities
                     return null;
                 }
 
-                // Navigate up from bin/Debug to DwsimWorker, then to dwsim_worker, then to dwsim_binaries
-                var binariesPath = Path.GetFullPath(Path.Combine(
-                    assemblyDir, "..", "..", "..", "dwsim_binaries", "x64", "Debug"));
-
-                if (Directory.Exists(binariesPath))
+                // Navigate up from assembly dir and probe multiple layouts:
+                // 1. workerDir/dwsim_binaries/x64/Debug (source-tree layout)
+                // 2. workerDir/dwsim_worker/dwsim_binaries/x64/Debug (wheel-install layout)
+                var workerDir = Path.GetFullPath(Path.Combine(assemblyDir, "..", "..", ".."));
+                var binCandidates = new[]
                 {
-                    Log.Debug("Found relative binaries folder: {Path}", binariesPath);
-                    return binariesPath;
+                    Path.GetFullPath(Path.Combine(workerDir, "dwsim_binaries", "x64", "Debug")),
+                    Path.GetFullPath(Path.Combine(workerDir, "dwsim_worker", "dwsim_binaries", "x64", "Debug")),
+                };
+
+                foreach (var candidate in binCandidates)
+                {
+                    if (Directory.Exists(candidate))
+                    {
+                        Log.Debug("Found relative binaries folder: {Path}", candidate);
+                        return candidate;
+                    }
                 }
 
-                Log.Debug("Relative binaries folder not found at {Path}", binariesPath);
+                Log.Debug("Relative binaries folder not found at any candidate path");
                 return null;
             }
             catch (Exception ex)
