@@ -13,7 +13,7 @@
 
 [project]
 name = "ol-dwsim-mcp-server"
-version = "0.1.5"
+version = "0.1.6"
 description = "Model Context Protocol server for DWSIM chemical process simulation"
 readme = "README.md"
 authors = [{name = "OntoLedgy AI", email = "development@ontoledgy.ai"}]
