@@ -1,4 +1,4 @@
-﻿# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
 #
 # This file is part of the OntoLedgy Thermodynamics Architecture and is
 # dual-licensed:
@@ -322,9 +322,9 @@ if ($Uninstall) {
 # ─────────────────────────────────────────────────────────────────────────────
 
 Write-Host ""
-Write-Host "  ╔══════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "  ║   DWSIM MCP Server - One-Command Installer  ║" -ForegroundColor Cyan
-Write-Host "  ╚══════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "  +----------------------------------------------+" -ForegroundColor Cyan
+Write-Host "  |   DWSIM MCP Server - One-Command Installer   |" -ForegroundColor Cyan
+Write-Host "  +----------------------------------------------+" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  This script will:" -ForegroundColor White
 Write-Host "    1. Install uv (Python package manager)" -ForegroundColor Gray
@@ -574,13 +574,13 @@ if ($SkipMcpConfig) {
 # ─────────────────────────────────────────────────────────────────────────────
 
 Write-Host ""
-Write-Host "  ╔══════════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "  ║         Installation Complete!               ║" -ForegroundColor Green
-Write-Host "  ╚══════════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host "  +----------------------------------------------+" -ForegroundColor Green
+Write-Host "  |           Installation Complete!             |" -ForegroundColor Green
+Write-Host "  +----------------------------------------------+" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Quick test:  dwsim-mcp doctor" -ForegroundColor White
 Write-Host ""
-Write-Host "  ── Manual MCP Configuration ──" -ForegroundColor Yellow
+Write-Host "  -- Manual MCP Configuration --" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  For any MCP-compatible client, the server command is:" -ForegroundColor White
 Write-Host ""
