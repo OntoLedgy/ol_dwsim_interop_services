@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-05-06
+
+### Fixed
+
+- **Property-package inventory loader (DIS-37):** Resolve `property_packages.toml` via `importlib.resources` from the installed package's `_prebuilt/` directory, with a development fallback to the repo `shared/` folder. Fixes `DIS-37 property-package inventory missing at <tool-root>\shared\property_packages.toml` on fresh `uv tool install` deployments.
+
 ## [0.1.0] - 2026-04-30
 
 First public beta release. `pip install ol-dwsim-mcp-server` and `pipx install ol-dwsim-mcp-server` are now supported on Windows.
