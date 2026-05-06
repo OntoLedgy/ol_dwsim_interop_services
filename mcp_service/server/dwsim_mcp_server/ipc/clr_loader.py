@@ -15,11 +15,14 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Optional
 
 from dwsim_mcp_server.ipc.exceptions import AssemblyLoadError, map_dotnet_exception
+
+_logger = logging.getLogger(__name__)
 
 
 def resolve_dll_path(explicit_path: Optional[str] = None) -> Path:
@@ -40,6 +43,7 @@ def resolve_dll_path(explicit_path: Optional[str] = None) -> Path:
 def load_dwsim_worker(explicit_path: Optional[str] = None):
     """Load the DwsimWorker assembly and return the root module."""
     dll_path = resolve_dll_path(explicit_path)
+    _inject_dwsim_path_env_var()
     try:
         import clr  # type: ignore
     except ImportError as exc:
@@ -54,6 +58,33 @@ def load_dwsim_worker(explicit_path: Optional[str] = None):
         raise map_dotnet_exception(exc, kind="assembly_load") from exc
 
     return DwsimWorker
+
+
+def _inject_dwsim_path_env_var() -> None:
+    # PathResolver.cs in the .NET worker resolves DWSIM via several strategies,
+    # the first of which is the DWSIM_PATH env var. The relative-path strategies
+    # navigate up from Assembly.GetExecutingAssembly().Location, which is
+    # unreliable when the assembly is loaded by pythonnet (Location can be empty
+    # or a shadow-copy path), so the Python parent — which already knows where
+    # `dwsim-mcp setup` placed the binaries — is the single source of truth.
+    existing = os.environ.get("DWSIM_PATH")
+    if existing:
+        _logger.debug(
+            "DWSIM_PATH already set to %s; not overriding from config.", existing
+        )
+        return
+
+    from dwsim_mcp_server.cli.setup import DwsimSetupService
+
+    dwsim_path = DwsimSetupService().read_config_dwsim_path()
+    if dwsim_path is None:
+        _logger.debug(
+            "No DWSIM path in config; falling back to PathResolver strategies."
+        )
+        return
+
+    os.environ["DWSIM_PATH"] = str(dwsim_path)
+    _logger.info("Injected DWSIM_PATH=%s from dwsim.config.json.", dwsim_path)
 
 
 def _resolve_from_environment() -> Optional[Path]:
