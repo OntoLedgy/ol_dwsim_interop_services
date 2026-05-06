@@ -395,12 +395,12 @@ Write-Step "Step 2: Install ol-dwsim-mcp-server"
 try {
     if ($PackageManager -eq "uv") {
         Invoke-Native -Description "uv tool install ol-dwsim-mcp-server" -ScriptBlock {
-            & uv tool install ol-dwsim-mcp-server 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+            & uv tool install ol-dwsim-mcp-server
         }
         Add-PathPrepend "$env:USERPROFILE\.local\bin"
     } else {
         Invoke-Native -Description "pipx install ol-dwsim-mcp-server" -ScriptBlock {
-            & pipx install ol-dwsim-mcp-server 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+            & pipx install ol-dwsim-mcp-server
         }
     }
 
@@ -447,7 +447,7 @@ if ($DwsimPath) {
 
     try {
         Invoke-Native -Description "dwsim-mcp setup --dwsim-path" -ScriptBlock {
-            & dwsim-mcp setup --dwsim-path $DwsimPath 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+            & dwsim-mcp setup --dwsim-path $DwsimPath
         }
         Write-Ok "Configured with local DWSIM at: $DwsimPath"
     } catch {
@@ -461,7 +461,7 @@ if ($DwsimPath) {
 
     try {
         Invoke-Native -Description "dwsim-mcp setup --download" -ScriptBlock {
-            & dwsim-mcp setup --download 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+            & dwsim-mcp setup --download
         }
         Write-Ok "DWSIM binaries downloaded and configured"
     } catch {
@@ -475,9 +475,8 @@ if ($DwsimPath) {
 # Verify installation
 Write-Host ""
 Write-Host "  Running doctor checks..." -ForegroundColor Gray
-$doctorOutput = & dwsim-mcp doctor 2>&1
+& dwsim-mcp doctor
 $doctorExit = $LASTEXITCODE
-$doctorOutput | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
 
 if ($doctorExit -ne 0) {
     Write-Warn "Doctor reported issues. The server may not function correctly."
@@ -502,8 +501,8 @@ if ($SkipMcpConfig) {
         if (Test-CommandExists "claude") {
             Write-Host "  Configuring Claude Code..." -ForegroundColor Gray
             try {
-                & claude mcp remove --scope user dwsim 2>$null
-                & claude mcp add --scope user dwsim -- dwsim-mcp run 2>&1 | Out-Null
+                & claude mcp remove --scope user dwsim *> $null
+                & claude mcp add --scope user dwsim -- dwsim-mcp run *> $null
                 $claudeExit = $LASTEXITCODE
                 if ($claudeExit -eq 0) {
                     Write-Ok "Claude Code configured (server: dwsim, scope: user)"
