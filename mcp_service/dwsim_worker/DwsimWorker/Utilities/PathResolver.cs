@@ -17,8 +17,11 @@ using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Serilog;
+
+[assembly: InternalsVisibleTo("DwsimWorker.Tests")]
 
 namespace DwsimWorker.Utilities
 {
@@ -31,7 +34,7 @@ namespace DwsimWorker.Utilities
         /// <summary>
         /// Required DWSIM assembly file names.
         /// </summary>
-        private static readonly string[] RequiredAssemblies = new[]
+        internal static readonly string[] RequiredAssemblies = new[]
         {
             "DWSIM.Interfaces.dll",
             "DWSIM.Thermodynamics.dll",
@@ -171,56 +174,61 @@ namespace DwsimWorker.Utilities
                     return null;
                 }
 
-                // Navigate up from bin/Debug to DwsimWorker, then to dwsim_worker
-                var workerDir = Path.GetFullPath(Path.Combine(assemblyDir, "..", "..", ".."));
-                // Probe multiple candidate locations for the config file:
-                // 1. Directly in workerDir (source-tree layout)
-                // 2. In workerDir/dwsim_worker (wheel-install layout)
-                var configCandidates = new[]
-                {
-                    Path.Combine(workerDir, "dwsim.config.json"),
-                    Path.Combine(workerDir, "dwsim_worker", "dwsim.config.json"),
-                };
-
-                var configPath = configCandidates.FirstOrDefault(File.Exists);
-
-                if (configPath == null)
-                {
-                    Log.Debug("dwsim.config.json not found at any candidate path");
-                    return null;
-                }
-
-                var text = File.ReadAllText(configPath);
-                if (string.IsNullOrWhiteSpace(text))
-                {
-                    return null;
-                }
-
-                var config = JsonConvert.DeserializeObject<DwsimJsonConfig>(text);
-                if (string.IsNullOrWhiteSpace(config?.DwsimPath))
-                {
-                    Log.Debug("dwsim_path not found or empty in JSON config");
-                    return null;
-                }
-
-                var dwsimPath = config.DwsimPath.Trim();
-
-                // Handle relative paths - resolve relative to config file directory
-                if (!Path.IsPathRooted(dwsimPath))
-                {
-                    var configDir = Path.GetDirectoryName(configPath);
-                    dwsimPath = Path.GetFullPath(Path.Combine(configDir, dwsimPath));
-                    Log.Debug("Resolved relative path to: {Path}", dwsimPath);
-                }
-
-                Log.Debug("Found dwsim_path in JSON config: {Path}", dwsimPath);
-                return dwsimPath;
+                return GetJsonConfigPath(assemblyDir);
             }
             catch (Exception ex)
             {
                 Log.Warning(ex, "Error reading dwsim.config.json");
                 return null;
             }
+        }
+
+        internal static string GetJsonConfigPath(string assemblyDir)
+        {
+            // Navigate up from bin/Debug to DwsimWorker, then to dwsim_worker
+            var workerDir = Path.GetFullPath(Path.Combine(assemblyDir, "..", "..", ".."));
+            // Probe multiple candidate locations for the config file:
+            // 1. Directly in workerDir (source-tree layout)
+            // 2. In workerDir/dwsim_worker (wheel-install layout)
+            var configCandidates = new[]
+            {
+                Path.Combine(workerDir, "dwsim.config.json"),
+                Path.Combine(workerDir, "dwsim_worker", "dwsim.config.json"),
+            };
+
+            var configPath = configCandidates.FirstOrDefault(File.Exists);
+
+            if (configPath == null)
+            {
+                Log.Debug("dwsim.config.json not found at any candidate path");
+                return null;
+            }
+
+            var text = File.ReadAllText(configPath);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return null;
+            }
+
+            var config = JsonConvert.DeserializeObject<DwsimJsonConfig>(text);
+            if (string.IsNullOrWhiteSpace(config?.DwsimPath))
+            {
+                Log.Debug("dwsim_path not found or empty in JSON config");
+                return null;
+            }
+
+            var dwsimPath = config.DwsimPath.Trim();
+
+            // Handle relative paths - resolve relative to config file directory
+            if (!Path.IsPathRooted(dwsimPath))
+            {
+                var configDir = Path.GetDirectoryName(configPath);
+                dwsimPath = Path.GetFullPath(Path.Combine(configDir, dwsimPath));
+                Log.Debug("Resolved relative path to: {Path}", dwsimPath);
+            }
+
+            Log.Debug("Found dwsim_path in JSON config: {Path}", dwsimPath);
+            return dwsimPath;
         }
 
         /// <summary>
@@ -244,33 +252,37 @@ namespace DwsimWorker.Utilities
                     return null;
                 }
 
-                // Navigate up from assembly dir and probe multiple layouts:
-                // 1. workerDir/dwsim_binaries/x64/Debug (source-tree layout)
-                // 2. workerDir/dwsim_worker/dwsim_binaries/x64/Debug (wheel-install layout)
-                var workerDir = Path.GetFullPath(Path.Combine(assemblyDir, "..", "..", ".."));
-                var binCandidates = new[]
-                {
-                    Path.GetFullPath(Path.Combine(workerDir, "dwsim_binaries", "x64", "Debug")),
-                    Path.GetFullPath(Path.Combine(workerDir, "dwsim_worker", "dwsim_binaries", "x64", "Debug")),
-                };
-
-                foreach (var candidate in binCandidates)
-                {
-                    if (Directory.Exists(candidate))
-                    {
-                        Log.Debug("Found relative binaries folder: {Path}", candidate);
-                        return candidate;
-                    }
-                }
-
-                Log.Debug("Relative binaries folder not found at any candidate path");
-                return null;
+                return GetRelativeBinariesPath(assemblyDir);
             }
             catch (Exception ex)
             {
                 Log.Warning(ex, "Error checking relative binaries path");
                 return null;
             }
+        }
+
+        internal static string GetRelativeBinariesPath(string assemblyDir)
+        {
+            // Navigate up from assembly dir and probe multiple layouts:
+            // 1. workerDir/dwsim_binaries/x64/Debug (source-tree layout)
+            // 2. workerDir/dwsim_worker/dwsim_binaries/x64/Debug (wheel-install layout)
+            var workerDir = Path.GetFullPath(Path.Combine(assemblyDir, "..", "..", ".."));
+            var binCandidates = new[]
+            {
+                Path.GetFullPath(Path.Combine(workerDir, "dwsim_binaries", "x64", "Debug")),
+                Path.GetFullPath(Path.Combine(workerDir, "dwsim_worker", "dwsim_binaries", "x64", "Debug")),
+            };
+
+            var binPath = binCandidates.FirstOrDefault(Directory.Exists);
+
+            if (binPath == null)
+            {
+                Log.Debug("Relative binaries folder not found at any candidate path");
+                return null;
+            }
+
+            Log.Debug("Found relative binaries folder: {Path}", binPath);
+            return binPath;
         }
 
         /// <summary>

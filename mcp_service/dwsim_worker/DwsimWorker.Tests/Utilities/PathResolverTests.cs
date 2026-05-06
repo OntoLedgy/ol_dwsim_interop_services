@@ -391,7 +391,63 @@ namespace DwsimWorker.Tests.Utilities
 
         #endregion
 
+        #region Wheel-Install Layout Tests
+
+        [Fact]
+        public void GetJsonConfigPath_WithWheelInstallConfigCandidate_ReturnsConfiguredPath()
+        {
+            // Arrange
+            var assemblyDir = CreateWheelInstallAssemblyDirectory(out var wheelWorkerDir);
+            var expectedDwsimPath = Path.GetFullPath(Path.Combine(wheelWorkerDir, "dwsim_binaries", "x64", "Debug"));
+            var configPath = Path.Combine(wheelWorkerDir, "dwsim.config.json");
+            File.WriteAllText(configPath, "{ \"dwsim_path\": \"dwsim_binaries/x64/Debug\" }");
+
+            // Act
+            var result = PathResolver.GetJsonConfigPath(assemblyDir);
+
+            // Assert
+            Assert.Equal(expectedDwsimPath, result);
+        }
+
+        [Fact]
+        public void GetRelativeBinariesPath_WithWheelInstallBinariesCandidate_ReturnsBinariesPath()
+        {
+            // Arrange
+            var assemblyDir = CreateWheelInstallAssemblyDirectory(out var wheelWorkerDir);
+            var expectedBinariesPath = Path.GetFullPath(Path.Combine(wheelWorkerDir, "dwsim_binaries", "x64", "Debug"));
+            Directory.CreateDirectory(expectedBinariesPath);
+            CreateRequiredMockAssemblies(expectedBinariesPath);
+
+            // Act
+            var result = PathResolver.GetRelativeBinariesPath(assemblyDir);
+
+            // Assert
+            Assert.Equal(expectedBinariesPath, result);
+        }
+
+        #endregion
+
         #region Helper Methods
+
+        private string CreateWheelInstallAssemblyDirectory(out string wheelWorkerDir)
+        {
+            var workerDir = Path.Combine(_tempTestDir, "WheelInstall", "dwsim_mcp_server", "_prebuilt");
+            var assemblyDir = Path.Combine(workerDir, "DwsimWorker", "bin", "Debug");
+            wheelWorkerDir = Path.Combine(workerDir, "dwsim_worker");
+
+            Directory.CreateDirectory(assemblyDir);
+            Directory.CreateDirectory(wheelWorkerDir);
+
+            return assemblyDir;
+        }
+
+        private void CreateRequiredMockAssemblies(string directory)
+        {
+            foreach (var assemblyName in PathResolver.RequiredAssemblies)
+            {
+                CreateMockAssembly(directory, assemblyName);
+            }
+        }
 
         /// <summary>
         /// Creates an empty mock assembly file for testing purposes.
