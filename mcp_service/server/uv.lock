@@ -978,7 +978,7 @@ requires-dist = [
     { name = "jsonrpcserver", specifier = ">=5.0.0" },
     { name = "mcp", specifier = ">=1.0.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.5.0" },
-    { name = "ol-simulator-interop-services", editable = "../../../ol_simulator_interop_services" },
+    { name = "ol-simulator-interop-services", specifier = ">=0.1.1" },
     { name = "opentelemetry-api", specifier = ">=1.20.0" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.20.0" },
     { name = "opentelemetry-exporter-zipkin", marker = "extra == 'observability'", specifier = ">=1.20.0" },
@@ -1007,20 +1007,14 @@ provides-extras = ["dev", "observability", "http"]
 
 [[package]]
 name = "ol-simulator-interop-services"
-version = "0.1.0"
-source = { editable = "../../../ol_simulator_interop_services" }
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
 ]
-
-[package.metadata]
-requires-dist = [{ name = "pydantic", specifier = ">=2.0,<3.0" }]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "mypy", specifier = ">=1.10" },
-    { name = "pytest", specifier = ">=8.0" },
-    { name = "ruff", specifier = ">=0.6" },
+sdist = { url = "https://files.pythonhosted.org/packages/f5/95/64541c20b5a49514483108b6ab45737ec9993a728229ae4c21dff959a2f1/ol_simulator_interop_services-0.1.1.tar.gz", hash = "sha256:3cd1a4a88194f27232f816cb0db3d6b2646c5f60b7b0bd254f11367e946fc450", size = 32263, upload-time = "2026-04-30T10:22:19.883Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/22/f2/7ec14a6d2b742e26e1698107177749319cb78a823250abea149ebd3e911d/ol_simulator_interop_services-0.1.1-py3-none-any.whl", hash = "sha256:87ea8216818db2b7676f63c5dbcf64fe991a6b777035fdc5d95733884b6ce17e", size = 40365, upload-time = "2026-04-30T10:22:18.414Z" },
 ]
 
 [[package]]

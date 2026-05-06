@@ -97,9 +97,6 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 
-[tool.uv.sources]
-ol-simulator-interop-services = { path = "../../../ol_simulator_interop_services", editable = true }
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
