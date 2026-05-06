@@ -27,6 +27,30 @@ Implements the `SimulatorAdapter` protocol defined by [`ol-simulator-interop-ser
 
 ### From PyPI (recommended for end users)
 
+For a full non-developer setup, run the one-command installer. It installs the Python tool, downloads and configures the tested DWSIM v9.0.5-mcp binaries unless you pass `-DwsimPath`, and configures detected MCP clients. Supports default Windows PowerShell 5.1 and PowerShell 7+.
+
+```powershell
+irm https://raw.githubusercontent.com/OntoLedgy/ol_dwsim_interop_services/develop/install.ps1 | iex
+```
+
+To pass installer parameters, download the script first:
+
+```powershell
+irm https://raw.githubusercontent.com/OntoLedgy/ol_dwsim_interop_services/develop/install.ps1 -OutFile install.ps1
+.\install.ps1 -DwsimPath "C:\Program Files\DWSIM"
+```
+
+Installer parameters:
+
+| Parameter | Use |
+|---|---|
+| `-DwsimPath <path>` | Use an existing local DWSIM directory instead of downloading the tested build. The directory must directly contain `DWSIM.Interfaces.dll`, `DWSIM.Thermodynamics.dll`, and `DWSIM.SharedClasses.dll`; version differences from v9.0.5-mcp may cause runtime issues. |
+| `-SkipUvInstall` | Skip uv installation when `uv` is already available. |
+| `-UsePipx` | Install or uninstall `ol-dwsim-mcp-server` with `pipx` instead of `uv tool`. |
+| `-SkipMcpConfig` | Skip automatic Claude Code, Codex CLI, and VS Code Copilot MCP configuration. |
+| `-McpClients <Claude\|Codex\|Copilot\|All>` | Limit automatic MCP configuration to selected clients. Defaults to `All`. |
+| `-Uninstall` | Remove the installed tool and DWSIM MCP client configuration. |
+
 Install via [`pipx`](https://pipx.pypa.io/) or [`uv tool`](https://docs.astral.sh/uv/guides/tools/) so the `dwsim-mcp` command lands on the system `PATH` — MCP clients like Claude Desktop need to be able to launch it without inheriting a venv:
 
 ```powershell
@@ -103,6 +127,18 @@ cd ..\server
 Edits to Python source are picked up immediately (editable install). Edits to `shared/property_packages.toml` or C# code require `build.bat` again so the new artifacts land in `DwsimWorker/bin/Debug/`.
 
 For deeper contributor workflow (tests, linting, release flow), see the [Development](#development) section below.
+
+---
+
+## Uninstall
+
+For a non-developer uninstall from PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/OntoLedgy/ol_dwsim_interop_services/develop/install.ps1 -OutFile install.ps1; .\install.ps1 -Uninstall
+```
+
+If you originally installed with `-UsePipx`, add `-UsePipx` to the uninstall command.
 
 ---
 

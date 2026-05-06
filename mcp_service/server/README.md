@@ -15,7 +15,30 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # DWSIM MCP Server
 
-Python-based Model Context Protocol (MCP) server that provides a clean, typed interface for LLM agents to interact with DWSIM chemical process simulation engine.
+`ol-dwsim-mcp-server` lets LLM agents drive [DWSIM](https://dwsim.org), the
+open-source chemical process simulator, through a typed
+[Model Context Protocol](https://modelcontextprotocol.io) interface. It is
+the Python façade in OntoLedgy's thermodynamics stack: agents (Claude
+Desktop, VS Code Copilot, Codex CLI, custom orchestrators) call MCP tools
+such as `add_compound`, `add_unit`, `connect`, `run`, and `flash_tp`; the
+server translates those calls into in-process .NET interop with the DWSIM
+assemblies via `pythonnet`, executes the simulation, and returns
+structured, JSON-friendly results — convergence state, stream conditions,
+phase compositions, mass-balance checks, and diagnostic messages.
+
+The server exposes 35 tools spanning session lifecycle, flowsheet
+construction, equation-of-state property packages, equilibrium flashes
+(TP / PH / PS), and sensitivity / optimisation studies. It enforces
+per-session memory and timeout limits, emits structured logs and
+OpenTelemetry traces, and supports optional OAuth (Clerk) when deployed
+beyond a local workstation. A pre-built `DwsimWorker` distribution is
+bundled so beta users can connect without building the C# layer.
+
+Typical use cases: conversational flowsheet authoring, automated
+parameter sweeps, AI-assisted process design reviews, and integration
+into agentic chemical-engineering workflows where a planning agent
+delegates simulation tasks to DWSIM and reasons over the returned
+results.
 
 ## Architecture
 

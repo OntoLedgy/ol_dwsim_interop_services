@@ -279,6 +279,22 @@ mcp_service/dwsim_worker/
 \-- ...
 ```
 
+## Path resolution: source-tree vs wheel-install
+
+`PathResolver.ResolveDwsimPath()` tries each strategy in the order shown below. For file-relative strategies, `<assemblyDir>` means the directory containing `DwsimWorker.dll`, and `<workerDir>` is resolved as `<assemblyDir>/../../..`.
+
+| Strategy | Source-tree path | Wheel-install path |
+| --- | --- | --- |
+| `DWSIM_PATH` environment variable | User-set path to the DWSIM binaries directory. | Same: user-set path to the DWSIM binaries directory. |
+| `dwsim.config.json` | `<repo>/mcp_service/dwsim_worker/dwsim.config.json` (`<assemblyDir>/../../../dwsim.config.json`). | `<assemblyDir>/../../../dwsim_worker/dwsim.config.json`. The existing source-tree candidate `<assemblyDir>/../../../dwsim.config.json` is also probed. |
+| `App.config` | `DwsimWorker.dll.config` beside the built worker assembly, normally `<repo>/mcp_service/dwsim_worker/DwsimWorker/bin/Debug/DwsimWorker.dll.config`; reads appSetting `DwsimPath`. | `DwsimWorker.dll.config` beside the wheel-bundled worker assembly, for example `<site-packages>/dwsim_mcp_server/_prebuilt/<inner_path>/DwsimWorker.dll.config`; reads appSetting `DwsimPath`. |
+| `dwsim_binaries/` | `<repo>/mcp_service/dwsim_worker/dwsim_binaries/x64/Debug/` (`<assemblyDir>/../../../dwsim_binaries/x64/Debug/`). | `<assemblyDir>/../../../dwsim_worker/dwsim_binaries/x64/Debug/`. The existing source-tree candidate `<assemblyDir>/../../../dwsim_binaries/x64/Debug/` is also probed. |
+| Default install paths | `C:\Program Files\DWSIM`, `C:\Program Files (x86)\DWSIM`, then `C:\DWSIM`. | Same default Windows install paths. |
+
+For a source checkout, the local setup script normally creates `dwsim_binaries/x64/Debug/` under `mcp_service/dwsim_worker/`, and `dwsim.config.json` can point at any compatible DWSIM build or install. For a wheel install, the wheel bundles `DwsimWorker.dll` under `dwsim_mcp_server/_prebuilt/<inner_path>/`; the current wheel probe expects `dwsim-mcp setup --download` to place `dwsim.config.json` and `dwsim_binaries/x64/Debug/` under the sibling `dwsim_worker` directory below `<workerDir>`.
+
+The exact wheel-install layout depends on what `dwsim-mcp setup --download` writes to disk on a clean machine. That end-to-end verification is a separate manual smoke test for a human reviewer running on a clean Windows VM.
+
 ### Troubleshooting
 
 #### Error: "Could not find MSBuild.exe"
