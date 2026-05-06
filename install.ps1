@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
+﻿# SPDX-FileCopyrightText: 2018-2026 OntoLedgy Ltd.
 #
 # This file is part of the OntoLedgy Thermodynamics Architecture and is
 # dual-licensed:
@@ -13,12 +13,13 @@
 
 <#
 .SYNOPSIS
-    One-command installer for the DWSIM MCP Server.
+    One-command installer and uninstaller for the DWSIM MCP Server.
 
 .DESCRIPTION
     Installs uv (if needed), installs ol-dwsim-mcp-server as a tool,
     downloads DWSIM binaries (or accepts a local path), and configures
     MCP for Claude Code, OpenAI Codex CLI, and VS Code Copilot.
+    When -Uninstall is provided, removes the tool and MCP client entries.
 
 .PARAMETER DwsimPath
     Path to an existing local DWSIM installation. Skips download.
@@ -37,6 +38,9 @@
     Which MCP clients to configure. Defaults to all detected.
     Valid values: Claude, Codex, Copilot, All
 
+.PARAMETER Uninstall
+    Remove ol-dwsim-mcp-server and DWSIM MCP client configuration.
+
 .EXAMPLE
     # Full automatic install (recommended)
     irm https://raw.githubusercontent.com/OntoLedgy/ol_dwsim_interop_services/develop/install.ps1 | iex
@@ -48,6 +52,10 @@
 .EXAMPLE
     # Skip uv install (already have it)
     .\install.ps1 -SkipUvInstall
+
+.EXAMPLE
+    # Remove installed tool and MCP client configuration
+    .\install.ps1 -Uninstall
 #>
 
 param(
@@ -56,10 +64,18 @@ param(
     [switch]$UsePipx,
     [switch]$SkipMcpConfig,
     [ValidateSet("Claude", "Codex", "Copilot", "All")]
-    [string]$McpClients = "All"
+    [string]$McpClients = "All",
+    [switch]$Uninstall
 )
 
 $ErrorActionPreference = "Stop"
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+$RequiredDwsimAssemblies = @(
+    "DWSIM.Interfaces.dll",
+    "DWSIM.Thermodynamics.dll",
+    "DWSIM.SharedClasses.dll"
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -90,6 +106,215 @@ function Write-Err {
 function Test-CommandExists {
     param([string]$Command)
     $null -ne (Get-Command $Command -ErrorAction SilentlyContinue)
+}
+
+function Write-Utf8NoBom {
+    param([string]$Path, [string]$Content)
+    $encoding = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($Path, $Content, $encoding)
+}
+
+function Add-PathPrepend {
+    param([string]$DirectoryPath)
+    if (-not (Test-Path -LiteralPath $DirectoryPath)) {
+        return
+    }
+    if (($env:PATH -split ';') -notcontains $DirectoryPath) {
+        $env:PATH = "$DirectoryPath;$env:PATH"
+    }
+}
+
+function Invoke-Native {
+    param([string]$Description, [scriptblock]$ScriptBlock)
+    & $ScriptBlock
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        Write-Err "$Description failed with exit code $exitCode."
+        exit 1
+    }
+}
+
+function Format-TextWithOneTrailingNewline {
+    param([string]$Text)
+    if ([string]::IsNullOrEmpty($Text)) {
+        return ""
+    }
+    return ($Text -replace "(\r?\n)+$", "") + "`n"
+}
+
+function Get-DwsimCodexSection {
+    return "[mcp_servers.dwsim]`ncommand = `"dwsim-mcp`"`nargs = [`"run`"]`n"
+}
+
+function Test-JsonProperty {
+    param([object]$JsonObject, [string]$PropertyName)
+    if ($null -eq $JsonObject) {
+        return $false
+    }
+    $null -ne $JsonObject.PSObject.Properties[$PropertyName]
+}
+
+function Set-JsonProperty {
+    param([object]$JsonObject, [string]$PropertyName, [object]$Value)
+    if (Test-JsonProperty $JsonObject $PropertyName) {
+        $JsonObject.PSObject.Properties[$PropertyName].Value = $Value
+        return
+    }
+    $JsonObject | Add-Member -NotePropertyName $PropertyName -NotePropertyValue $Value
+}
+
+function Remove-JsonProperty {
+    param([object]$JsonObject, [string]$PropertyName)
+    if (-not (Test-JsonProperty $JsonObject $PropertyName)) {
+        return $false
+    }
+    $JsonObject.PSObject.Properties.Remove($PropertyName)
+    return $true
+}
+
+function Get-VsCodeMcpConfig {
+    param([string]$ConfigPath)
+    if (-not (Test-Path -LiteralPath $ConfigPath)) {
+        return [PSCustomObject]@{}
+    }
+    $content = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8
+    if ([string]::IsNullOrWhiteSpace($content)) {
+        return [PSCustomObject]@{}
+    }
+    return ($content | ConvertFrom-Json)
+}
+
+function Set-DwsimCopilotConfig {
+    param([string]$ConfigPath)
+    $mcpConfig = Get-VsCodeMcpConfig $ConfigPath
+    if ((-not (Test-JsonProperty $mcpConfig "mcpServers")) -or ($null -eq $mcpConfig.mcpServers)) {
+        Set-JsonProperty $mcpConfig "mcpServers" ([PSCustomObject]@{})
+    }
+    $serverConfig = [PSCustomObject]@{ command = "dwsim-mcp"; args = @("run") }
+    Set-JsonProperty $mcpConfig.mcpServers "dwsim" $serverConfig
+    Write-Utf8NoBom $ConfigPath (($mcpConfig | ConvertTo-Json -Depth 5) + "`n")
+}
+
+function Remove-DwsimCopilotConfig {
+    param([string]$ConfigPath)
+    if (-not (Test-Path -LiteralPath $ConfigPath)) {
+        return $false
+    }
+    $mcpConfig = Get-VsCodeMcpConfig $ConfigPath
+    if (-not (Test-JsonProperty $mcpConfig "mcpServers")) {
+        return $false
+    }
+    if (-not (Remove-JsonProperty $mcpConfig.mcpServers "dwsim")) {
+        return $false
+    }
+    Write-Utf8NoBom $ConfigPath (($mcpConfig | ConvertTo-Json -Depth 5) + "`n")
+    return $true
+}
+
+function Add-DwsimCodexConfig {
+    param([string]$ConfigPath)
+    $tomlContent = ""
+    if (Test-Path -LiteralPath $ConfigPath) {
+        $tomlContent = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8
+    }
+    if ($tomlContent -match '(?m)^\[mcp_servers\.dwsim\]\s*$') {
+        return $false
+    }
+    $updatedContent = (Format-TextWithOneTrailingNewline $tomlContent) + (Get-DwsimCodexSection)
+    Write-Utf8NoBom $ConfigPath $updatedContent
+    return $true
+}
+
+function Remove-DwsimCodexConfig {
+    param([string]$ConfigPath)
+    if (-not (Test-Path -LiteralPath $ConfigPath)) {
+        return $false
+    }
+    $tomlContent = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8
+    $pattern = '(?m)^[ \t]*\[mcp_servers\.dwsim\][^\r\n]*(\r?\n(?![ \t]*\[).*)*(\r?\n)?'
+    $updatedContent = [regex]::Replace($tomlContent, $pattern, "")
+    if ($updatedContent -eq $tomlContent) {
+        return $false
+    }
+    Write-Utf8NoBom $ConfigPath (Format-TextWithOneTrailingNewline $updatedContent)
+    return $true
+}
+
+function Get-MissingDwsimAssemblies {
+    param([string]$DwsimDirectory)
+    $missingAssemblies = @()
+    foreach ($assemblyName in $RequiredDwsimAssemblies) {
+        $assemblyPath = Join-Path $DwsimDirectory $assemblyName
+        if (-not (Test-Path -LiteralPath $assemblyPath -PathType Leaf)) {
+            $missingAssemblies += $assemblyName
+        }
+    }
+    return $missingAssemblies
+}
+
+function Uninstall-UvTool {
+    if (-not (Test-CommandExists "uv")) {
+        Write-Warn "uv not found; skipping uv tool uninstall."
+        return $false
+    }
+    & uv tool uninstall ol-dwsim-mcp-server
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        Write-Warn "uv did not remove ol-dwsim-mcp-server (exit code $exitCode). It may not be installed."
+        return $false
+    }
+    return $true
+}
+
+function Uninstall-PipxTool {
+    if (-not (Test-CommandExists "pipx")) {
+        Write-Warn "pipx not found; skipping pipx uninstall."
+        return $false
+    }
+    & pipx uninstall ol-dwsim-mcp-server
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        Write-Warn "pipx did not remove ol-dwsim-mcp-server (exit code $exitCode). It may not be installed."
+        return $false
+    }
+    return $true
+}
+
+function Remove-ClaudeDwsimConfig {
+    if (-not (Test-CommandExists "claude")) {
+        Write-Host "  Claude Code CLI not detected (skipping)" -ForegroundColor Gray
+        return $false
+    }
+    & claude mcp remove --scope user dwsim 2>$null
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        Write-Warn "Claude Code dwsim entry was not removed (exit code $exitCode). It may not be present."
+        return $false
+    }
+    return $true
+}
+
+function Invoke-DwsimUninstall {
+    Write-Step "Uninstall DWSIM MCP Server"
+    $removedItems = @()
+    if ($UsePipx) {
+        if (Uninstall-PipxTool) { $removedItems += "pipx tool" }
+    } else {
+        if (Uninstall-UvTool) { $removedItems += "uv tool" }
+    }
+    if (Remove-ClaudeDwsimConfig) { $removedItems += "Claude Code config" }
+    $codexConfigFile = Join-Path (Join-Path $env:USERPROFILE ".codex") "config.toml"
+    if (Remove-DwsimCodexConfig $codexConfigFile) { $removedItems += "Codex config" }
+    $vscodeMcpFile = Join-Path $env:APPDATA "Code\User\mcp.json"
+    if (Remove-DwsimCopilotConfig $vscodeMcpFile) { $removedItems += "VS Code Copilot config" }
+    Write-Step "Uninstall summary"
+    if ($removedItems.Count -eq 0) { Write-Warn "No installed DWSIM MCP entries were found."; return }
+    foreach ($item in $removedItems) { Write-Ok "Removed $item" }
+}
+
+if ($Uninstall) {
+    Invoke-DwsimUninstall
+    exit 0
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -143,13 +368,9 @@ if ($UsePipx) {
 
             # Refresh PATH for current session
             $uvPath = "$env:USERPROFILE\.local\bin"
-            if (Test-Path $uvPath) {
-                $env:PATH = "$uvPath;$env:PATH"
-            }
+            Add-PathPrepend $uvPath
             $cargoUvPath = "$env:USERPROFILE\.cargo\bin"
-            if (Test-Path $cargoUvPath) {
-                $env:PATH = "$cargoUvPath;$env:PATH"
-            }
+            Add-PathPrepend $cargoUvPath
 
             if (-not (Test-CommandExists "uv")) {
                 Write-Err "uv installed but not found in PATH. Please restart your terminal and re-run."
@@ -173,14 +394,20 @@ Write-Step "Step 2: Install ol-dwsim-mcp-server"
 
 try {
     if ($PackageManager -eq "uv") {
-        & uv tool install ol-dwsim-mcp-server 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+        Invoke-Native -Description "uv tool install ol-dwsim-mcp-server" -ScriptBlock {
+            & uv tool install ol-dwsim-mcp-server 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+        }
+        Add-PathPrepend "$env:USERPROFILE\.local\bin"
     } else {
-        & pipx install ol-dwsim-mcp-server 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+        Invoke-Native -Description "pipx install ol-dwsim-mcp-server" -ScriptBlock {
+            & pipx install ol-dwsim-mcp-server 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+        }
     }
 
     if (-not (Test-CommandExists "dwsim-mcp")) {
         # Try refreshing PATH
         $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "User") + ";" + $env:PATH
+        Add-PathPrepend "$env:USERPROFILE\.local\bin"
         if (-not (Test-CommandExists "dwsim-mcp")) {
             Write-Err "dwsim-mcp command not found after install. You may need to restart your terminal."
             exit 1
@@ -200,8 +427,15 @@ Write-Step "Step 3: DWSIM binaries"
 
 if ($DwsimPath) {
     # User provided a local DWSIM path
-    if (-not (Test-Path $DwsimPath)) {
+    if (-not (Test-Path -LiteralPath $DwsimPath -PathType Container)) {
         Write-Err "Provided DWSIM path does not exist: $DwsimPath"
+        exit 1
+    }
+
+    $missingAssemblies = Get-MissingDwsimAssemblies $DwsimPath
+    if ($missingAssemblies.Count -gt 0) {
+        Write-Err "Provided DWSIM path is missing required assemblies: $($missingAssemblies -join ', ')"
+        Write-Host "  See the README DWSIM-version note. This server is tested against DWSIM v9.0.5-mcp." -ForegroundColor Gray
         exit 1
     }
 
@@ -212,7 +446,9 @@ if ($DwsimPath) {
     Write-Host ""
 
     try {
-        & dwsim-mcp setup --dwsim-path $DwsimPath 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+        Invoke-Native -Description "dwsim-mcp setup --dwsim-path" -ScriptBlock {
+            & dwsim-mcp setup --dwsim-path $DwsimPath 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+        }
         Write-Ok "Configured with local DWSIM at: $DwsimPath"
     } catch {
         Write-Err "Setup failed: $_"
@@ -224,7 +460,9 @@ if ($DwsimPath) {
     Write-Host "  This may take a few minutes on slower connections." -ForegroundColor Gray
 
     try {
-        & dwsim-mcp setup --download 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+        Invoke-Native -Description "dwsim-mcp setup --download" -ScriptBlock {
+            & dwsim-mcp setup --download 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+        }
         Write-Ok "DWSIM binaries downloaded and configured"
     } catch {
         Write-Err "Download failed: $_"
@@ -264,10 +502,15 @@ if ($SkipMcpConfig) {
         if (Test-CommandExists "claude") {
             Write-Host "  Configuring Claude Code..." -ForegroundColor Gray
             try {
-                & claude mcp remove dwsim 2>$null
-                & claude mcp add dwsim -- dwsim-mcp run 2>&1 | Out-Null
-                Write-Ok "Claude Code configured (server: dwsim)"
-                $configuredAny = $true
+                & claude mcp remove --scope user dwsim 2>$null
+                & claude mcp add --scope user dwsim -- dwsim-mcp run 2>&1 | Out-Null
+                $claudeExit = $LASTEXITCODE
+                if ($claudeExit -eq 0) {
+                    Write-Ok "Claude Code configured (server: dwsim, scope: user)"
+                    $configuredAny = $true
+                } else {
+                    Write-Warn "Could not configure Claude Code automatically (exit code $claudeExit)."
+                }
             } catch {
                 Write-Warn "Could not configure Claude Code automatically: $_"
             }
@@ -288,24 +531,10 @@ if ($SkipMcpConfig) {
                     New-Item -ItemType Directory -Path $codexConfigDir -Force | Out-Null
                 }
 
-                # Read existing config or start fresh
-                $tomlContent = ""
-                if (Test-Path $codexConfigFile) {
-                    $tomlContent = Get-Content $codexConfigFile -Raw
-                }
-
-                # Check if dwsim section already exists
-                if ($tomlContent -match '\[mcp_servers\.dwsim\]') {
-                    Write-Ok "Codex CLI already configured (dwsim section exists)"
-                } else {
-                    $dwsimSection = @"
-
-[mcp_servers.dwsim]
-command = "dwsim-mcp"
-args = ["run"]
-"@
-                    Add-Content -Path $codexConfigFile -Value $dwsimSection -Encoding UTF8
+                if (Add-DwsimCodexConfig $codexConfigFile) {
                     Write-Ok "Codex CLI configured ($codexConfigFile)"
+                } else {
+                    Write-Ok "Codex CLI already configured (dwsim section exists)"
                 }
                 $configuredAny = $true
             } catch {
@@ -324,21 +553,7 @@ args = ["run"]
         if (Test-Path $vscodeSettingsDir) {
             Write-Host "  Configuring VS Code Copilot..." -ForegroundColor Gray
             try {
-                $mcpConfig = @{}
-                if (Test-Path $vscodeMcpFile) {
-                    $mcpConfig = Get-Content $vscodeMcpFile -Raw | ConvertFrom-Json -AsHashtable
-                }
-
-                if (-not $mcpConfig.ContainsKey("mcpServers")) {
-                    $mcpConfig["mcpServers"] = @{}
-                }
-
-                $mcpConfig["mcpServers"]["dwsim"] = @{
-                    command = "dwsim-mcp"
-                    args    = @("run")
-                }
-
-                $mcpConfig | ConvertTo-Json -Depth 5 | Set-Content $vscodeMcpFile -Encoding UTF8
+                Set-DwsimCopilotConfig $vscodeMcpFile
                 Write-Ok "VS Code Copilot configured ($vscodeMcpFile)"
                 $configuredAny = $true
             } catch {
@@ -371,39 +586,47 @@ Write-Host "  For any MCP-compatible client, the server command is:" -Foreground
 Write-Host ""
 Write-Host "    dwsim-mcp run" -ForegroundColor White
 Write-Host ""
-Write-Host "  Claude Desktop  ($env:APPDATA\Claude\claude_desktop_config.json):" -ForegroundColor Yellow
-Write-Host @"
-    {
-      "mcpServers": {
-        "dwsim": {
-          "command": "dwsim-mcp",
-          "args": ["run"]
-        }
-      }
-    }
-"@ -ForegroundColor Gray
+$claudeDesktopConfig = @(
+    '    {',
+    '      "mcpServers": {',
+    '        "dwsim": {',
+    '          "command": "dwsim-mcp",',
+    '          "args": ["run"]',
+    '        }',
+    '      }',
+    '    }'
+) -join "`n"
+$claudeDesktopPath = Join-Path $env:APPDATA "Claude\claude_desktop_config.json"
+
+Write-Host ("  Claude Desktop  ({0}):" -f $claudeDesktopPath) -ForegroundColor Yellow
+Write-Host $claudeDesktopConfig -ForegroundColor Gray
 Write-Host ""
 Write-Host "  Claude Code (CLI):" -ForegroundColor Yellow
-Write-Host "    claude mcp add dwsim -- dwsim-mcp run" -ForegroundColor Gray
+Write-Host "    claude mcp add --scope user dwsim -- dwsim-mcp run" -ForegroundColor Gray
 Write-Host ""
 Write-Host "  Codex CLI  (~/.codex/config.toml):" -ForegroundColor Yellow
-Write-Host @"
-    [mcp_servers.dwsim]
-    command = "dwsim-mcp"
-    args = ["run"]
-"@ -ForegroundColor Gray
+$codexConfig = @(
+    '    [mcp_servers.dwsim]',
+    '    command = "dwsim-mcp"',
+    '    args = ["run"]'
+) -join "`n"
+
+Write-Host $codexConfig -ForegroundColor Gray
 Write-Host ""
-Write-Host "  VS Code Copilot  ($env:APPDATA\Code\User\mcp.json):" -ForegroundColor Yellow
-Write-Host @"
-    {
-      "mcpServers": {
-        "dwsim": {
-          "command": "dwsim-mcp",
-          "args": ["run"]
-        }
-      }
-    }
-"@ -ForegroundColor Gray
+$vscodeMcpConfig = @(
+    '    {',
+    '      "mcpServers": {',
+    '        "dwsim": {',
+    '          "command": "dwsim-mcp",',
+    '          "args": ["run"]',
+    '        }',
+    '      }',
+    '    }'
+) -join "`n"
+$vscodeMcpPath = Join-Path $env:APPDATA "Code\User\mcp.json"
+
+Write-Host ("  VS Code Copilot  ({0}):" -f $vscodeMcpPath) -ForegroundColor Yellow
+Write-Host $vscodeMcpConfig -ForegroundColor Gray
 Write-Host ""
 Write-Host "  For HTTP/SSE transport (remote/Docker), see:" -ForegroundColor Gray
 Write-Host "    https://github.com/OntoLedgy/ol_dwsim_interop_services#deployment" -ForegroundColor Gray
