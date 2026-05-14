@@ -12,6 +12,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **Property-package inventory loader (DIS-37):** Resolve `property_packages.toml` via `importlib.resources` from the installed package's `_prebuilt/` directory, with a development fallback to the repo `shared/` folder. Fixes `DIS-37 property-package inventory missing at <tool-root>\shared\property_packages.toml` on fresh `uv tool install` deployments.
 
+## [0.1.1] - 2026-05-14
+
+### Fixed
+
+- **`dwsim-mcp version` reports `Commit: unknown` (cosmetic):** `_commit_sha.py` was missing from the
+  published wheel because (a) the PowerShell heredoc in the "Bake release commit metadata" CI step is
+  fragile under YAML block-scalar indentation rules, and (b) `mcp_service/server/.gitignore` lists
+  `dwsim_mcp_server/_commit_sha.py`, causing hatchling's default VCS-based file picker to silently
+  exclude it. Fixed by replacing the heredoc with an explicit `Set-Content -Value` call and declaring
+  the file as a hatchling `artifact` (`[tool.hatch.build.targets.wheel] artifacts = [...]`) so it is
+  always bundled regardless of VCS tracking. A new "Verify `_commit_sha.py` bundled in wheel" CI step
+  now fails the build immediately if the file is absent, preventing silent regression.
+
 ## [0.1.0] - 2026-04-30
 
 First public beta release. `pip install ol-dwsim-mcp-server` and `pipx install ol-dwsim-mcp-server` are now supported on Windows.
@@ -62,4 +75,5 @@ First public beta release. `pip install ol-dwsim-mcp-server` and `pipx install o
 - STA threading for DWSIM COM interop; serialised interop calls on single thread
 
 [Unreleased]: https://github.com/OntoLedgy/ol_dwsim_interop_services/compare/v0.1.0...HEAD
+[0.1.1]: https://github.com/OntoLedgy/ol_dwsim_interop_services/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/OntoLedgy/ol_dwsim_interop_services/releases/tag/v0.1.0
