@@ -157,7 +157,7 @@ dwsim_interop_services/             # Project root (OntoLedgy AI services conven
 │
 ├── .editorconfig                   # Editor configuration (Python + C#)
 ├── .gitignore                      # Git ignore rules
-├── LICENSE                         # GPLv3 license
+├── LICENSE                         # AGPL-3.0-or-later license
 └── README.md                       # Project README
 ```
 

@@ -499,6 +499,6 @@ For large simulations:
 
 ## License
 
-GPLv3 - See LICENSE file for details.
+AGPL-3.0-or-later - See LICENSE file for details.
 
 DWSIM is licensed under GPLv3. This worker is a derived work and must comply with DWSIM's license terms.

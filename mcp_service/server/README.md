@@ -469,4 +469,4 @@ export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 
 ## License
 
-GPLv3 - See LICENSE file for details.
+AGPL-3.0-or-later - See LICENSE file for details.
